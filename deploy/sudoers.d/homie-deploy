@@ -1,4 +1,0 @@
-homie ALL=(root) NOPASSWD: /usr/bin/systemctl restart homie-api.service
-homie ALL=(root) NOPASSWD: /usr/bin/systemctl restart homie-kiosk.service
-homie ALL=(root) NOPASSWD: /usr/bin/systemctl start homie-kiosk.service
-homie ALL=(root) NOPASSWD: /usr/bin/systemctl stop homie-kiosk.service

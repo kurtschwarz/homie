@@ -9,11 +9,18 @@ dev:
 build:
     docker buildx build --platform linux/arm64 --target export --output type=local,dest=./dist .
 
-# Build and ship the binary + kiosk URL to the Pi, then restart services.
+# The SPAs are embedded in the binary, so the kiosk browser restarts too:
+# without it Chromium keeps rendering the page it loaded before the deploy
+# and frontend changes appear to have no effect. The two restarts stay
+# separate calls: the Pi's NOPASSWD sudo rules match one exact unit each,
+# so restarting both in a single systemctl call would prompt for a password.
+
+# Build and ship the binary to the Pi, then restart the API and the kiosk.
 deploy: build
     rsync -az ./dist/homie-api {{pi_host}}:{{pi_dir}}/homie-api.new
     ssh {{pi_host}} "mv {{pi_dir}}/homie-api.new {{pi_dir}}/homie-api && chmod +x {{pi_dir}}/homie-api"
     ssh {{pi_host}} "sudo systemctl restart homie-api.service"
+    ssh {{pi_host}} "sudo systemctl restart homie-kiosk.service"
 
 # Push updated systemd units (prompts for a password).
 deploy-units:

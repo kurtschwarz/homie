@@ -22,7 +22,12 @@ body,
    universal selector is deliberate — the UA stylesheet sets its own cursor
    on links and text, which beats inheriting these from body. */
 * {
-  cursor: none;
   user-select: none;
   -webkit-user-select: none;
+}
+
+/* Hiding the cursor on the dev machine only hides the one you are using to
+   click around, so main.tsx marks the document in dev and we skip it. */
+html:not([data-dev]) * {
+  cursor: none;
 }

@@ -5,6 +5,7 @@ dist
 .turbo
 **/.turbo
 .scratch
+deploy
 .git
 **/tmp
 services/api/web/display/*

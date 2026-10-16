@@ -17,7 +17,7 @@ deploy: build
 
 # Push updated systemd units (prompts for a password).
 deploy-units:
-    rsync -az ./services/api/deploy/*.service {{pi_host}}:/tmp/
+    rsync -az ./deploy/*.service {{pi_host}}:/tmp/
     ssh -t {{pi_host}} "sudo mv /tmp/homie-*.service /etc/systemd/system/ && sudo systemctl daemon-reload"
 
 # Point the kiosk browser at this Mac's Vite dev server.

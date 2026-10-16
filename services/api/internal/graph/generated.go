@@ -49,6 +49,8 @@ type ComplexityRoot struct {
 	Weather struct {
 		Condition     func(childComplexity int) int
 		ConditionCode func(childComplexity int) int
+		FetchedAt     func(childComplexity int) int
+		Stale         func(childComplexity int) int
 		Temperature   func(childComplexity int) int
 	}
 }
@@ -125,6 +127,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Weather.ConditionCode(childComplexity), true
+	case "Weather.fetchedAt":
+		if e.ComplexityRoot.Weather.FetchedAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Weather.FetchedAt(childComplexity), true
+	case "Weather.stale":
+		if e.ComplexityRoot.Weather.Stale == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Weather.Stale(childComplexity), true
 	case "Weather.temperature":
 		if e.ComplexityRoot.Weather.Temperature == nil {
 			break
@@ -221,6 +235,8 @@ type Weather {
   condition: WeatherCondition!
   conditionCode: String!
   temperature: Int!
+  fetchedAt: Int!
+  stale: Boolean!
 }
 
 extend type Query {
@@ -254,6 +270,10 @@ func (ec *executionContext) childFields_Weather(ctx context.Context, field graph
 		return ec.fieldContext_Weather_conditionCode(ctx, field)
 	case "temperature":
 		return ec.fieldContext_Weather_temperature(ctx, field)
+	case "fetchedAt":
+		return ec.fieldContext_Weather_fetchedAt(ctx, field)
+	case "stale":
+		return ec.fieldContext_Weather_stale(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type Weather", field.Name)
 }
@@ -724,6 +744,52 @@ func (ec *executionContext) _Weather_temperature(ctx context.Context, field grap
 }
 func (ec *executionContext) fieldContext_Weather_temperature(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("Weather", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _Weather_fetchedAt(ctx context.Context, field graphql.CollectedField, obj *model.Weather) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Weather_fetchedAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.FetchedAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Weather_fetchedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Weather", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _Weather_stale(ctx context.Context, field graphql.CollectedField, obj *model.Weather) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Weather_stale(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Stale, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Weather_stale(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Weather", field, false, false, errors.New("field of type Boolean does not have child fields"))
 }
 
 func (ec *executionContext) ___Directive_name(ctx context.Context, field graphql.CollectedField, obj *introspection.Directive) (ret graphql.Marshaler) {
@@ -1964,6 +2030,16 @@ func (ec *executionContext) _Weather(ctx context.Context, sel ast.SelectionSet, 
 			}
 		case "temperature":
 			out.Values[i] = ec._Weather_temperature(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "fetchedAt":
+			out.Values[i] = ec._Weather_fetchedAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "stale":
+			out.Values[i] = ec._Weather_stale(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

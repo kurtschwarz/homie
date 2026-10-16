@@ -12,15 +12,17 @@ import { CONDITION_LABEL, WeatherIcon, type WeatherCondition } from "./weather-i
 export function WeatherGlance({
   condition,
   temperature,
+  stale = false,
   className,
   ...props
-}: BaseButton.Props & { condition: WeatherCondition; temperature: number }) {
+}: BaseButton.Props & { condition: WeatherCondition; temperature: number; stale?: boolean }) {
   return (
     <BaseButton
       data-slot="weather-glance"
       aria-label={`${CONDITION_LABEL[condition]}, ${temperature} degrees. Show the forecast`}
       className={cn(
         "inline-flex min-h-hm-touch cursor-pointer items-center gap-hm-12 rounded-hm-control bg-transparent px-hm-14 py-hm-6 leading-none text-hm-ink",
+        stale && "opacity-55",
         "transition-transform duration-120 active:scale-(--hm-press-scale) focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-hm-accent",
         className,
       )}

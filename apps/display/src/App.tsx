@@ -34,11 +34,22 @@ export function App() {
           className="fixed right-hm-screen top-hm-screen z-10"
           condition={weatherIconCondition(weather.weather.condition)}
           temperature={weather.weather.temperature}
-          aria-label={`${weather.weather.conditionCode}, ${weather.weather.temperature} degrees`}
+          stale={weather.weather.stale}
+          aria-label={weatherAriaLabel(weather.weather.conditionCode, weather.weather.temperature, weather.weather.fetchedAt, weather.weather.stale)}
         />
       )}
     </HomeLayout>
   );
+}
+
+function weatherAriaLabel(conditionCode: string, temperature: number, fetchedAt: number, stale: boolean): string {
+  const ageSeconds = Math.max(0, Math.floor(Date.now() / 1000) - fetchedAt);
+  const age = ageSeconds < 60
+    ? "less than a minute ago"
+    : ageSeconds < 3600
+      ? `${Math.floor(ageSeconds / 60)} minutes ago`
+      : `${Math.floor(ageSeconds / 3600)} hours ago`;
+  return `${conditionCode}, ${temperature} degrees, updated ${age}${stale ? ", stale weather data" : ""}`;
 }
 
 function weatherIconCondition(condition: "SUN" | "CLOUD_SUN" | "CLOUD" | "RAIN" | "MOON"): WeatherCondition {

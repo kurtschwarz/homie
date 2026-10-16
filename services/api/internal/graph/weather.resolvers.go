@@ -25,5 +25,7 @@ func (r *queryResolver) Weather(ctx context.Context) (*model.Weather, error) {
 		Condition:     model.WeatherCondition(current.Condition),
 		ConditionCode: current.ConditionCode,
 		Temperature:   current.Temperature,
+		FetchedAt:     int(current.FetchedAt.Unix()),
+		Stale:         current.Stale,
 	}, nil
 }

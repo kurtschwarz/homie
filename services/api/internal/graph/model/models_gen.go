@@ -22,6 +22,8 @@ type Weather struct {
 	Condition     WeatherCondition `json:"condition"`
 	ConditionCode string           `json:"conditionCode"`
 	Temperature   int              `json:"temperature"`
+	FetchedAt     int              `json:"fetchedAt"`
+	Stale         bool             `json:"stale"`
 }
 
 type WeatherCondition string

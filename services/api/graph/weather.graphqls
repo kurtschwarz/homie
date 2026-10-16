@@ -10,6 +10,8 @@ type Weather {
   condition: WeatherCondition!
   conditionCode: String!
   temperature: Int!
+  fetchedAt: Int!
+  stale: Boolean!
 }
 
 extend type Query {

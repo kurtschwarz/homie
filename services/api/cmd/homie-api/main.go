@@ -18,6 +18,7 @@ import (
 	"github.com/kurtschwarz/homie/services/api/internal/graph"
 	"github.com/kurtschwarz/homie/services/api/internal/sdnotify"
 	"github.com/kurtschwarz/homie/services/api/internal/server"
+	"github.com/kurtschwarz/homie/services/api/internal/store"
 	"github.com/kurtschwarz/homie/services/api/internal/weather"
 	"github.com/kurtschwarz/homie/services/api/internal/weatherkit"
 )
@@ -30,7 +31,15 @@ func main() {
 
 	addr := envOr("HOMIE_ADDR", ":3000")
 	playground := os.Getenv("HOMIE_PLAYGROUND") == "1"
-	weatherService, err := configureWeather()
+	db, err := store.Open(envOr("HOMIE_DB_PATH", "/var/lib/homie/homie.db"), logger)
+	if err != nil {
+		logger.Error("open SQLite cache; weather will use memory only", "error", err)
+	}
+	var weatherRepository weather.Repository
+	if db != nil {
+		weatherRepository = weather.NewSQLiteRepository(db)
+	}
+	weatherService, err := configureWeather(weatherRepository, logger)
 	if err != nil {
 		logger.Error("configure WeatherKit; weather query will be unavailable", "error", err)
 	}
@@ -87,9 +96,14 @@ func main() {
 	if err := httpServer.Shutdown(shutdownCtx); err != nil {
 		logger.Error("shutdown", "error", err)
 	}
+	if db != nil {
+		if err := db.Close(); err != nil {
+			logger.Error("close SQLite cache", "error", err)
+		}
+	}
 }
 
-func configureWeather() (*weather.Service, error) {
+func configureWeather(repository weather.Repository, logger *slog.Logger) (*weather.Service, error) {
 	teamID := os.Getenv("HOMIE_WEATHERKIT_TEAM_ID")
 	serviceID := os.Getenv("HOMIE_WEATHERKIT_SERVICE_ID")
 	keyID := os.Getenv("HOMIE_WEATHERKIT_KEY_ID")
@@ -123,7 +137,10 @@ func configureWeather() (*weather.Service, error) {
 	if err != nil {
 		return nil, err
 	}
-	return weather.New(client, lat, lon)
+	return weather.New(weather.Config{
+		Client: client, Repository: repository,
+		Latitude: lat, Longitude: lon, Logger: logger,
+	})
 }
 
 // watchdogLoop pings systemd's WatchdogSec at roughly half its interval, as

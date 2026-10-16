@@ -4,6 +4,8 @@ type Weather = {
   condition: "SUN" | "CLOUD_SUN" | "CLOUD" | "RAIN" | "MOON";
   conditionCode: string;
   temperature: number;
+  fetchedAt: number;
+  stale: boolean;
 };
 
 type WeatherState =
@@ -17,6 +19,8 @@ const QUERY = `
       condition
       conditionCode
       temperature
+      fetchedAt
+      stale
     }
   }
 `;

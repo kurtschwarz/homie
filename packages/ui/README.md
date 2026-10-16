@@ -110,7 +110,7 @@ All are plain React (19) with Tailwind classes. Interactive ones are `"use clien
 | --- | --- | --- |
 | `Button` (`variant="outline" \| "text"`, `block`) | `Button` | Outlined nav button (`button` tall) and text button (`touch` tall). Supports `render` (set `nativeButton={false}` for links). |
 | `Clock` (`size="default" \| "sm"`) | | Time with a blinking colon; follows the clock unless you pass `date`. |
-| `WeatherGlance` | `Button` | Header icon + temperature that opens the Weather screen. |
+| `WeatherGlance` (`stale`) | `Button` | Header icon + temperature that opens the Weather screen; dims a cached reading served after an upstream failure. |
 | `WeatherIcon`, `CONDITION_LABEL` | | Lucide weather icons for `sun`, `cloud-sun`, `cloud`, `rain`, `moon`. |
 | `PersonBadge`, `PersonBadges`, `PersonLegend` | | Emoji badge in a person's colour; legend pill. |
 | `ReminderChip` | | One-line nudge under the clock. |

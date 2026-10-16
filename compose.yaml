@@ -8,11 +8,13 @@ services:
     environment:
       HOMIE_ADDR: ":3000"
       HOMIE_PLAYGROUND: "1"
+      HOMIE_DB_PATH: "/var/lib/homie/homie.db"
     env_file:
       - path: ./services/api/.env
         required: false
     volumes:
       - ./services/api:/src
+      - api-data:/var/lib/homie
       - ./.scratch/weatherkit.p8:/run/secrets/weatherkit.p8:ro
       - api-gomod-cache:/go/pkg/mod
 
@@ -45,6 +47,7 @@ services:
       - api
 
 volumes:
+  api-data:
   api-gomod-cache:
   display-node-modules:
   manager-node-modules:

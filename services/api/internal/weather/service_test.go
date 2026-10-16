@@ -1,25 +1,150 @@
-package weather
+package weather_test
 
 import (
 	"context"
+	"errors"
+	"io"
+	"log/slog"
+	"math"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/kurtschwarz/homie/services/api/internal/store"
+	"github.com/kurtschwarz/homie/services/api/internal/weather"
 	"github.com/kurtschwarz/homie/services/api/internal/weatherkit"
 )
 
 type fakeFetcher struct {
 	mu       sync.Mutex
 	response weatherkit.CurrentConditions
+	err      error
 	calls    int
+}
+
+type memoryCache struct {
+	entry weather.CacheEntry
+	found bool
+}
+
+func (c *memoryCache) Load(context.Context, string) (weather.CacheEntry, bool, error) {
+	return c.entry, c.found, nil
+}
+
+func (c *memoryCache) Save(_ context.Context, _ string, entry weather.CacheEntry) error {
+	c.entry = entry
+	c.found = true
+	return nil
 }
 
 func (f *fakeFetcher) CurrentWeather(context.Context, float64, float64) (weatherkit.CurrentConditions, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.calls++
-	return f.response, nil
+	return f.response, f.err
+}
+
+func TestCurrentLoadsFreshWeatherFromSQLite(t *testing.T) {
+	db, err := store.Open(t.TempDir()+"/weather.db", slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	now := time.Date(2026, 10, 16, 12, 0, 0, 0, time.UTC)
+	entry := weather.CacheEntry{
+		ConditionCode: "PartlyCloudy",
+		Temperature:   12.6,
+		Daylight:      true,
+		FetchedAt:     now.Add(-time.Minute),
+		ExpiresAt:     now.Add(20 * time.Minute),
+	}
+	repository := weather.NewSQLiteRepository(db)
+	if err := repository.Save(context.Background(), "43.4422469,-80.4699426", entry); err != nil {
+		t.Fatal(err)
+	}
+	fetcher := &fakeFetcher{err: errors.New("WeatherKit should not be called")}
+	service, err := weather.New(weather.Config{Client: fetcher, Latitude: 43.4422469, Longitude: -80.4699426, Repository: repository, Now: func() time.Time { return now }})
+	if err != nil {
+		t.Fatal(err)
+	}
+	current, err := service.Current(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fetcher.calls != 0 {
+		t.Fatalf("expected SQLite cache hit without upstream call, got %d calls", fetcher.calls)
+	}
+	if current.Condition != weather.ConditionCloudSun || current.Temperature != 13 || current.Stale || !current.FetchedAt.Equal(entry.FetchedAt) {
+		t.Fatalf("unexpected cached current weather: %+v", current)
+	}
+}
+
+func TestCurrentServesStaleSQLiteEntryWhenFetchFails(t *testing.T) {
+	db, err := store.Open(t.TempDir()+"/weather.db", slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	now := time.Date(2026, 10, 16, 12, 0, 0, 0, time.UTC)
+	entry := weather.CacheEntry{
+		ConditionCode: "Rain",
+		Temperature:   8,
+		Daylight:      true,
+		FetchedAt:     now.Add(-time.Hour),
+		ExpiresAt:     now.Add(-30 * time.Minute),
+	}
+	repository := weather.NewSQLiteRepository(db)
+	if err := repository.Save(context.Background(), "43.4422469,-80.4699426", entry); err != nil {
+		t.Fatal(err)
+	}
+	fetcher := &fakeFetcher{err: errors.New("WeatherKit unavailable")}
+	service, err := weather.New(weather.Config{Client: fetcher, Latitude: 43.4422469, Longitude: -80.4699426, Repository: repository, Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), Now: func() time.Time { return now }})
+	if err != nil {
+		t.Fatal(err)
+	}
+	current, err := service.Current(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !current.Stale || current.Condition != weather.ConditionRain || current.Temperature != 8 || !current.FetchedAt.Equal(entry.FetchedAt) {
+		t.Fatalf("unexpected stale current weather: %+v", current)
+	}
+}
+
+func TestCurrentFailsWithoutCacheWhenFetchFails(t *testing.T) {
+	wantErr := errors.New("WeatherKit unavailable")
+	service, err := weather.New(weather.Config{Client: &fakeFetcher{err: wantErr}, Latitude: 43.4422469, Longitude: -80.4699426})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.Current(context.Background()); !errors.Is(err, wantErr) {
+		t.Fatalf("expected upstream error %v, got %v", wantErr, err)
+	}
+}
+
+func TestCurrentRemapsConditionFromPersistedUpstreamCode(t *testing.T) {
+	db, err := store.Open(t.TempDir()+"/weather.db", slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	now := time.Now().UTC()
+	entry := weather.CacheEntry{ConditionCode: "NewAppleCondition", Temperature: math.Pi, Daylight: true, FetchedAt: now, ExpiresAt: now.Add(time.Hour)}
+	repository := weather.NewSQLiteRepository(db)
+	if err := repository.Save(context.Background(), "43.4422469,-80.4699426", entry); err != nil {
+		t.Fatal(err)
+	}
+	service, err := weather.New(weather.Config{Client: &fakeFetcher{}, Latitude: 43.4422469, Longitude: -80.4699426, Repository: repository})
+	if err != nil {
+		t.Fatal(err)
+	}
+	current, err := service.Current(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if current.Condition != weather.ConditionCloud || current.ConditionCode != "NewAppleCondition" {
+		t.Fatalf("persisted condition was not mapped at read time: %+v", current)
+	}
 }
 
 func TestCurrentCachesWeatherAndMapsConditions(t *testing.T) {
@@ -29,7 +154,7 @@ func TestCurrentCachesWeatherAndMapsConditions(t *testing.T) {
 		Daylight:      boolPointer(false),
 		Expiration:    time.Now().Add(30 * time.Minute),
 	}}
-	service, err := New(fetcher, 43.4422469, -80.4699426)
+	service, err := weather.New(weather.Config{Client: fetcher, Latitude: 43.4422469, Longitude: -80.4699426})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,7 +163,7 @@ func TestCurrentCachesWeatherAndMapsConditions(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if current.Condition != ConditionMoon || current.Temperature != 13 {
+		if current.Condition != weather.ConditionMoon || current.Temperature != 13 {
 			t.Fatalf("unexpected current weather: %+v", current)
 		}
 	}
@@ -47,10 +172,24 @@ func TestCurrentCachesWeatherAndMapsConditions(t *testing.T) {
 	}
 }
 
-func boolPointer(value bool) *bool { return &value }
-
 func TestMapConditionFallsBackForUnknownCode(t *testing.T) {
-	if got := mapCondition("NewAppleCondition", true); got != ConditionCloud {
-		t.Fatalf("unexpected condition for unknown code: %s", got)
+	cache := &memoryCache{
+		entry: weather.CacheEntry{
+			ConditionCode: "NewAppleCondition",
+			Temperature:   12,
+			Daylight:      true,
+			FetchedAt:     time.Now(),
+			ExpiresAt:     time.Now().Add(time.Hour),
+		},
+		found: true,
+	}
+	service, err := weather.New(weather.Config{Client: &fakeFetcher{}, Latitude: 43.4422469, Longitude: -80.4699426, Repository: cache})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, err := service.Current(context.Background()); err != nil || got.Condition != weather.ConditionCloud {
+		t.Fatalf("unexpected condition for unknown code: %+v, %v", got, err)
 	}
 }
+
+func boolPointer(value bool) *bool { return &value }

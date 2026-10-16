@@ -16,11 +16,14 @@ import (
 
 	assets "github.com/kurtschwarz/homie/services/api"
 	"github.com/kurtschwarz/homie/services/api/internal/graph"
+	"github.com/kurtschwarz/homie/services/api/internal/queue"
 	"github.com/kurtschwarz/homie/services/api/internal/sdnotify"
 	"github.com/kurtschwarz/homie/services/api/internal/server"
 	"github.com/kurtschwarz/homie/services/api/internal/store"
 	"github.com/kurtschwarz/homie/services/api/internal/weather"
+	weatherjobs "github.com/kurtschwarz/homie/services/api/internal/weather/jobs"
 	"github.com/kurtschwarz/homie/services/api/internal/weatherkit"
+	"github.com/riverqueue/river"
 )
 
 const version = "dev"
@@ -43,6 +46,12 @@ func main() {
 	if err != nil {
 		logger.Error("configure WeatherKit; weather query will be unavailable", "error", err)
 	}
+	var refresher weatherjobs.Refresher
+	if weatherService != nil {
+		refresher = weatherService
+	}
+	workers := river.NewWorkers()
+	river.AddWorker(workers, weatherjobs.NewRefreshWorker(refresher, logger))
 
 	display, err := fs.Sub(assets.DisplayFS, "web/display")
 	if err != nil {
@@ -74,6 +83,28 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	backgroundQueue, err := queue.New(ctx, queue.Config{
+		DBPath:       envOr("HOMIE_RIVER_DB_PATH", "/var/lib/homie/river.db"),
+		Logger:       logger,
+		Workers:      workers,
+		PeriodicJobs: []*river.PeriodicJob{weatherjobs.PeriodicJob()},
+	})
+	if err != nil {
+		logger.Error("configure background queue", "error", err)
+		if db != nil {
+			_ = db.Close()
+		}
+		os.Exit(1)
+	}
+	if err := backgroundQueue.Start(ctx); err != nil {
+		logger.Error("start background queue", "error", err)
+		_ = backgroundQueue.Stop(context.Background())
+		if db != nil {
+			_ = db.Close()
+		}
+		os.Exit(1)
+	}
+
 	go func() {
 		logger.Info("listening", "addr", addr, "version", version)
 		if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -95,6 +126,9 @@ func main() {
 	defer cancel()
 	if err := httpServer.Shutdown(shutdownCtx); err != nil {
 		logger.Error("shutdown", "error", err)
+	}
+	if err := backgroundQueue.Stop(shutdownCtx); err != nil {
+		logger.Error("stop background queue", "error", err)
 	}
 	if db != nil {
 		if err := db.Close(); err != nil {

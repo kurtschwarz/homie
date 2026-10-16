@@ -6,8 +6,10 @@ require (
 	github.com/99designs/gqlgen v0.17.95
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/pressly/goose/v3 v3.29.0
+	github.com/riverqueue/river v0.49.0
+	github.com/riverqueue/river/riverdriver/riversqlite v0.49.0
+	github.com/riverqueue/river/rivertype v0.49.0
 	github.com/vektah/gqlparser/v2 v2.5.37
-	golang.org/x/sync v0.24.0
 	modernc.org/sqlite v1.60.1
 )
 
@@ -23,11 +25,18 @@ require (
 	github.com/mfridman/interpolate v0.0.2 // indirect
 	github.com/ncruces/go-strftime v1.1.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
+	github.com/riverqueue/river/riverdriver v0.49.0 // indirect
+	github.com/riverqueue/river/rivershared v0.49.0 // indirect
 	github.com/sethvargo/go-retry v0.5.0 // indirect
 	github.com/sosodev/duration v1.4.0 // indirect
+	github.com/tidwall/gjson v1.19.0 // indirect
+	github.com/tidwall/match v1.2.0 // indirect
+	github.com/tidwall/pretty v1.2.1 // indirect
+	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/urfave/cli/v3 v3.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/mod v0.41.0 // indirect
+	golang.org/x/sync v0.24.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect
 	golang.org/x/text v0.43.0 // indirect
 	golang.org/x/tools v0.51.0 // indirect

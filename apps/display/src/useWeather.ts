@@ -34,6 +34,7 @@ export function useWeather(): WeatherState {
     let timeout: ReturnType<typeof setTimeout> | undefined;
 
     async function fetchWeather() {
+      let retryDelay = 10 * 60_000;
       try {
         const response = await fetch("/graphql", {
           method: "POST",
@@ -48,9 +49,10 @@ export function useWeather(): WeatherState {
         if (body.errors?.length || !body.data?.weather) throw new Error("Weather query failed");
         if (!cancelled) setState({ kind: "ready", weather: body.data.weather });
       } catch {
+        retryDelay = 30_000;
         if (!cancelled) setState({ kind: "error" });
       } finally {
-        if (!cancelled) timeout = setTimeout(fetchWeather, 10 * 60_000);
+        if (!cancelled) timeout = setTimeout(fetchWeather, retryDelay);
       }
     }
 

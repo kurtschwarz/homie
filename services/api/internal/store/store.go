@@ -1,6 +1,7 @@
 package store
 
 import (
+	"database/sql"
 	"embed"
 	"fmt"
 	"log/slog"
@@ -22,6 +23,30 @@ func init() {
 
 // Open opens the SQLite database, configures it, and applies embedded migrations.
 func Open(path string, logger *slog.Logger) (*sqlx.DB, error) {
+	db, err := OpenSQLite(path)
+	if err != nil {
+		return nil, err
+	}
+	dbx := sqlx.NewDb(db, "sqlite")
+	if logger == nil {
+		logger = slog.Default()
+	}
+	goose.SetBaseFS(migrations)
+	if err := goose.SetDialect("sqlite3"); err != nil {
+		_ = dbx.Close()
+		return nil, fmt.Errorf("configure SQLite migrations: %w", err)
+	}
+	goose.SetLogger(gooseSlogLogger{logger: logger})
+	if err := goose.Up(db, "migrations"); err != nil {
+		_ = dbx.Close()
+		return nil, fmt.Errorf("apply SQLite migrations: %w", err)
+	}
+	return dbx, nil
+}
+
+// OpenSQLite opens a SQLite database with the connection settings shared by
+// application and queue databases. It does not apply application migrations.
+func OpenSQLite(path string) (*sql.DB, error) {
 	if path == "" {
 		return nil, fmt.Errorf("SQLite database path is required")
 	}
@@ -29,26 +54,13 @@ func Open(path string, logger *slog.Logger) (*sqlx.DB, error) {
 		return nil, fmt.Errorf("create SQLite database directory: %w", err)
 	}
 	dsn := "file:" + url.PathEscape(path) + "?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=synchronous(NORMAL)&_pragma=foreign_keys(1)"
-	db, err := sqlx.Open("sqlite", dsn)
+	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("open SQLite database: %w", err)
 	}
 	// SQLite allows concurrent readers but only one writer. A single connection
 	// also keeps PRAGMA user_version migrations serialized.
 	db.SetMaxOpenConns(1)
-	if logger == nil {
-		logger = slog.Default()
-	}
-	goose.SetBaseFS(migrations)
-	if err := goose.SetDialect("sqlite3"); err != nil {
-		_ = db.Close()
-		return nil, fmt.Errorf("configure SQLite migrations: %w", err)
-	}
-	goose.SetLogger(gooseSlogLogger{logger: logger})
-	if err := goose.Up(db.DB, "migrations"); err != nil {
-		_ = db.Close()
-		return nil, fmt.Errorf("apply SQLite migrations: %w", err)
-	}
 	return db, nil
 }
 

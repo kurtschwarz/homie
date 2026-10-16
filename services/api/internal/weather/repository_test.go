@@ -26,7 +26,6 @@ func TestSQLiteRepositoryRoundTripAndUpsert(t *testing.T) {
 		Temperature:   12.75,
 		Daylight:      true,
 		FetchedAt:     time.Unix(1_800_000_000, 0),
-		ExpiresAt:     time.Unix(1_800_003_600, 0),
 	}
 	if err := repo.Save(ctx, location, entry); err != nil {
 		t.Fatalf("save first entry (named bind parameters): %v", err)

@@ -9,6 +9,7 @@ services:
       HOMIE_ADDR: ":3000"
       HOMIE_PLAYGROUND: "1"
       HOMIE_DB_PATH: "/var/lib/homie/homie.db"
+      HOMIE_RIVER_DB_PATH: "/var/lib/homie/river.db"
     env_file:
       - path: ./services/api/.env
         required: false

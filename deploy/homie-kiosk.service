@@ -32,10 +32,18 @@ ExecStart=/bin/sh -c 'exec cage -- chromium \
   --kiosk "$HOMIE_KIOSK_URL" \
   --ozone-platform=wayland \
   --noerrdialogs \
-  --disable-infobars \
+  --no-first-run \
+  --no-default-browser-check \
+  --disable-search-engine-choice-screen \
+  --password-store=basic \
+  --force-device-scale-factor=1 \
+  --disable-pinch \
   --disable-session-crashed-bubble \
-  --disable-features=TranslateUI \
-  --check-for-update-interval=31536000 \
+  --disable-background-timer-throttling \
+  --disable-renderer-backgrounding \
+  --disable-backgrounding-occluded-windows \
+  --hide-scrollbars \
+  --disable-features=TranslateUI,PrivacySandboxSettings4,PrivacySandboxAdsAPIs,MediaRouter,DialMediaRouteProvider,OptimizationHints \
   --autoplay-policy=no-user-gesture-required \
   $HOMIE_KIOSK_EXTRA_FLAGS'
 

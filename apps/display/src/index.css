@@ -1,0 +1,27 @@
+/* The kiosk panel is exactly 1920x1080 and the display is laid out to that
+   size (see the fixed viewport in index.html). The UA default body margin
+   pushes the page past the panel, which shows up as a border around the UI
+   and makes Chromium draw scrollbars, so the page box is pinned flat here. */
+
+:root {
+  --homie-bg: #0b0907;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: var(--homie-bg);
+}
+
+/* The display is output-only: nobody is holding a mouse in front of it, and
+   a stray drag leaving text highlighted would stay on screen for days. The
+   universal selector is deliberate — the UA stylesheet sets its own cursor
+   on links and text, which beats inheriting these from body. */
+* {
+  cursor: none;
+  user-select: none;
+  -webkit-user-select: none;
+}

@@ -1,7 +1,7 @@
 import { useHealth } from "./useHealth";
 
 const theme = {
-  bg: "#0B0907",
+  bg: "var(--homie-bg)",
   ink: "#E2CFB6",
   ink2: "#8E7B66",
   accent: "#E0A060",

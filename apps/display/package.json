@@ -5,20 +5,22 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
-    "typecheck": "tsc -b --noEmit",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "pnpm --filter @homie/ui build && tsc --noEmit",
     "lint": "eslint ."
   },
   "dependencies": {
-    "@fontsource/lexend": "^5.2.5",
+    "@homie/ui": "workspace:*",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },
   "devDependencies": {
     "@homie/tsconfig": "workspace:*",
+    "@tailwindcss/vite": "^4.3.3",
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.5",
     "@vitejs/plugin-react": "^4.3.4",
+    "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "vite": "^8.3.4"
   }

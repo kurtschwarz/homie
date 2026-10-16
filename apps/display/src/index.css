@@ -3,9 +3,8 @@
    pushes the page past the panel, which shows up as a border around the UI
    and makes Chromium draw scrollbars, so the page box is pinned flat here. */
 
-:root {
-  --homie-bg: #0b0907;
-}
+@import "@homie/ui/globals.css";
+@source "./**/*.{ts,tsx}";
 
 html,
 body,
@@ -13,7 +12,7 @@ body,
   margin: 0;
   padding: 0;
   overflow: hidden;
-  background: var(--homie-bg);
+  background: var(--hm-bg);
 }
 
 /* The display is output-only: nobody is holding a mouse in front of it, and

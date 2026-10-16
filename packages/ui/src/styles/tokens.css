@@ -1,0 +1,515 @@
+/*
+ * Homie tokens. GENERATED from tokens.json by scripts/build-tokens.mjs; edit tokens.json, not this file.
+ * Themes: light (Day), dark (Evening), night, set with a class (.dark / .night) or data-theme.
+ * Surfaces: desktop by default, mobile under 768px, kiosk with data-surface="kiosk". data-surface="mobile" / "desktop" force the others.
+ */
+
+:root,
+.light,
+[data-theme="light"] {
+  --hm-bg: #F5F4F0;
+  --hm-surface: #FFFFFF;
+  --hm-ink: #15161A;
+  --hm-ink-2: #4F525A;
+  --hm-ink-3: #6B6E76;
+  --hm-line: #E2E0DA;
+  --hm-accent: #2550C7;
+  --hm-accent-soft: #E6ECFB;
+  --hm-on-accent: #FFFFFF;
+  --hm-photo: #E6E4DE;
+  --hm-scrim: rgba(16, 17, 20, 0.62);
+  --hm-on-scrim: #FFFFFF;
+  --hm-on-scrim-2: rgba(255, 255, 255, 0.82);
+  --hm-person-a: #C2521F;
+  --hm-person-b: #1F7A63;
+  --hm-person-c: #6E45C4;
+  --hm-person-family: #4F5663;
+  --hm-person-grownups: #A8366A;
+  --hm-person-a-tint: #C2521F24;
+  --hm-person-b-tint: #1F7A6324;
+  --hm-person-c-tint: #6E45C424;
+  --hm-person-family-tint: #4F566324;
+  --hm-person-grownups-tint: #A8366A24;
+  --hm-on-person: #FFFFFF;
+  --hm-photo-filter: none;
+  --hm-emoji-filter: none;
+}
+
+.dark,
+[data-theme="dark"] {
+  --hm-bg: #0E0F11;
+  --hm-surface: #17181B;
+  --hm-ink: #F2F2EF;
+  --hm-ink-2: #B9BBC1;
+  --hm-ink-3: #8F929A;
+  --hm-line: #26282D;
+  --hm-accent: #7FA2FF;
+  --hm-accent-soft: #1A2440;
+  --hm-on-accent: #0E0F11;
+  --hm-photo: #1B1C20;
+  --hm-scrim: rgba(16, 17, 20, 0.62);
+  --hm-on-scrim: #FFFFFF;
+  --hm-on-scrim-2: rgba(255, 255, 255, 0.82);
+  --hm-person-a: #FF9A62;
+  --hm-person-b: #4FD1AE;
+  --hm-person-c: #B79BFF;
+  --hm-person-family: #A9B0BC;
+  --hm-person-grownups: #F08AB6;
+  --hm-person-a-tint: #FF9A622E;
+  --hm-person-b-tint: #4FD1AE2E;
+  --hm-person-c-tint: #B79BFF2E;
+  --hm-person-family-tint: #A9B0BC2E;
+  --hm-person-grownups-tint: #F08AB62E;
+  --hm-on-person: #0E0F11;
+  --hm-photo-filter: brightness(0.85);
+  --hm-emoji-filter: none;
+  color-scheme: dark;
+}
+
+.night,
+[data-theme="night"] {
+  --hm-bg: #0B0907;
+  --hm-surface: #16120E;
+  --hm-ink: #E2CFB6;
+  --hm-ink-2: #B39E85;
+  --hm-ink-3: #8E7B66;
+  --hm-line: #2A231C;
+  --hm-accent: #E0A060;
+  --hm-accent-soft: #2A1E12;
+  --hm-on-accent: #0B0907;
+  --hm-photo: #120E0A;
+  --hm-scrim: rgba(16, 17, 20, 0.62);
+  --hm-on-scrim: #FFFFFF;
+  --hm-on-scrim-2: rgba(255, 255, 255, 0.82);
+  --hm-person-a: #D9925E;
+  --hm-person-b: #8DB89C;
+  --hm-person-c: #B49AC9;
+  --hm-person-family: #A39482;
+  --hm-person-grownups: #D196A6;
+  --hm-person-a-tint: #D9925E2E;
+  --hm-person-b-tint: #8DB89C2E;
+  --hm-person-c-tint: #B49AC92E;
+  --hm-person-family-tint: #A394822E;
+  --hm-person-grownups-tint: #D196A62E;
+  --hm-on-person: #0B0907;
+  --hm-photo-filter: brightness(0.5) saturate(0.7) sepia(0.25);
+  --hm-emoji-filter: brightness(0.75) saturate(0.8);
+  color-scheme: dark;
+}
+
+/* Scales. spacing and radius are written at kiosk size; components multiply them by --hm-density. */
+:root {
+  --hm-space-4: 4px;
+  --hm-space-6: 6px;
+  --hm-space-8: 8px;
+  --hm-space-10: 10px;
+  --hm-space-12: 12px;
+  --hm-space-14: 14px;
+  --hm-space-16: 16px;
+  --hm-space-18: 18px;
+  --hm-space-20: 20px;
+  --hm-space-24: 24px;
+  --hm-space-28: 28px;
+  --hm-space-32: 32px;
+  --hm-space-36: 36px;
+  --hm-space-40: 40px;
+  --hm-space-56: 56px;
+  --hm-space-64: 64px;
+  --hm-radius-3: 3px;
+  --hm-radius-6: 6px;
+  --hm-radius-16: 16px;
+  --hm-radius-18: 18px;
+  --hm-radius-20: 20px;
+  --hm-radius-22: 22px;
+  --hm-radius-24: 24px;
+  --hm-radius-28: 28px;
+  --hm-radius-32: 32px;
+  --hm-radius-pill: 999px;
+  --hm-radius-round: 50%;
+  --hm-kiosk-screen-padding: 32px;
+  --hm-kiosk-column-gap: 64px;
+  --hm-kiosk-section-gap: 36px;
+  --hm-kiosk-touch: 64px;
+  --hm-kiosk-button: 88px;
+  --hm-kiosk-badge-lg: 52px;
+  --hm-kiosk-badge: 50px;
+  --hm-kiosk-badge-sm: 38px;
+  --hm-kiosk-time-col: 200px;
+  --hm-kiosk-panel-radius: 24px;
+  --hm-kiosk-control-radius: 22px;
+  --hm-kiosk-density: 1;
+  --hm-desktop-screen-padding: 24px;
+  --hm-desktop-column-gap: 32px;
+  --hm-desktop-section-gap: 24px;
+  --hm-desktop-touch: 40px;
+  --hm-desktop-button: 44px;
+  --hm-desktop-badge-lg: 32px;
+  --hm-desktop-badge: 28px;
+  --hm-desktop-badge-sm: 22px;
+  --hm-desktop-time-col: 104px;
+  --hm-desktop-panel-radius: 20px;
+  --hm-desktop-control-radius: 12px;
+  --hm-desktop-density: 0.6;
+  --hm-mobile-screen-padding: 16px;
+  --hm-mobile-column-gap: 20px;
+  --hm-mobile-section-gap: 20px;
+  --hm-mobile-touch: 44px;
+  --hm-mobile-button: 48px;
+  --hm-mobile-badge-lg: 32px;
+  --hm-mobile-badge: 28px;
+  --hm-mobile-badge-sm: 22px;
+  --hm-mobile-time-col: 84px;
+  --hm-mobile-panel-radius: 16px;
+  --hm-mobile-control-radius: 12px;
+  --hm-mobile-density: 0.55;
+  --hm-shadow-sheet: 0 -12px 40px rgba(0, 0, 0, 0.16);
+  --hm-shadow-float: 0 16px 48px rgba(0, 0, 0, 0.18), 0 2px 6px rgba(0, 0, 0, 0.08);
+  --hm-shadow-float-strong: 0 16px 48px rgba(0, 0, 0, 0.22), 0 2px 6px rgba(0, 0, 0, 0.1);
+  --hm-size-screen-w: 1920px;
+  --hm-size-screen-h: 1080px;
+  --hm-size-photo-nav: 72px;
+  --hm-size-handle: 72px;
+  --hm-size-legend: 52px;
+  --hm-size-daily-row: 76px;
+  --hm-size-panel-portrait: 720px;
+  --hm-size-panel-square: 900px;
+  --hm-size-panel-landscape: 1040px;
+  --hm-size-now-card: 640px;
+  --hm-size-breakpoint: 768px;
+  --hm-border-line: 2px;
+  --hm-ring-person: 3px;
+  --hm-ring-person-sm: 2px;
+  --hm-opacity-past: 0.45;
+  --hm-press-scale: 0.97;
+}
+
+/* The active surface. */
+:root,
+[data-surface="desktop"] {
+  --hm-fs-display-xl: 96px;
+  --hm-lh-display-xl: 0.95;
+  --hm-fs-headline: 56px;
+  --hm-lh-headline: 1.08;
+  --hm-fs-clock: 48px;
+  --hm-lh-clock: 1;
+  --hm-fs-display: 40px;
+  --hm-lh-display: 1.1;
+  --hm-fs-title-lg: 30px;
+  --hm-lh-title-lg: 1.2;
+  --hm-fs-clock-sm: 28px;
+  --hm-lh-clock-sm: 1;
+  --hm-fs-title: 26px;
+  --hm-lh-title: 1.2;
+  --hm-fs-stat: 24px;
+  --hm-lh-stat: 1;
+  --hm-fs-title-sm: 22px;
+  --hm-lh-title-sm: 1.25;
+  --hm-fs-lead: 18px;
+  --hm-lh-lead: 1.45;
+  --hm-fs-item-lg: 18px;
+  --hm-lh-item-lg: 1.35;
+  --hm-fs-item: 17px;
+  --hm-lh-item: 1.35;
+  --hm-fs-strong: 16px;
+  --hm-lh-strong: 1.35;
+  --hm-fs-body: 16px;
+  --hm-lh-body: 1.45;
+  --hm-fs-body-sm: 15px;
+  --hm-lh-body-sm: 1.45;
+  --hm-fs-label-lg: 16px;
+  --hm-lh-label-lg: 1.25;
+  --hm-fs-label: 14px;
+  --hm-lh-label: 1.3;
+  --hm-fs-caption: 14px;
+  --hm-lh-caption: 1.4;
+  --hm-fs-eyebrow-lg: 14px;
+  --hm-lh-eyebrow-lg: 1.25;
+  --hm-fs-eyebrow: 12px;
+  --hm-lh-eyebrow: 1.25;
+  --hm-fs-small: 13px;
+  --hm-lh-small: 1.35;
+  --hm-fs-micro: 12px;
+  --hm-lh-micro: 1.35;
+  --hm-screen-padding: var(--hm-desktop-screen-padding);
+  --hm-column-gap: var(--hm-desktop-column-gap);
+  --hm-section-gap: var(--hm-desktop-section-gap);
+  --hm-touch: var(--hm-desktop-touch);
+  --hm-button: var(--hm-desktop-button);
+  --hm-badge-lg: var(--hm-desktop-badge-lg);
+  --hm-badge: var(--hm-desktop-badge);
+  --hm-badge-sm: var(--hm-desktop-badge-sm);
+  --hm-time-col: var(--hm-desktop-time-col);
+  --hm-panel-radius: var(--hm-desktop-panel-radius);
+  --hm-control-radius: var(--hm-desktop-control-radius);
+  --hm-density: var(--hm-desktop-density);
+}
+
+@media (max-width: 767.98px) {
+  :root {
+    --hm-fs-display-xl: 64px;
+    --hm-lh-display-xl: 0.95;
+    --hm-fs-headline: 34px;
+    --hm-lh-headline: 1.1;
+    --hm-fs-clock: 40px;
+    --hm-lh-clock: 1;
+    --hm-fs-display: 28px;
+    --hm-lh-display: 1.15;
+    --hm-fs-title-lg: 24px;
+    --hm-lh-title-lg: 1.2;
+    --hm-fs-clock-sm: 22px;
+    --hm-lh-clock-sm: 1;
+    --hm-fs-title: 22px;
+    --hm-lh-title: 1.2;
+    --hm-fs-stat: 20px;
+    --hm-lh-stat: 1;
+    --hm-fs-title-sm: 20px;
+    --hm-lh-title-sm: 1.25;
+    --hm-fs-lead: 16px;
+    --hm-lh-lead: 1.45;
+    --hm-fs-item-lg: 17px;
+    --hm-lh-item-lg: 1.35;
+    --hm-fs-item: 16px;
+    --hm-lh-item: 1.35;
+    --hm-fs-strong: 15px;
+    --hm-lh-strong: 1.35;
+    --hm-fs-body: 15px;
+    --hm-lh-body: 1.45;
+    --hm-fs-body-sm: 14px;
+    --hm-lh-body-sm: 1.45;
+    --hm-fs-label-lg: 15px;
+    --hm-lh-label-lg: 1.25;
+    --hm-fs-label: 14px;
+    --hm-lh-label: 1.3;
+    --hm-fs-caption: 13px;
+    --hm-lh-caption: 1.4;
+    --hm-fs-eyebrow-lg: 13px;
+    --hm-lh-eyebrow-lg: 1.25;
+    --hm-fs-eyebrow: 11px;
+    --hm-lh-eyebrow: 1.25;
+    --hm-fs-small: 12px;
+    --hm-lh-small: 1.35;
+    --hm-fs-micro: 12px;
+    --hm-lh-micro: 1.35;
+    --hm-screen-padding: var(--hm-mobile-screen-padding);
+    --hm-column-gap: var(--hm-mobile-column-gap);
+    --hm-section-gap: var(--hm-mobile-section-gap);
+    --hm-touch: var(--hm-mobile-touch);
+    --hm-button: var(--hm-mobile-button);
+    --hm-badge-lg: var(--hm-mobile-badge-lg);
+    --hm-badge: var(--hm-mobile-badge);
+    --hm-badge-sm: var(--hm-mobile-badge-sm);
+    --hm-time-col: var(--hm-mobile-time-col);
+    --hm-panel-radius: var(--hm-mobile-panel-radius);
+    --hm-control-radius: var(--hm-mobile-control-radius);
+    --hm-density: var(--hm-mobile-density);
+  }
+}
+
+[data-surface="desktop"] {
+  --hm-fs-display-xl: 96px;
+  --hm-lh-display-xl: 0.95;
+  --hm-fs-headline: 56px;
+  --hm-lh-headline: 1.08;
+  --hm-fs-clock: 48px;
+  --hm-lh-clock: 1;
+  --hm-fs-display: 40px;
+  --hm-lh-display: 1.1;
+  --hm-fs-title-lg: 30px;
+  --hm-lh-title-lg: 1.2;
+  --hm-fs-clock-sm: 28px;
+  --hm-lh-clock-sm: 1;
+  --hm-fs-title: 26px;
+  --hm-lh-title: 1.2;
+  --hm-fs-stat: 24px;
+  --hm-lh-stat: 1;
+  --hm-fs-title-sm: 22px;
+  --hm-lh-title-sm: 1.25;
+  --hm-fs-lead: 18px;
+  --hm-lh-lead: 1.45;
+  --hm-fs-item-lg: 18px;
+  --hm-lh-item-lg: 1.35;
+  --hm-fs-item: 17px;
+  --hm-lh-item: 1.35;
+  --hm-fs-strong: 16px;
+  --hm-lh-strong: 1.35;
+  --hm-fs-body: 16px;
+  --hm-lh-body: 1.45;
+  --hm-fs-body-sm: 15px;
+  --hm-lh-body-sm: 1.45;
+  --hm-fs-label-lg: 16px;
+  --hm-lh-label-lg: 1.25;
+  --hm-fs-label: 14px;
+  --hm-lh-label: 1.3;
+  --hm-fs-caption: 14px;
+  --hm-lh-caption: 1.4;
+  --hm-fs-eyebrow-lg: 14px;
+  --hm-lh-eyebrow-lg: 1.25;
+  --hm-fs-eyebrow: 12px;
+  --hm-lh-eyebrow: 1.25;
+  --hm-fs-small: 13px;
+  --hm-lh-small: 1.35;
+  --hm-fs-micro: 12px;
+  --hm-lh-micro: 1.35;
+  --hm-screen-padding: var(--hm-desktop-screen-padding);
+  --hm-column-gap: var(--hm-desktop-column-gap);
+  --hm-section-gap: var(--hm-desktop-section-gap);
+  --hm-touch: var(--hm-desktop-touch);
+  --hm-button: var(--hm-desktop-button);
+  --hm-badge-lg: var(--hm-desktop-badge-lg);
+  --hm-badge: var(--hm-desktop-badge);
+  --hm-badge-sm: var(--hm-desktop-badge-sm);
+  --hm-time-col: var(--hm-desktop-time-col);
+  --hm-panel-radius: var(--hm-desktop-panel-radius);
+  --hm-control-radius: var(--hm-desktop-control-radius);
+  --hm-density: var(--hm-desktop-density);
+}
+
+[data-surface="mobile"] {
+  --hm-fs-display-xl: 64px;
+  --hm-lh-display-xl: 0.95;
+  --hm-fs-headline: 34px;
+  --hm-lh-headline: 1.1;
+  --hm-fs-clock: 40px;
+  --hm-lh-clock: 1;
+  --hm-fs-display: 28px;
+  --hm-lh-display: 1.15;
+  --hm-fs-title-lg: 24px;
+  --hm-lh-title-lg: 1.2;
+  --hm-fs-clock-sm: 22px;
+  --hm-lh-clock-sm: 1;
+  --hm-fs-title: 22px;
+  --hm-lh-title: 1.2;
+  --hm-fs-stat: 20px;
+  --hm-lh-stat: 1;
+  --hm-fs-title-sm: 20px;
+  --hm-lh-title-sm: 1.25;
+  --hm-fs-lead: 16px;
+  --hm-lh-lead: 1.45;
+  --hm-fs-item-lg: 17px;
+  --hm-lh-item-lg: 1.35;
+  --hm-fs-item: 16px;
+  --hm-lh-item: 1.35;
+  --hm-fs-strong: 15px;
+  --hm-lh-strong: 1.35;
+  --hm-fs-body: 15px;
+  --hm-lh-body: 1.45;
+  --hm-fs-body-sm: 14px;
+  --hm-lh-body-sm: 1.45;
+  --hm-fs-label-lg: 15px;
+  --hm-lh-label-lg: 1.25;
+  --hm-fs-label: 14px;
+  --hm-lh-label: 1.3;
+  --hm-fs-caption: 13px;
+  --hm-lh-caption: 1.4;
+  --hm-fs-eyebrow-lg: 13px;
+  --hm-lh-eyebrow-lg: 1.25;
+  --hm-fs-eyebrow: 11px;
+  --hm-lh-eyebrow: 1.25;
+  --hm-fs-small: 12px;
+  --hm-lh-small: 1.35;
+  --hm-fs-micro: 12px;
+  --hm-lh-micro: 1.35;
+  --hm-screen-padding: var(--hm-mobile-screen-padding);
+  --hm-column-gap: var(--hm-mobile-column-gap);
+  --hm-section-gap: var(--hm-mobile-section-gap);
+  --hm-touch: var(--hm-mobile-touch);
+  --hm-button: var(--hm-mobile-button);
+  --hm-badge-lg: var(--hm-mobile-badge-lg);
+  --hm-badge: var(--hm-mobile-badge);
+  --hm-badge-sm: var(--hm-mobile-badge-sm);
+  --hm-time-col: var(--hm-mobile-time-col);
+  --hm-panel-radius: var(--hm-mobile-panel-radius);
+  --hm-control-radius: var(--hm-mobile-control-radius);
+  --hm-density: var(--hm-mobile-density);
+}
+
+[data-surface="kiosk"] {
+  --hm-fs-display-xl: 200px;
+  --hm-lh-display-xl: 0.9;
+  --hm-fs-headline: 112px;
+  --hm-lh-headline: 1.04;
+  --hm-fs-clock: 88px;
+  --hm-lh-clock: 1;
+  --hm-fs-display: 80px;
+  --hm-lh-display: 1.1;
+  --hm-fs-title-lg: 56px;
+  --hm-lh-title-lg: 1.15;
+  --hm-fs-clock-sm: 56px;
+  --hm-lh-clock-sm: 1;
+  --hm-fs-title: 48px;
+  --hm-lh-title: 1.2;
+  --hm-fs-stat: 44px;
+  --hm-lh-stat: 1;
+  --hm-fs-title-sm: 40px;
+  --hm-lh-title-sm: 1.2;
+  --hm-fs-lead: 34px;
+  --hm-lh-lead: 1.25;
+  --hm-fs-item-lg: 34px;
+  --hm-lh-item-lg: 1.3;
+  --hm-fs-item: 32px;
+  --hm-lh-item: 1.3;
+  --hm-fs-strong: 30px;
+  --hm-lh-strong: 1.3;
+  --hm-fs-body: 28px;
+  --hm-lh-body: 1.35;
+  --hm-fs-body-sm: 26px;
+  --hm-lh-body-sm: 1.35;
+  --hm-fs-label-lg: 26px;
+  --hm-lh-label-lg: 1.2;
+  --hm-fs-label: 24px;
+  --hm-lh-label: 1.25;
+  --hm-fs-caption: 22px;
+  --hm-lh-caption: 1.35;
+  --hm-fs-eyebrow-lg: 26px;
+  --hm-lh-eyebrow-lg: 1.2;
+  --hm-fs-eyebrow: 20px;
+  --hm-lh-eyebrow: 1.2;
+  --hm-fs-small: 20px;
+  --hm-lh-small: 1.3;
+  --hm-fs-micro: 18px;
+  --hm-lh-micro: 1.3;
+  --hm-screen-padding: var(--hm-kiosk-screen-padding);
+  --hm-column-gap: var(--hm-kiosk-column-gap);
+  --hm-section-gap: var(--hm-kiosk-section-gap);
+  --hm-touch: var(--hm-kiosk-touch);
+  --hm-button: var(--hm-kiosk-button);
+  --hm-badge-lg: var(--hm-kiosk-badge-lg);
+  --hm-badge: var(--hm-kiosk-badge);
+  --hm-badge-sm: var(--hm-kiosk-badge-sm);
+  --hm-time-col: var(--hm-kiosk-time-col);
+  --hm-panel-radius: var(--hm-kiosk-panel-radius);
+  --hm-control-radius: var(--hm-kiosk-control-radius);
+  --hm-density: var(--hm-kiosk-density);
+}
+
+/* shadcn semantic variables, declared wherever a theme is set so they resolve against that theme. */
+:root,
+.light,
+.dark,
+.night,
+[data-theme] {
+  --background: var(--hm-bg);
+  --foreground: var(--hm-ink);
+  --card: var(--hm-surface);
+  --card-foreground: var(--hm-ink);
+  --popover: var(--hm-surface);
+  --popover-foreground: var(--hm-ink);
+  --primary: var(--hm-accent);
+  --primary-foreground: var(--hm-on-accent);
+  --secondary: var(--hm-surface);
+  --secondary-foreground: var(--hm-ink);
+  --muted: var(--hm-photo);
+  --muted-foreground: var(--hm-ink-2);
+  --accent: var(--hm-accent-soft);
+  --accent-foreground: var(--hm-ink);
+  --border: var(--hm-line);
+  --input: var(--hm-line);
+  --ring: var(--hm-accent);
+  /* Homie has no error colour yet. This placeholder keeps stock shadcn components rendering; replace it. */
+  --destructive: var(--hm-person-a);
+}
+/* shadcn's radius follows the surface's control radius. */
+:root,
+[data-surface] {
+  --radius: var(--hm-control-radius);
+}

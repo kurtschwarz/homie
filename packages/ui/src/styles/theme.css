@@ -1,0 +1,200 @@
+/* GENERATED from tokens.json by scripts/build-tokens.mjs; edit tokens.json, not this file. */
+
+@theme inline {
+  /* Colours: bg-hm-surface, text-hm-ink-2, bg-hm-person-a-tint ... */
+  --color-hm-bg: var(--hm-bg);
+  --color-hm-surface: var(--hm-surface);
+  --color-hm-ink: var(--hm-ink);
+  --color-hm-ink-2: var(--hm-ink-2);
+  --color-hm-ink-3: var(--hm-ink-3);
+  --color-hm-line: var(--hm-line);
+  --color-hm-accent: var(--hm-accent);
+  --color-hm-accent-soft: var(--hm-accent-soft);
+  --color-hm-on-accent: var(--hm-on-accent);
+  --color-hm-photo: var(--hm-photo);
+  --color-hm-scrim: var(--hm-scrim);
+  --color-hm-on-scrim: var(--hm-on-scrim);
+  --color-hm-on-scrim-2: var(--hm-on-scrim-2);
+  --color-hm-person-a: var(--hm-person-a);
+  --color-hm-person-b: var(--hm-person-b);
+  --color-hm-person-c: var(--hm-person-c);
+  --color-hm-person-family: var(--hm-person-family);
+  --color-hm-person-grownups: var(--hm-person-grownups);
+  --color-hm-person-a-tint: var(--hm-person-a-tint);
+  --color-hm-person-b-tint: var(--hm-person-b-tint);
+  --color-hm-person-c-tint: var(--hm-person-c-tint);
+  --color-hm-person-family-tint: var(--hm-person-family-tint);
+  --color-hm-person-grownups-tint: var(--hm-person-grownups-tint);
+  --color-hm-on-person: var(--hm-on-person);
+
+  /* Type roles, sized by the active surface: text-hm-headline, text-hm-body ... */
+  --text-hm-display-xl: var(--hm-fs-display-xl);
+  --text-hm-display-xl--line-height: var(--hm-lh-display-xl);
+  --text-hm-display-xl--letter-spacing: -0.05em;
+  --text-hm-display-xl--font-weight: 500;
+  --text-hm-headline: var(--hm-fs-headline);
+  --text-hm-headline--line-height: var(--hm-lh-headline);
+  --text-hm-headline--letter-spacing: -0.03em;
+  --text-hm-headline--font-weight: 600;
+  --text-hm-clock: var(--hm-fs-clock);
+  --text-hm-clock--line-height: var(--hm-lh-clock);
+  --text-hm-clock--letter-spacing: -0.04em;
+  --text-hm-clock--font-weight: 500;
+  --text-hm-display: var(--hm-fs-display);
+  --text-hm-display--line-height: var(--hm-lh-display);
+  --text-hm-display--letter-spacing: -0.03em;
+  --text-hm-display--font-weight: 600;
+  --text-hm-title-lg: var(--hm-fs-title-lg);
+  --text-hm-title-lg--line-height: var(--hm-lh-title-lg);
+  --text-hm-title-lg--letter-spacing: -0.03em;
+  --text-hm-title-lg--font-weight: 600;
+  --text-hm-clock-sm: var(--hm-fs-clock-sm);
+  --text-hm-clock-sm--line-height: var(--hm-lh-clock-sm);
+  --text-hm-clock-sm--letter-spacing: -0.04em;
+  --text-hm-clock-sm--font-weight: 500;
+  --text-hm-title: var(--hm-fs-title);
+  --text-hm-title--line-height: var(--hm-lh-title);
+  --text-hm-title--letter-spacing: -0.02em;
+  --text-hm-title--font-weight: 600;
+  --text-hm-stat: var(--hm-fs-stat);
+  --text-hm-stat--line-height: var(--hm-lh-stat);
+  --text-hm-stat--letter-spacing: -0.02em;
+  --text-hm-stat--font-weight: 500;
+  --text-hm-title-sm: var(--hm-fs-title-sm);
+  --text-hm-title-sm--line-height: var(--hm-lh-title-sm);
+  --text-hm-title-sm--letter-spacing: -0.02em;
+  --text-hm-title-sm--font-weight: 600;
+  --text-hm-lead: var(--hm-fs-lead);
+  --text-hm-lead--line-height: var(--hm-lh-lead);
+  --text-hm-lead--font-weight: 400;
+  --text-hm-item-lg: var(--hm-fs-item-lg);
+  --text-hm-item-lg--line-height: var(--hm-lh-item-lg);
+  --text-hm-item-lg--font-weight: 500;
+  --text-hm-item: var(--hm-fs-item);
+  --text-hm-item--line-height: var(--hm-lh-item);
+  --text-hm-item--font-weight: 500;
+  --text-hm-strong: var(--hm-fs-strong);
+  --text-hm-strong--line-height: var(--hm-lh-strong);
+  --text-hm-strong--font-weight: 500;
+  --text-hm-body: var(--hm-fs-body);
+  --text-hm-body--line-height: var(--hm-lh-body);
+  --text-hm-body--font-weight: 400;
+  --text-hm-body-sm: var(--hm-fs-body-sm);
+  --text-hm-body-sm--line-height: var(--hm-lh-body-sm);
+  --text-hm-body-sm--font-weight: 400;
+  --text-hm-label-lg: var(--hm-fs-label-lg);
+  --text-hm-label-lg--line-height: var(--hm-lh-label-lg);
+  --text-hm-label-lg--font-weight: 500;
+  --text-hm-label: var(--hm-fs-label);
+  --text-hm-label--line-height: var(--hm-lh-label);
+  --text-hm-label--font-weight: 500;
+  --text-hm-caption: var(--hm-fs-caption);
+  --text-hm-caption--line-height: var(--hm-lh-caption);
+  --text-hm-caption--font-weight: 400;
+  --text-hm-eyebrow-lg: var(--hm-fs-eyebrow-lg);
+  --text-hm-eyebrow-lg--line-height: var(--hm-lh-eyebrow-lg);
+  --text-hm-eyebrow-lg--letter-spacing: 0.08em;
+  --text-hm-eyebrow-lg--font-weight: 600;
+  --text-hm-eyebrow: var(--hm-fs-eyebrow);
+  --text-hm-eyebrow--line-height: var(--hm-lh-eyebrow);
+  --text-hm-eyebrow--letter-spacing: 0.08em;
+  --text-hm-eyebrow--font-weight: 600;
+  --text-hm-small: var(--hm-fs-small);
+  --text-hm-small--line-height: var(--hm-lh-small);
+  --text-hm-small--font-weight: 400;
+  --text-hm-micro: var(--hm-fs-micro);
+  --text-hm-micro--line-height: var(--hm-lh-micro);
+  --text-hm-micro--font-weight: 400;
+
+  /* Surface layout: h-hm-touch, h-hm-button, size-hm-badge, p-hm-screen, gap-hm-column, gap-hm-section ... */
+  --spacing-hm-touch: var(--hm-touch);
+  --spacing-hm-button: var(--hm-button);
+  --spacing-hm-badge-lg: var(--hm-badge-lg);
+  --spacing-hm-badge: var(--hm-badge);
+  --spacing-hm-badge-sm: var(--hm-badge-sm);
+  --spacing-hm-time-col: var(--hm-time-col);
+  --spacing-hm-screen: var(--hm-screen-padding);
+  --spacing-hm-column: var(--hm-column-gap);
+  --spacing-hm-section: var(--hm-section-gap);
+
+  /* Density-scaled spacing (kiosk px × density): gap-hm-12, p-hm-24, size-hm-28 ... */
+  --spacing-hm-2: calc(2px * var(--hm-density));
+  --spacing-hm-4: calc(4px * var(--hm-density));
+  --spacing-hm-6: calc(6px * var(--hm-density));
+  --spacing-hm-8: calc(8px * var(--hm-density));
+  --spacing-hm-10: calc(10px * var(--hm-density));
+  --spacing-hm-12: calc(12px * var(--hm-density));
+  --spacing-hm-14: calc(14px * var(--hm-density));
+  --spacing-hm-16: calc(16px * var(--hm-density));
+  --spacing-hm-18: calc(18px * var(--hm-density));
+  --spacing-hm-20: calc(20px * var(--hm-density));
+  --spacing-hm-22: calc(22px * var(--hm-density));
+  --spacing-hm-24: calc(24px * var(--hm-density));
+  --spacing-hm-26: calc(26px * var(--hm-density));
+  --spacing-hm-28: calc(28px * var(--hm-density));
+  --spacing-hm-30: calc(30px * var(--hm-density));
+  --spacing-hm-32: calc(32px * var(--hm-density));
+  --spacing-hm-36: calc(36px * var(--hm-density));
+  --spacing-hm-40: calc(40px * var(--hm-density));
+  --spacing-hm-44: calc(44px * var(--hm-density));
+  --spacing-hm-52: calc(52px * var(--hm-density));
+  --spacing-hm-56: calc(56px * var(--hm-density));
+  --spacing-hm-64: calc(64px * var(--hm-density));
+  --spacing-hm-76: calc(76px * var(--hm-density));
+  --spacing-hm-128: calc(128px * var(--hm-density));
+
+  /* Fixed kiosk sizes: w-hm-panel-landscape, w-hm-now-card ... */
+  --spacing-hm-screen-w: var(--hm-size-screen-w);
+  --spacing-hm-screen-h: var(--hm-size-screen-h);
+  --spacing-hm-photo-nav: var(--hm-size-photo-nav);
+  --spacing-hm-handle: var(--hm-size-handle);
+  --spacing-hm-legend: var(--hm-size-legend);
+  --spacing-hm-daily-row: var(--hm-size-daily-row);
+  --spacing-hm-panel-portrait: var(--hm-size-panel-portrait);
+  --spacing-hm-panel-square: var(--hm-size-panel-square);
+  --spacing-hm-panel-landscape: var(--hm-size-panel-landscape);
+  --spacing-hm-now-card: var(--hm-size-now-card);
+
+  /* Radii: rounded-hm-panel and rounded-hm-control follow the surface; rounded-hm-18 etc. scale with density. */
+  --radius-hm-panel: var(--hm-panel-radius);
+  --radius-hm-control: var(--hm-control-radius);
+  --radius-hm-3: calc(3px * var(--hm-density));
+  --radius-hm-6: calc(6px * var(--hm-density));
+  --radius-hm-16: calc(16px * var(--hm-density));
+  --radius-hm-18: calc(18px * var(--hm-density));
+  --radius-hm-20: calc(20px * var(--hm-density));
+  --radius-hm-22: calc(22px * var(--hm-density));
+  --radius-hm-24: calc(24px * var(--hm-density));
+  --radius-hm-28: calc(28px * var(--hm-density));
+  --radius-hm-32: calc(32px * var(--hm-density));
+
+  /* Shadows: shadow-hm-sheet ... */
+  --shadow-hm-sheet: var(--hm-shadow-sheet);
+  --shadow-hm-float: var(--hm-shadow-float);
+  --shadow-hm-float-strong: var(--hm-shadow-float-strong);
+}
+
+@theme {
+  --font-sans: "Lexend Variable", "Lexend", system-ui, sans-serif;
+  --ease-hm-panel: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-hm-sheet: cubic-bezier(0.2, 0.9, 0.3, 1);
+  --animate-hm-blink: hm-blink 2s steps(1, end) infinite;
+
+  @keyframes hm-blink {
+    0%, 49.9% { opacity: 1; }
+    50%, 100% { opacity: 0.18; }
+  }
+}
+
+/* Surface variants. mobile: = under 768px (or data-surface="mobile"); kiosk: = data-surface="kiosk". */
+@custom-variant kiosk (&:where([data-surface="kiosk"], [data-surface="kiosk"] *));
+@custom-variant mobile {
+  &:where([data-surface="mobile"], [data-surface="mobile"] *) {
+    @slot;
+  }
+  @media (max-width: 767.98px) {
+    &:where(:not([data-surface="desktop"], [data-surface="desktop"] *, [data-surface="kiosk"], [data-surface="kiosk"] *)) {
+      @slot;
+    }
+  }
+}

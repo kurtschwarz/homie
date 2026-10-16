@@ -1,9 +1,10 @@
 {
   "extends": "@homie/tsconfig/base.json",
   "compilerOptions": {
-    "composite": true,
+    "rootDir": "../..",
     "outDir": "dist",
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    "paths": { "@homie/ui/*": ["../../packages/ui/src/*"] }
   },
   "include": ["src"]
 }

@@ -9,7 +9,7 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml turbo.json ./
 COPY apps apps
 COPY packages packages
 RUN npm install -g pnpm@12.9.1 && pnpm install --frozen-lockfile
-RUN pnpm --filter @homie/display build && pnpm --filter @homie/manager build
+RUN pnpm exec turbo run build --filter=@homie/display --filter=@homie/manager
 
 FROM --platform=$BUILDPLATFORM golang:1.26-bookworm AS api-builder
 ARG TARGETOS

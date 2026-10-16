@@ -22,6 +22,17 @@ deploy: build
     ssh {{pi_host}} "sudo systemctl restart homie-api.service"
     ssh {{pi_host}} "sudo systemctl restart homie-kiosk.service"
 
+# The theme must land under the name "default": cage asks wlroots for a NULL
+# theme, which resolves to "default" and never consults XCURSOR_THEME. The
+# cursors live in {{pi_dir}}, owned by the homie user, so this needs no
+# password. Only needed once per device, or after reimaging.
+
+# Install the transparent cursor theme that the kiosk unit's XCURSOR_PATH points at.
+install-blank-cursor:
+    rsync -az ./deploy/blank-cursor.py {{pi_host}}:{{pi_dir}}/blank-cursor.py
+    ssh {{pi_host}} "python3 {{pi_dir}}/blank-cursor.py {{pi_dir}}/cursors default"
+    ssh {{pi_host}} "sudo systemctl restart homie-kiosk.service"
+
 # Push updated systemd units (prompts for a password).
 deploy-units:
     rsync -az ./deploy/*.service {{pi_host}}:/tmp/

@@ -6,9 +6,28 @@ Conflicts=getty@tty1.service
 
 [Service]
 Type=simple
+User=homie
+Group=homie
+PAMName=login
+TTYPath=/dev/tty1
+StandardInput=tty
+StandardOutput=journal
+StandardError=journal
+
+# Core environment configuration
 EnvironmentFile=-/opt/homie/kiosk.env
 Environment=HOMIE_KIOSK_URL=http://localhost:3000
 Environment=HOMIE_KIOSK_EXTRA_FLAGS=
+
+# Cursor Configuration (Your custom transparent theme assets)
+Environment=XCURSOR_PATH=/opt/homie/cursors
+Environment=XCURSOR_THEME=homie-blank
+
+# FIX: Explicitly pass runtime directory context variables so Cage can read assets
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+Environment=XDG_SESSION_TYPE=wayland
+Environment=XDG_DATA_DIRS=/usr/local/share:/usr/share
+
 ExecStart=/bin/sh -c 'exec cage -- chromium \
   --kiosk "$HOMIE_KIOSK_URL" \
   --ozone-platform=wayland \
@@ -19,16 +38,9 @@ ExecStart=/bin/sh -c 'exec cage -- chromium \
   --check-for-update-interval=31536000 \
   --autoplay-policy=no-user-gesture-required \
   $HOMIE_KIOSK_EXTRA_FLAGS'
+
 Restart=always
 RestartSec=2
-
-User=homie
-Group=homie
-PAMName=login
-TTYPath=/dev/tty1
-StandardInput=tty
-StandardOutput=journal
-StandardError=journal
 
 [Install]
 WantedBy=multi-user.target

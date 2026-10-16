@@ -1,0 +1,9 @@
+{
+  "extends": "@homie/tsconfig/base.json",
+  "compilerOptions": {
+    "composite": true,
+    "outDir": "dist",
+    "types": ["vite/client"]
+  },
+  "include": ["src"]
+}

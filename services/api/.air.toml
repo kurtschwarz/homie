@@ -1,0 +1,12 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+cmd = "go build -o ./tmp/homie-api ./cmd/homie-api"
+bin = "./tmp/homie-api"
+include_ext = ["go", "graphqls"]
+exclude_dir = ["tmp", "web", "node_modules"]
+delay = 150
+
+[log]
+time = false

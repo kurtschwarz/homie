@@ -1,0 +1,46 @@
+services:
+  api:
+    build:
+      context: ./services/api
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./services/api:/src
+      - api-gomod-cache:/go/pkg/mod
+    environment:
+      HOMIE_ADDR: ":3000"
+      HOMIE_PLAYGROUND: "1"
+
+  display:
+    image: node:22-bookworm
+    working_dir: /app
+    command: sh -c "corepack enable && pnpm install --frozen-lockfile && pnpm --filter @homie/display dev -- --host"
+    ports:
+      - "5173:5173"
+    environment:
+      HOMIE_API_URL: "http://api:3000"
+    volumes:
+      - .:/app
+      - display-node-modules:/app/node_modules
+    depends_on:
+      - api
+
+  manager:
+    image: node:22-bookworm
+    working_dir: /app
+    command: sh -c "corepack enable && pnpm install --frozen-lockfile && pnpm --filter @homie/manager dev -- --host"
+    ports:
+      - "5174:5174"
+    environment:
+      HOMIE_API_URL: "http://api:3000"
+    volumes:
+      - .:/app
+      - manager-node-modules:/app/node_modules
+    depends_on:
+      - api
+
+volumes:
+  api-gomod-cache:
+  display-node-modules:
+  manager-node-modules:

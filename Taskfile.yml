@@ -1,0 +1,47 @@
+version: "3"
+
+vars:
+  PI_HOST: homie
+  PI_DIR: /opt/homie
+
+tasks:
+  dev:
+    desc: Run the API (with hot reload) and both Vite dev servers in Docker.
+    cmds:
+      - docker compose -f docker-compose.dev.yml up --build
+
+  build:
+    desc: Cross-compile the homie-api binary (linux/arm64) with both SPAs embedded.
+    cmds:
+      - docker buildx build --platform linux/arm64 --target export --output type=local,dest=./dist .
+
+  deploy:
+    desc: Build and ship the binary + kiosk URL to the Pi, then restart services.
+    deps: [build]
+    cmds:
+      - rsync -az ./dist/homie-api {{.PI_HOST}}:{{.PI_DIR}}/homie-api.new
+      - ssh {{.PI_HOST}} "mv {{.PI_DIR}}/homie-api.new {{.PI_DIR}}/homie-api && chmod +x {{.PI_DIR}}/homie-api"
+      - ssh {{.PI_HOST}} "sudo systemctl restart homie-api.service"
+
+  deploy:units:
+    desc: Push updated systemd units and the sudoers rule (prompts for a password).
+    cmds:
+      - rsync -az ./deploy/*.service {{.PI_HOST}}:/tmp/
+      - ssh -t {{.PI_HOST}} "sudo mv /tmp/homie-*.service /etc/systemd/system/ && sudo systemctl daemon-reload"
+      - rsync -az ./deploy/sudoers.d/homie-deploy {{.PI_HOST}}:/tmp/homie-deploy.sudoers
+      - ssh -t {{.PI_HOST}} "sudo visudo -cf /tmp/homie-deploy.sudoers && sudo mv /tmp/homie-deploy.sudoers /etc/sudoers.d/homie-deploy && sudo chmod 0440 /etc/sudoers.d/homie-deploy"
+
+  kiosk:dev:
+    desc: Point the kiosk browser at this Mac's Vite dev server.
+    vars:
+      MAC_HOST:
+        sh: scutil --get LocalHostName
+    cmds:
+      - ssh {{.PI_HOST}} "echo HOMIE_KIOSK_URL=http://{{.MAC_HOST}}.local:5173 > {{.PI_DIR}}/kiosk.env"
+      - ssh {{.PI_HOST}} "sudo systemctl restart homie-kiosk.service"
+
+  kiosk:prod:
+    desc: Point the kiosk browser back at the on-device API.
+    cmds:
+      - ssh {{.PI_HOST}} "echo HOMIE_KIOSK_URL=http://localhost:3000 > {{.PI_DIR}}/kiosk.env"
+      - ssh {{.PI_HOST}} "sudo systemctl restart homie-kiosk.service"

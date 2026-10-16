@@ -1,0 +1,9 @@
+type Health {
+  status: String!
+  version: String!
+  uptimeSeconds: Int!
+}
+
+type Query {
+  health: Health!
+}

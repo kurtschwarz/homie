@@ -1,0 +1,25 @@
+[Unit]
+Description=Homie API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+ExecStart=/opt/homie/homie-api
+Environment=HOMIE_ADDR=:3000
+WatchdogSec=30s
+Restart=always
+RestartSec=2
+
+StateDirectory=homie
+WorkingDirectory=/opt/homie
+User=homie
+Group=homie
+
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

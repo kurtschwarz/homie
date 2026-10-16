@@ -1,0 +1,22 @@
+.scratch/*
+!.scratch/.gitkeep
+
+# JS
+node_modules/
+dist/
+.turbo/
+*.tsbuildinfo
+
+# Go
+/services/api/bin/
+/services/api/tmp/
+/services/api/web/display/*
+/services/api/web/manager/*
+!/services/api/web/display/index.html
+!/services/api/web/manager/index.html
+
+# build output
+/dist/
+
+# OS
+.DS_Store

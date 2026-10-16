@@ -1,8 +1,11 @@
 import { Clock } from "@homie/ui/components/clock";
 import { HomeEvents, HomeLayout } from "@homie/ui/components/layout";
 import { PhotoPanel, type Photo } from "@homie/ui/components/photo-panel";
+import { WeatherGlance } from "@homie/ui/components/weather-glance";
+import type { WeatherCondition } from "@homie/ui/components/weather-icon";
 import { formatShortDate } from "@homie/ui/lib/time";
 import { useNow } from "@homie/ui/hooks/use-now";
+import { useWeather } from "./useWeather";
 
 // Placeholder photos to preview the slideshow's crossfade and per-shape
 // resizing until real ones come from the API. Remove once that lands.
@@ -15,6 +18,7 @@ const PLACEHOLDER_PHOTOS: Photo[] = [
 
 export function App() {
   const now = useNow();
+  const weather = useWeather();
 
   return (
     <HomeLayout>
@@ -25,6 +29,29 @@ export function App() {
           <div className="text-hm-lead text-hm-ink-2">{formatShortDate(now)}</div>
         </div>
       </HomeEvents>
+      {weather.kind === "ready" && (
+        <WeatherGlance
+          className="fixed right-hm-screen top-hm-screen z-10"
+          condition={weatherIconCondition(weather.weather.condition)}
+          temperature={weather.weather.temperature}
+          aria-label={`${weather.weather.conditionCode}, ${weather.weather.temperature} degrees`}
+        />
+      )}
     </HomeLayout>
   );
+}
+
+function weatherIconCondition(condition: "SUN" | "CLOUD_SUN" | "CLOUD" | "RAIN" | "MOON"): WeatherCondition {
+  switch (condition) {
+    case "SUN":
+      return "sun";
+    case "CLOUD_SUN":
+      return "cloud-sun";
+    case "CLOUD":
+      return "cloud";
+    case "RAIN":
+      return "rain";
+    case "MOON":
+      return "moon";
+  }
 }

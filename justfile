@@ -38,6 +38,23 @@ deploy-units:
     rsync -az ./deploy/*.service {{pi_host}}:/tmp/
     ssh -t {{pi_host}} "sudo mv /tmp/homie-*.service /etc/systemd/system/ && sudo systemctl daemon-reload"
 
+# Install WeatherKit credentials without putting the private key in the deploy tree.
+deploy-weatherkit:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    test -f services/api/.env
+    : "${WEATHERKIT_KEY_FILE:?set WEATHERKIT_KEY_FILE to the rotated WeatherKit .p8 file}"
+    test -f "$WEATHERKIT_KEY_FILE"
+    key_path="$(grep '^HOMIE_WEATHERKIT_KEY_PATH=' services/api/.env | cut -d= -f2-)"
+    test -n "$key_path"
+    ssh {{pi_host}} "sudo install -o homie -g homie -m 0700 -d /var/lib/homie"
+    rsync -az "$WEATHERKIT_KEY_FILE" {{pi_host}}:/tmp/weatherkit.p8
+    ssh {{pi_host}} "sudo install -o homie -g homie -m 0400 /tmp/weatherkit.p8 /var/lib/homie/weatherkit.p8 && rm /tmp/weatherkit.p8"
+    scp services/api/.env {{pi_host}}:/tmp/homie-api.env
+    ssh {{pi_host}} "sudo install -o root -g homie -m 0640 /tmp/homie-api.env {{pi_dir}}/api.env && rm /tmp/homie-api.env"
+    rsync -az ./deploy/homie-api.service {{pi_host}}:/tmp/homie-api.service
+    ssh {{pi_host}} "sudo install -o root -g root -m 0644 /tmp/homie-api.service /etc/systemd/system/homie-api.service && rm /tmp/homie-api.service && sudo systemctl daemon-reload && sudo systemctl restart homie-api.service"
+
 # Point the kiosk browser at this Mac's Vite dev server.
 kiosk-dev:
     #!/usr/bin/env bash

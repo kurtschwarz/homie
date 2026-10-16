@@ -5,9 +5,14 @@ package graph
 // It serves as dependency injection for your app, add any dependencies you require
 // here.
 
-import "time"
+import (
+	"time"
+
+	"github.com/kurtschwarz/homie/services/api/internal/weather"
+)
 
 type Resolver struct {
 	Version   string
 	StartedAt time.Time
+	Weather   *weather.Service
 }

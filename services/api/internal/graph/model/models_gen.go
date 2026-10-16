@@ -2,6 +2,13 @@
 
 package model
 
+import (
+	"bytes"
+	"fmt"
+	"io"
+	"strconv"
+)
+
 type Health struct {
 	Status        string `json:"status"`
 	Version       string `json:"version"`
@@ -9,4 +16,71 @@ type Health struct {
 }
 
 type Query struct {
+}
+
+type Weather struct {
+	Condition     WeatherCondition `json:"condition"`
+	ConditionCode string           `json:"conditionCode"`
+	Temperature   int              `json:"temperature"`
+}
+
+type WeatherCondition string
+
+const (
+	WeatherConditionSun      WeatherCondition = "SUN"
+	WeatherConditionCloudSun WeatherCondition = "CLOUD_SUN"
+	WeatherConditionCloud    WeatherCondition = "CLOUD"
+	WeatherConditionRain     WeatherCondition = "RAIN"
+	WeatherConditionMoon     WeatherCondition = "MOON"
+)
+
+var AllWeatherCondition = []WeatherCondition{
+	WeatherConditionSun,
+	WeatherConditionCloudSun,
+	WeatherConditionCloud,
+	WeatherConditionRain,
+	WeatherConditionMoon,
+}
+
+func (e WeatherCondition) IsValid() bool {
+	switch e {
+	case WeatherConditionSun, WeatherConditionCloudSun, WeatherConditionCloud, WeatherConditionRain, WeatherConditionMoon:
+		return true
+	}
+	return false
+}
+
+func (e WeatherCondition) String() string {
+	return string(e)
+}
+
+func (e *WeatherCondition) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = WeatherCondition(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid WeatherCondition", str)
+	}
+	return nil
+}
+
+func (e WeatherCondition) MarshalGQL(w io.Writer) {
+	_, _ = fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *WeatherCondition) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e WeatherCondition) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
 }

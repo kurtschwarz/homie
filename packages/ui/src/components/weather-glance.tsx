@@ -26,8 +26,8 @@ export function WeatherGlance({
       )}
       {...props}
     >
-      <WeatherIcon condition={condition} className="size-hm-40 text-hm-ink-2" />
-      <span className="text-hm-stat">{temperature}°</span>
+      <WeatherIcon condition={condition} className="h-[88px] w-[88px] shrink-0 text-hm-ink-2" />
+      <span className="text-hm-clock">{temperature}°</span>
     </BaseButton>
   )
 }

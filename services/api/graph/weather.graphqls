@@ -1,0 +1,17 @@
+enum WeatherCondition {
+  SUN
+  CLOUD_SUN
+  CLOUD
+  RAIN
+  MOON
+}
+
+type Weather {
+  condition: WeatherCondition!
+  conditionCode: String!
+  temperature: Int!
+}
+
+extend type Query {
+  weather: Weather!
+}

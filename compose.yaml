@@ -5,12 +5,16 @@ services:
       dockerfile: Dockerfile.dev
     ports:
       - "3000:3000"
-    volumes:
-      - ./services/api:/src
-      - api-gomod-cache:/go/pkg/mod
     environment:
       HOMIE_ADDR: ":3000"
       HOMIE_PLAYGROUND: "1"
+    env_file:
+      - path: ./services/api/.env
+        required: false
+    volumes:
+      - ./services/api:/src
+      - ./.scratch/weatherkit.p8:/run/secrets/weatherkit.p8:ro
+      - api-gomod-cache:/go/pkg/mod
 
   display:
     image: node:22-bookworm

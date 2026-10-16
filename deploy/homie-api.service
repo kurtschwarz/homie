@@ -7,6 +7,7 @@ Wants=network-online.target
 Type=notify
 ExecStart=/opt/homie/homie-api
 Environment=HOMIE_ADDR=:3000
+EnvironmentFile=-/opt/homie/api.env
 WatchdogSec=30s
 Restart=always
 RestartSec=2

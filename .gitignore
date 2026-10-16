@@ -1,5 +1,7 @@
 .scratch/*
 !.scratch/.gitkeep
+**/.env
+**/.env.*
 
 # JS
 node_modules/

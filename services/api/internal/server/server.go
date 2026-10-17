@@ -14,9 +14,9 @@ import (
 )
 
 type Config struct {
-	Resolver  *graph.Resolver
-	Display   fs.FS
-	Manager   fs.FS
+	Resolver   *graph.Resolver
+	Display    fs.FS
+	Manager    fs.FS
 	Playground bool
 }
 
@@ -27,6 +27,7 @@ func New(cfg Config) http.Handler {
 	gqlSrv.AddTransport(transport.Options{})
 	gqlSrv.AddTransport(transport.GET{})
 	gqlSrv.AddTransport(transport.POST{})
+	gqlSrv.AddTransport(transport.MultipartForm{MaxMemory: 10 << 20, MaxUploadSize: 20 << 20})
 	gqlSrv.AddTransport(transport.Websocket{})
 	mux.Handle("/graphql", gqlSrv)
 

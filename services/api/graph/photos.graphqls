@@ -1,0 +1,36 @@
+type Coordinate {
+  latitude: Float!
+  longitude: Float!
+}
+
+type Photo {
+  id: ID!
+  url: String!
+  width: Int!
+  height: Int!
+  takenAt: Int!
+  coordinate: Coordinate
+  place: String
+}
+
+"""Metadata accompanying a photo upload."""
+input PhotoUploadInput {
+  assetID: ID!
+  version: String!
+  takenAt: Int!
+  width: Int!
+  height: Int!
+  latitude: Float
+  longitude: Float
+  place: String
+}
+
+scalar Upload
+
+extend type Query {
+  photos(limit: Int = 60): [Photo!]!
+}
+
+type Mutation {
+  uploadPhoto(input: PhotoUploadInput!, file: Upload!): Photo!
+}

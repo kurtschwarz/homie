@@ -9,10 +9,40 @@ import (
 	"strconv"
 )
 
+type Coordinate struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+}
+
 type Health struct {
 	Status        string `json:"status"`
 	Version       string `json:"version"`
 	UptimeSeconds int    `json:"uptimeSeconds"`
+}
+
+type Mutation struct {
+}
+
+type Photo struct {
+	ID         string      `json:"id"`
+	URL        string      `json:"url"`
+	Width      int         `json:"width"`
+	Height     int         `json:"height"`
+	TakenAt    int         `json:"takenAt"`
+	Coordinate *Coordinate `json:"coordinate,omitempty"`
+	Place      *string     `json:"place,omitempty"`
+}
+
+// Metadata accompanying a photo upload.
+type PhotoUploadInput struct {
+	AssetID   string   `json:"assetID"`
+	Version   string   `json:"version"`
+	TakenAt   int      `json:"takenAt"`
+	Width     int      `json:"width"`
+	Height    int      `json:"height"`
+	Latitude  *float64 `json:"latitude,omitempty"`
+	Longitude *float64 `json:"longitude,omitempty"`
+	Place     *string  `json:"place,omitempty"`
 }
 
 type Query struct {

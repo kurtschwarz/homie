@@ -4,12 +4,13 @@ services:
       context: ./services/api
       dockerfile: Dockerfile.dev
     ports:
-      - "3000:3000"
+      - "3030:3000"
     environment:
       HOMIE_ADDR: ":3000"
       HOMIE_PLAYGROUND: "1"
       HOMIE_DB_PATH: "/var/lib/homie/homie.db"
       HOMIE_RIVER_DB_PATH: "/var/lib/homie/river.db"
+      HOMIE_PHOTOS_PATH: "/var/lib/homie/photos"
     env_file:
       - path: ./services/api/.env
         required: false
@@ -17,6 +18,7 @@ services:
       - ./services/api:/src
       - api-data:/var/lib/homie
       - ./.scratch/weatherkit.p8:/run/secrets/weatherkit.p8:ro
+      - ./.scratch/photos:/var/lib/homie/photos
       - api-gomod-cache:/go/pkg/mod
 
   display:

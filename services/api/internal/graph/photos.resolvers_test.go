@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -36,7 +37,11 @@ func TestPhotosResolver(t *testing.T) {
 	if err := repo.Upsert(context.Background(), photo); err != nil {
 		t.Fatal(err)
 	}
-	resolver.Resolver.Photos = photos.New(repo)
+	library, err := photos.NewLibrary(filepath.Join(t.TempDir(), "photos"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resolver.Resolver.Photos = photos.New(repo, library)
 	limit := 3
 	got, err := resolver.Photos(context.Background(), &limit)
 	if err != nil || len(got) != 1 {
@@ -47,10 +52,47 @@ func TestPhotosResolver(t *testing.T) {
 	}
 }
 
-func TestUploadPhotoResolverIsExplicitlyStubbed(t *testing.T) {
+func TestUploadPhotoResolver(t *testing.T) {
 	resolver := &mutationResolver{Resolver: &Resolver{}}
-	_, err := resolver.UploadPhoto(context.Background(), model.PhotoUploadInput{}, graphql.Upload{})
-	if !errors.Is(err, errPhotoUploadsNotImplemented) {
-		t.Fatalf("upload stub error=%v, want %v", err, errPhotoUploadsNotImplemented)
+	if _, err := resolver.UploadPhoto(context.Background(), model.PhotoUploadInput{}, graphql.Upload{ContentType: "image/jpeg"}); err == nil || err.Error() != "photos are not configured" {
+		t.Fatalf("unconfigured resolver err=%v", err)
+	}
+
+	db, err := store.Open(filepath.Join(t.TempDir(), "photos.db"), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	library, err := photos.NewLibrary(filepath.Join(t.TempDir(), "photos"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resolver.Resolver.Photos = photos.New(photos.NewSQLiteRepository(db), library)
+
+	latitude, longitude := 43.4, -80.4
+	place := "Kitchener, Ontario"
+	input := model.PhotoUploadInput{
+		AssetID: "asset", Version: "1", TakenAt: 1_760_640_000, Width: 1400, Height: 1050,
+		Latitude: &latitude, Longitude: &longitude, Place: &place,
+	}
+	got, err := resolver.UploadPhoto(context.Background(), input, graphql.Upload{ContentType: "image/jpeg", File: strings.NewReader("jpeg-bytes")})
+	if err != nil {
+		t.Fatalf("upload: %v", err)
+	}
+	if got.Width != 1400 || got.Coordinate == nil || got.Place == nil || *got.Place != place {
+		t.Fatalf("uploaded photo: %+v", got)
+	}
+	trimmed := strings.TrimPrefix(got.URL, "/photos/")
+	file, err := library.FS().Open(trimmed[:strings.IndexByte(trimmed, '?')])
+	if err != nil {
+		t.Fatal(err)
+	}
+	contents, err := io.ReadAll(file)
+	if err != nil || string(contents) != "jpeg-bytes" {
+		t.Fatalf("stored contents=%q err=%v", contents, err)
+	}
+
+	if _, err := resolver.UploadPhoto(context.Background(), input, graphql.Upload{ContentType: "image/png"}); !errors.Is(err, errUnsupportedPhotoContentType) {
+		t.Fatalf("content type error=%v, want %v", err, errUnsupportedPhotoContentType)
 	}
 }

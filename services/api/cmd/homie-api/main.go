@@ -16,6 +16,7 @@ import (
 
 	assets "github.com/kurtschwarz/homie/services/api"
 	"github.com/kurtschwarz/homie/services/api/internal/graph"
+	"github.com/kurtschwarz/homie/services/api/internal/photos"
 	"github.com/kurtschwarz/homie/services/api/internal/queue"
 	"github.com/kurtschwarz/homie/services/api/internal/sdnotify"
 	"github.com/kurtschwarz/homie/services/api/internal/server"
@@ -46,6 +47,18 @@ func main() {
 	if err != nil {
 		logger.Error("configure WeatherKit; weather query will be unavailable", "error", err)
 	}
+
+	var photosService *photos.Service
+	var photosFS fs.FS
+	if db != nil {
+		library, err := photos.NewLibrary(envOr("HOMIE_PHOTOS_PATH", "/var/lib/homie/photos"))
+		if err != nil {
+			logger.Error("open photo library; photos will be unavailable", "error", err)
+		} else {
+			photosService = photos.New(photos.NewSQLiteRepository(db), library)
+			photosFS = library.FS()
+		}
+	}
 	var refresher weatherjobs.Refresher
 	if weatherService != nil {
 		refresher = weatherService
@@ -69,9 +82,11 @@ func main() {
 			Version:   version,
 			StartedAt: time.Now(),
 			Weather:   weatherService,
+			Photos:    photosService,
 		},
 		Display:    display,
 		Manager:    manager,
+		Photos:     photosFS,
 		Playground: playground,
 	})
 

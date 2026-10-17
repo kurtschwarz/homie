@@ -5,6 +5,7 @@ package server
 import (
 	"io/fs"
 	"net/http"
+	"strings"
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/transport"
@@ -17,6 +18,7 @@ type Config struct {
 	Resolver   *graph.Resolver
 	Display    fs.FS
 	Manager    fs.FS
+	Photos     fs.FS
 	Playground bool
 }
 
@@ -43,9 +45,32 @@ func New(cfg Config) http.Handler {
 	})
 
 	mux.Handle("/manage/", http.StripPrefix("/manage/", spaHandler(cfg.Manager)))
+	mux.Handle("/photos/", http.StripPrefix("/photos/", photoHandler(cfg.Photos)))
 	mux.Handle("/", spaHandler(cfg.Display))
 
 	return mux
+}
+
+// photoHandler serves stored photo files, rejecting anything that isn't a
+// plain .jpg name so temp files and nested paths can't be fetched.
+func photoHandler(fsys fs.FS) http.Handler {
+	var fileServer http.Handler
+	if fsys != nil {
+		fileServer = http.FileServerFS(fsys)
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if fileServer == nil {
+			http.NotFound(w, r)
+			return
+		}
+		name := r.URL.Path
+		if strings.Contains(name, "/") || !strings.HasSuffix(name, ".jpg") {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Cache-Control", "no-cache")
+		fileServer.ServeHTTP(w, r)
+	})
 }
 
 // spaHandler serves files from fsys, falling back to index.html for any

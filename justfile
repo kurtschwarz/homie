@@ -5,6 +5,14 @@ pi_dir := "/opt/homie"
 dev:
     docker compose up --build
 
+# Build the Photo Sync macOS test app.
+photo-sync:
+    ./apps/photo-sync/build.sh
+
+# Regenerate gqlgen code after editing services/api/graph/*.graphqls.
+codegen:
+    docker compose run --rm --no-deps api go run github.com/99designs/gqlgen generate
+
 # Cross-compile the homie-api binary (linux/arm64) with both SPAs embedded.
 build:
     docker buildx build --platform linux/arm64 --target export --output type=local,dest=./dist .

@@ -25,6 +25,7 @@ func TestServiceImportStoresFileAndKeepsStableID(t *testing.T) {
 	upload := photos.Upload{
 		AssetID: "asset", Version: "1", Width: 1400, Height: 1050,
 		TakenAt: time.Unix(1_760_640_000, 0), Coordinate: &photos.Coordinate{Latitude: 43.4, Longitude: -80.4},
+		Focus: &photos.FocalRegion{X: 0.2, Y: 0.3, Width: 0.4, Height: 0.5, Source: "vision-face"},
 	}
 	first, err := service.Import(ctx, upload, strings.NewReader("first-bytes"))
 	if err != nil {
@@ -42,6 +43,9 @@ func TestServiceImportStoresFileAndKeepsStableID(t *testing.T) {
 	}
 	if second.ID != first.ID || second.File != first.File {
 		t.Fatalf("re-import changed identity: first=%+v second=%+v", first, second)
+	}
+	if second.Focus == nil || *second.Focus != *upload.Focus {
+		t.Fatalf("focus did not round-trip through repository: got %+v", second.Focus)
 	}
 	contents, err = io.ReadAll(mustOpen(t, library.FS(), second.File))
 	if err != nil || string(contents) != "second-bytes" {
@@ -68,6 +72,13 @@ func TestServiceImportValidation(t *testing.T) {
 		{"zero width", func(u *photos.Upload) { u.Width = 0 }},
 		{"zero height", func(u *photos.Upload) { u.Height = 0 }},
 		{"missing taken at", func(u *photos.Upload) { u.TakenAt = time.Time{} }},
+		{"negative focus origin", func(u *photos.Upload) {
+			u.Focus = &photos.FocalRegion{X: -0.1, Y: 0, Width: 0.2, Height: 0.2, Source: "vision-face"}
+		}},
+		{"focus outside image", func(u *photos.Upload) {
+			u.Focus = &photos.FocalRegion{X: 0.8, Y: 0.8, Width: 0.3, Height: 0.2, Source: "vision-face"}
+		}},
+		{"empty focus source", func(u *photos.Upload) { u.Focus = &photos.FocalRegion{X: 0.1, Y: 0.1, Width: 0.2, Height: 0.2} }},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

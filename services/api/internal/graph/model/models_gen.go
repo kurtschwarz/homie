@@ -14,6 +14,22 @@ type Coordinate struct {
 	Longitude float64 `json:"longitude"`
 }
 
+// A normalized region of interest, with top-left origin.
+type FocalRegion struct {
+	X      float64 `json:"x"`
+	Y      float64 `json:"y"`
+	Width  float64 `json:"width"`
+	Height float64 `json:"height"`
+}
+
+type FocalRegionInput struct {
+	X      float64 `json:"x"`
+	Y      float64 `json:"y"`
+	Width  float64 `json:"width"`
+	Height float64 `json:"height"`
+	Source string  `json:"source"`
+}
+
 type Health struct {
 	Status        string `json:"status"`
 	Version       string `json:"version"`
@@ -24,25 +40,27 @@ type Mutation struct {
 }
 
 type Photo struct {
-	ID         string      `json:"id"`
-	URL        string      `json:"url"`
-	Width      int         `json:"width"`
-	Height     int         `json:"height"`
-	TakenAt    int         `json:"takenAt"`
-	Coordinate *Coordinate `json:"coordinate,omitempty"`
-	Place      *string     `json:"place,omitempty"`
+	ID         string       `json:"id"`
+	URL        string       `json:"url"`
+	Width      int          `json:"width"`
+	Height     int          `json:"height"`
+	TakenAt    int          `json:"takenAt"`
+	Coordinate *Coordinate  `json:"coordinate,omitempty"`
+	Place      *string      `json:"place,omitempty"`
+	Focus      *FocalRegion `json:"focus,omitempty"`
 }
 
 // Metadata accompanying a photo upload.
 type PhotoUploadInput struct {
-	AssetID   string   `json:"assetID"`
-	Version   string   `json:"version"`
-	TakenAt   int      `json:"takenAt"`
-	Width     int      `json:"width"`
-	Height    int      `json:"height"`
-	Latitude  *float64 `json:"latitude,omitempty"`
-	Longitude *float64 `json:"longitude,omitempty"`
-	Place     *string  `json:"place,omitempty"`
+	AssetID   string            `json:"assetID"`
+	Version   string            `json:"version"`
+	TakenAt   int               `json:"takenAt"`
+	Width     int               `json:"width"`
+	Height    int               `json:"height"`
+	Latitude  *float64          `json:"latitude,omitempty"`
+	Longitude *float64          `json:"longitude,omitempty"`
+	Place     *string           `json:"place,omitempty"`
+	Focus     *FocalRegionInput `json:"focus,omitempty"`
 }
 
 type Query struct {

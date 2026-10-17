@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"math"
 	"time"
 
 	"github.com/google/uuid"
@@ -34,6 +35,7 @@ type Upload struct {
 	TakenAt    time.Time
 	Coordinate *Coordinate
 	Place      string
+	Focus      *FocalRegion
 }
 
 var (
@@ -41,6 +43,7 @@ var (
 	errMissingVersion = errors.New("version is required")
 	errInvalidSize    = errors.New("width and height must be positive")
 	errMissingTakenAt = errors.New("takenAt is required")
+	errInvalidFocus   = errors.New("focus must be a non-empty normalized region within the image")
 )
 
 // Import stores an uploaded photo's bytes on disk and persists its metadata,
@@ -57,6 +60,12 @@ func (s *Service) Import(ctx context.Context, upload Upload, src io.Reader) (Pho
 	}
 	if upload.TakenAt.IsZero() {
 		return Photo{}, errMissingTakenAt
+	}
+	if upload.Focus != nil {
+		f := upload.Focus
+		if !finite(f.X) || !finite(f.Y) || !finite(f.Width) || !finite(f.Height) || f.X < 0 || f.Y < 0 || f.Width <= 0 || f.Height <= 0 || f.X+f.Width > 1 || f.Y+f.Height > 1 || f.Source == "" {
+			return Photo{}, errInvalidFocus
+		}
 	}
 
 	id, existed, err := s.repository.IDForAsset(ctx, upload.AssetID)
@@ -78,7 +87,7 @@ func (s *Service) Import(ctx context.Context, upload Upload, src io.Reader) (Pho
 	photo := Photo{
 		ID: id, AssetID: upload.AssetID, Version: upload.Version, File: name,
 		Width: upload.Width, Height: upload.Height, TakenAt: upload.TakenAt,
-		Coordinate: upload.Coordinate, Place: upload.Place,
+		Coordinate: upload.Coordinate, Place: upload.Place, Focus: upload.Focus,
 	}
 	if err := s.repository.Upsert(ctx, photo); err != nil {
 		if !existed {
@@ -88,3 +97,5 @@ func (s *Service) Import(ctx context.Context, upload Upload, src io.Reader) (Pho
 	}
 	return photo, nil
 }
+
+func finite(value float64) bool { return !math.IsNaN(value) && !math.IsInf(value, 0) }

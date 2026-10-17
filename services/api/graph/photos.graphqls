@@ -3,6 +3,22 @@ type Coordinate {
   longitude: Float!
 }
 
+"""A normalized region of interest, with top-left origin."""
+type FocalRegion {
+  x: Float!
+  y: Float!
+  width: Float!
+  height: Float!
+}
+
+input FocalRegionInput {
+  x: Float!
+  y: Float!
+  width: Float!
+  height: Float!
+  source: String!
+}
+
 type Photo {
   id: ID!
   url: String!
@@ -11,6 +27,7 @@ type Photo {
   takenAt: Int!
   coordinate: Coordinate
   place: String
+  focus: FocalRegion
 }
 
 """Metadata accompanying a photo upload."""
@@ -23,6 +40,7 @@ input PhotoUploadInput {
   latitude: Float
   longitude: Float
   place: String
+  focus: FocalRegionInput
 }
 
 scalar Upload

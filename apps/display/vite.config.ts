@@ -15,6 +15,9 @@ export default defineConfig({
         target: process.env.HOMIE_API_URL ?? "http://localhost:3000",
         ws: true,
       },
+      "/photos": {
+        target: process.env.HOMIE_API_URL ?? "http://localhost:3000",
+      },
     },
   },
 });

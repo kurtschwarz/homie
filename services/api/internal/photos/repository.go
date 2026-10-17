@@ -3,6 +3,7 @@ package photos
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -17,6 +18,15 @@ type Coordinate struct {
 	Longitude float64
 }
 
+// FocalRegion is a normalized region of interest in top-left-origin coordinates.
+type FocalRegion struct {
+	X      float64 `json:"x"`
+	Y      float64 `json:"y"`
+	Width  float64 `json:"width"`
+	Height float64 `json:"height"`
+	Source string  `json:"source"`
+}
+
 // Photo contains the metadata used to display an imported photo.
 type Photo struct {
 	ID         uuid.UUID
@@ -28,6 +38,7 @@ type Photo struct {
 	TakenAt    time.Time
 	Coordinate *Coordinate
 	Place      string
+	Focus      *FocalRegion
 }
 
 // ManifestEntry describes the server copy of an Apple photo asset.
@@ -66,6 +77,7 @@ type photoRow struct {
 	Latitude   sql.NullFloat64 `db:"latitude"`
 	Longitude  sql.NullFloat64 `db:"longitude"`
 	Place      sql.NullString  `db:"place"`
+	Focus      sql.NullString  `db:"focus"`
 	ImportedAt int64           `db:"imported_at"`
 }
 
@@ -79,7 +91,7 @@ type manifestRow struct {
 func (r *SQLiteRepository) List(ctx context.Context, limit int) ([]Photo, error) {
 	var rows []photoRow
 	if err := r.db.SelectContext(ctx, &rows, `
-		SELECT id, asset_id, version, file, width, height, taken_at, latitude, longitude, place, imported_at
+		SELECT id, asset_id, version, file, width, height, taken_at, latitude, longitude, place, focus, imported_at
 		FROM photos
 		ORDER BY taken_at DESC, id DESC
 		LIMIT ?`, limit); err != nil {
@@ -137,17 +149,26 @@ func (r *SQLiteRepository) Upsert(ctx context.Context, photo Photo) error {
 		latitude = sql.NullFloat64{Float64: photo.Coordinate.Latitude, Valid: true}
 		longitude = sql.NullFloat64{Float64: photo.Coordinate.Longitude, Valid: true}
 	}
+	var focus sql.NullString
+	if photo.Focus != nil {
+		encoded, err := json.Marshal(photo.Focus)
+		if err != nil {
+			return fmt.Errorf("encode focal region: %w", err)
+		}
+		focus = sql.NullString{String: string(encoded), Valid: true}
+	}
 	row := photoRow{
 		ID: photo.ID[:], AssetID: photo.AssetID, Version: photo.Version, File: photo.File,
 		Width: photo.Width, Height: photo.Height, TakenAt: photo.TakenAt.Unix(),
 		Latitude:   latitude,
 		Longitude:  longitude,
 		Place:      sql.NullString{String: photo.Place, Valid: photo.Place != ""},
+		Focus:      focus,
 		ImportedAt: time.Now().Unix(),
 	}
 	_, err := r.db.NamedExecContext(ctx, `
-		INSERT INTO photos (id, asset_id, version, file, width, height, taken_at, latitude, longitude, place, imported_at)
-		VALUES (:id, :asset_id, :version, :file, :width, :height, :taken_at, :latitude, :longitude, :place, :imported_at)
+		INSERT INTO photos (id, asset_id, version, file, width, height, taken_at, latitude, longitude, place, focus, imported_at)
+		VALUES (:id, :asset_id, :version, :file, :width, :height, :taken_at, :latitude, :longitude, :place, :focus, :imported_at)
 		ON CONFLICT(asset_id) DO UPDATE SET
 			version = excluded.version,
 			file = excluded.file,
@@ -157,6 +178,7 @@ func (r *SQLiteRepository) Upsert(ctx context.Context, photo Photo) error {
 			latitude = excluded.latitude,
 			longitude = excluded.longitude,
 			place = excluded.place,
+			focus = excluded.focus,
 			imported_at = excluded.imported_at`, row)
 	return err
 }
@@ -228,9 +250,16 @@ func (row photoRow) photo() (Photo, error) {
 	if row.Latitude.Valid {
 		coordinate = &Coordinate{Latitude: row.Latitude.Float64, Longitude: row.Longitude.Float64}
 	}
+	var focus *FocalRegion
+	if row.Focus.Valid {
+		focus = &FocalRegion{}
+		if err := json.Unmarshal([]byte(row.Focus.String), focus); err != nil {
+			return Photo{}, fmt.Errorf("decode focal region for photo %q: %w", row.AssetID, err)
+		}
+	}
 	return Photo{
 		ID: id, AssetID: row.AssetID, Version: row.Version, File: row.File,
 		Width: row.Width, Height: row.Height, TakenAt: time.Unix(row.TakenAt, 0),
-		Coordinate: coordinate, Place: row.Place.String,
+		Coordinate: coordinate, Place: row.Place.String, Focus: focus,
 	}, nil
 }

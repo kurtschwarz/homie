@@ -41,6 +41,13 @@ type ComplexityRoot struct {
 		Longitude func(childComplexity int) int
 	}
 
+	FocalRegion struct {
+		Height func(childComplexity int) int
+		Width  func(childComplexity int) int
+		X      func(childComplexity int) int
+		Y      func(childComplexity int) int
+	}
+
 	Health struct {
 		Status        func(childComplexity int) int
 		UptimeSeconds func(childComplexity int) int
@@ -53,6 +60,7 @@ type ComplexityRoot struct {
 
 	Photo struct {
 		Coordinate func(childComplexity int) int
+		Focus      func(childComplexity int) int
 		Height     func(childComplexity int) int
 		ID         func(childComplexity int) int
 		Place      func(childComplexity int) int
@@ -120,6 +128,31 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.Coordinate.Longitude(childComplexity), true
 
+	case "FocalRegion.height":
+		if e.ComplexityRoot.FocalRegion.Height == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FocalRegion.Height(childComplexity), true
+	case "FocalRegion.width":
+		if e.ComplexityRoot.FocalRegion.Width == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FocalRegion.Width(childComplexity), true
+	case "FocalRegion.x":
+		if e.ComplexityRoot.FocalRegion.X == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FocalRegion.X(childComplexity), true
+	case "FocalRegion.y":
+		if e.ComplexityRoot.FocalRegion.Y == nil {
+			break
+		}
+
+		return e.ComplexityRoot.FocalRegion.Y(childComplexity), true
+
 	case "Health.status":
 		if e.ComplexityRoot.Health.Status == nil {
 			break
@@ -157,6 +190,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Photo.Coordinate(childComplexity), true
+	case "Photo.focus":
+		if e.ComplexityRoot.Photo.Focus == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Photo.Focus(childComplexity), true
 	case "Photo.height":
 		if e.ComplexityRoot.Photo.Height == nil {
 			break
@@ -258,6 +297,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	opCtx := graphql.GetOperationContext(ctx)
 	ec := newExecutionContext(opCtx, e, make(chan graphql.DeferredResult))
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
+		ec.unmarshalInputFocalRegionInput,
 		ec.unmarshalInputPhotoUploadInput,
 	)
 	first := true
@@ -339,6 +379,22 @@ var sources = []*ast.Source{
   longitude: Float!
 }
 
+"""A normalized region of interest, with top-left origin."""
+type FocalRegion {
+  x: Float!
+  y: Float!
+  width: Float!
+  height: Float!
+}
+
+input FocalRegionInput {
+  x: Float!
+  y: Float!
+  width: Float!
+  height: Float!
+  source: String!
+}
+
 type Photo {
   id: ID!
   url: String!
@@ -347,6 +403,7 @@ type Photo {
   takenAt: Int!
   coordinate: Coordinate
   place: String
+  focus: FocalRegion
 }
 
 """Metadata accompanying a photo upload."""
@@ -359,6 +416,7 @@ input PhotoUploadInput {
   latitude: Float
   longitude: Float
   place: String
+  focus: FocalRegionInput
 }
 
 scalar Upload
@@ -418,6 +476,20 @@ func (ec *executionContext) childFields_Coordinate(ctx context.Context, field gr
 	return nil, fmt.Errorf("no field named %q was found under type Coordinate", field.Name)
 }
 
+func (ec *executionContext) childFields_FocalRegion(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "x":
+		return ec.fieldContext_FocalRegion_x(ctx, field)
+	case "y":
+		return ec.fieldContext_FocalRegion_y(ctx, field)
+	case "width":
+		return ec.fieldContext_FocalRegion_width(ctx, field)
+	case "height":
+		return ec.fieldContext_FocalRegion_height(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type FocalRegion", field.Name)
+}
+
 func (ec *executionContext) childFields_Health(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "status":
@@ -446,6 +518,8 @@ func (ec *executionContext) childFields_Photo(ctx context.Context, field graphql
 		return ec.fieldContext_Photo_coordinate(ctx, field)
 	case "place":
 		return ec.fieldContext_Photo_place(ctx, field)
+	case "focus":
+		return ec.fieldContext_Photo_focus(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type Photo", field.Name)
 }
@@ -738,6 +812,98 @@ func (ec *executionContext) fieldContext_Coordinate_longitude(_ context.Context,
 	return graphql.NewScalarFieldContext("Coordinate", field, false, false, errors.New("field of type Float does not have child fields"))
 }
 
+func (ec *executionContext) _FocalRegion_x(ctx context.Context, field graphql.CollectedField, obj *model.FocalRegion) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FocalRegion_x(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.X, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v float64) graphql.Marshaler {
+			return ec.marshalNFloat2float64(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FocalRegion_x(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FocalRegion", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
+func (ec *executionContext) _FocalRegion_y(ctx context.Context, field graphql.CollectedField, obj *model.FocalRegion) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FocalRegion_y(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Y, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v float64) graphql.Marshaler {
+			return ec.marshalNFloat2float64(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FocalRegion_y(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FocalRegion", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
+func (ec *executionContext) _FocalRegion_width(ctx context.Context, field graphql.CollectedField, obj *model.FocalRegion) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FocalRegion_width(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Width, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v float64) graphql.Marshaler {
+			return ec.marshalNFloat2float64(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FocalRegion_width(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FocalRegion", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
+func (ec *executionContext) _FocalRegion_height(ctx context.Context, field graphql.CollectedField, obj *model.FocalRegion) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_FocalRegion_height(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Height, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v float64) graphql.Marshaler {
+			return ec.marshalNFloat2float64(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_FocalRegion_height(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("FocalRegion", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
 func (ec *executionContext) _Health_status(ctx context.Context, field graphql.CollectedField, obj *model.Health) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -1019,6 +1185,38 @@ func (ec *executionContext) _Photo_place(ctx context.Context, field graphql.Coll
 }
 func (ec *executionContext) fieldContext_Photo_place(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("Photo", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Photo_focus(ctx context.Context, field graphql.CollectedField, obj *model.Photo) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Photo_focus(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Focus, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.FocalRegion) graphql.Marshaler {
+			return ec.marshalOFocalRegion2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐFocalRegion(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Photo_focus(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Photo",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_FocalRegion(ctx, field)
+		},
+	}
+	return fc, nil
 }
 
 func (ec *executionContext) _Query_health(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -2379,6 +2577,64 @@ func (ec *executionContext) fieldContext___Type_isOneOf(_ context.Context, field
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputFocalRegionInput(ctx context.Context, obj any) (model.FocalRegionInput, error) {
+	var it model.FocalRegionInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"x", "y", "width", "height", "source"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "x":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("x"))
+			data, err := ec.unmarshalNFloat2float64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.X = data
+		case "y":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("y"))
+			data, err := ec.unmarshalNFloat2float64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Y = data
+		case "width":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("width"))
+			data, err := ec.unmarshalNFloat2float64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Width = data
+		case "height":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("height"))
+			data, err := ec.unmarshalNFloat2float64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Height = data
+		case "source":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("source"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Source = data
+		}
+	}
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputPhotoUploadInput(ctx context.Context, obj any) (model.PhotoUploadInput, error) {
 	var it model.PhotoUploadInput
 	if obj == nil {
@@ -2390,7 +2646,7 @@ func (ec *executionContext) unmarshalInputPhotoUploadInput(ctx context.Context, 
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"assetID", "version", "takenAt", "width", "height", "latitude", "longitude", "place"}
+	fieldsInOrder := [...]string{"assetID", "version", "takenAt", "width", "height", "latitude", "longitude", "place", "focus"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -2453,6 +2709,13 @@ func (ec *executionContext) unmarshalInputPhotoUploadInput(ctx context.Context, 
 				return it, err
 			}
 			it.Place = data
+		case "focus":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("focus"))
+			data, err := ec.unmarshalOFocalRegionInput2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐFocalRegionInput(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Focus = data
 		}
 	}
 	return it, nil
@@ -2485,6 +2748,59 @@ func (ec *executionContext) _Coordinate(ctx context.Context, sel ast.SelectionSe
 			}
 		case "longitude":
 			out.Values[i] = ec._Coordinate_longitude(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferLabelToView), math.MaxInt32)))
+
+	ec.ProcessDeferredGroup(graphql.DeferredGroup{
+		Defers:   deferLabelToView,
+		Path:     graphql.GetPath(ctx),
+		FieldSet: deferredFieldSet,
+		Context:  ctx,
+	})
+
+	return out
+}
+
+var focalRegionImplementors = []string{"FocalRegion"}
+
+func (ec *executionContext) _FocalRegion(ctx context.Context, sel ast.SelectionSet, obj *model.FocalRegion) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, focalRegionImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferredFieldSet := graphql.NewFieldSet(nil)
+	deferLabelToView := make(map[string]*graphql.FieldSetView)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("FocalRegion")
+		case "x":
+			out.Values[i] = ec._FocalRegion_x(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "y":
+			out.Values[i] = ec._FocalRegion_y(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "width":
+			out.Values[i] = ec._FocalRegion_width(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "height":
+			out.Values[i] = ec._FocalRegion_height(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -2649,6 +2965,11 @@ func (ec *executionContext) _Photo(ctx context.Context, sel ast.SelectionSet, ob
 			}
 		case "place":
 			out.Values[i] = ec._Photo_place(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		case "focus":
+			out.Values[i] = ec._Photo_focus(ctx, field, obj)
 			if out.Values[i] == graphql.RequiredNull {
 				out.Invalids++
 			}
@@ -3597,6 +3918,21 @@ func (ec *executionContext) marshalOFloat2ᚖfloat64(ctx context.Context, sel as
 	_ = sel
 	res := graphql.MarshalFloatContext(*v)
 	return graphql.WrapContextMarshaler(ctx, res)
+}
+
+func (ec *executionContext) marshalOFocalRegion2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐFocalRegion(ctx context.Context, sel ast.SelectionSet, v *model.FocalRegion) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._FocalRegion(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOFocalRegionInput2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐFocalRegionInput(ctx context.Context, v any) (*model.FocalRegionInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputFocalRegionInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalOInt2ᚖint(ctx context.Context, v any) (*int, error) {

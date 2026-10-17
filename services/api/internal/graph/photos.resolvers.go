@@ -16,8 +16,6 @@ import (
 	"github.com/kurtschwarz/homie/services/api/internal/photos"
 )
 
-var errUnsupportedPhotoContentType = errors.New("only image/jpeg uploads are supported")
-
 // UploadPhoto is the resolver for the uploadPhoto field.
 func (r *mutationResolver) UploadPhoto(ctx context.Context, input model.PhotoUploadInput, file graphql.Upload) (*model.Photo, error) {
 	if r.Resolver.Photos == nil {
@@ -34,10 +32,14 @@ func (r *mutationResolver) UploadPhoto(ctx context.Context, input model.PhotoUpl
 	if input.Place != nil {
 		place = *input.Place
 	}
+	var focus *photos.FocalRegion
+	if input.Focus != nil {
+		focus = &photos.FocalRegion{X: input.Focus.X, Y: input.Focus.Y, Width: input.Focus.Width, Height: input.Focus.Height, Source: input.Focus.Source}
+	}
 	photo, err := r.Resolver.Photos.Import(ctx, photos.Upload{
 		AssetID: input.AssetID, Version: input.Version,
 		Width: input.Width, Height: input.Height, TakenAt: time.Unix(int64(input.TakenAt), 0),
-		Coordinate: coordinate, Place: place,
+		Coordinate: coordinate, Place: place, Focus: focus,
 	}, file.File)
 	if err != nil {
 		return nil, fmt.Errorf("upload photo: %w", err)
@@ -64,24 +66,6 @@ func (r *queryResolver) Photos(ctx context.Context, limit *int) ([]model.Photo, 
 		result = append(result, toModelPhoto(photo))
 	}
 	return result, nil
-}
-
-// toModelPhoto maps a photos.Photo onto the GraphQL model shared by the
-// photos query and uploadPhoto mutation.
-func toModelPhoto(photo photos.Photo) model.Photo {
-	var coordinate *model.Coordinate
-	if photo.Coordinate != nil {
-		coordinate = &model.Coordinate{Latitude: photo.Coordinate.Latitude, Longitude: photo.Coordinate.Longitude}
-	}
-	var place *string
-	if photo.Place != "" {
-		place = &photo.Place
-	}
-	return model.Photo{
-		ID: photo.ID.String(), URL: "/photos/" + photo.File + "?v=" + photo.Version,
-		Width: photo.Width, Height: photo.Height, TakenAt: int(photo.TakenAt.Unix()),
-		Coordinate: coordinate, Place: place,
-	}
 }
 
 // Mutation returns MutationResolver implementation.

@@ -13,20 +13,21 @@ export interface Photo {
   place?: string
   /** EXIF date taken. */
   takenAt?: Date
+  focus?: { x: number; y: number; width: number; height: number }
 }
 
 type Shape = "portrait" | "square" | "landscape"
-const KIOSK_WIDTH: Record<Shape, string> = {
-  portrait: "kiosk:w-hm-panel-portrait",
-  square: "kiosk:w-hm-panel-square",
-  landscape: "kiosk:w-hm-panel-landscape",
+const PANEL_WIDTH: Record<Shape, string> = {
+  portrait: "w-hm-panel-portrait",
+  square: "w-hm-panel-square",
+  landscape: "w-hm-panel-landscape",
 }
-const shapeOf = (w: number, h: number): Shape => (w / h < 0.9 ? "portrait" : w / h > 1.15 ? "landscape" : "square")
+const shapeOf = (aspectRatio: number): Shape => (aspectRatio < 0.9 ? "portrait" : aspectRatio > 1.15 ? "landscape" : "square")
 
 /**
  * The family photo slideshow. Crossfades every `intervalMs` (12 s); a tap advances and restarts the timer.
- * Kiosk: full height, width follows the photo's shape (720 / 900 / 1040px).
- * Desktop: fills the space beside the events column. Mobile: a full-width 4:3 card below the events.
+ * Full height, with the width following the photo's shape (720 / 900 / 1040px).
+ * Kiosk-only: the home screen it belongs to never renders on another surface.
  * Evening and Night dim the photos through --hm-photo-filter.
  */
 export function PhotoPanel({
@@ -36,8 +37,35 @@ export function PhotoPanel({
   ...props
 }: React.ComponentProps<"section"> & { photos: Photo[]; intervalMs?: number }) {
   const [index, setIndex] = React.useState(0)
-  const [shapes, setShapes] = React.useState<Record<number, Shape>>({})
+  const [aspectRatios, setAspectRatios] = React.useState<Record<string, number>>({})
+  const [panelHeight, setPanelHeight] = React.useState(0)
+  const [frameWidths, setFrameWidths] = React.useState<Record<Shape, number>>()
   const [tick, setTick] = React.useState(0)
+  const panelRef = React.useRef<HTMLElement>(null)
+
+  React.useEffect(() => {
+    const panel = panelRef.current
+    if (!panel) return
+    // Read the resting widths from the tokens rather than repeating them here.
+    const styles = getComputedStyle(panel)
+    const token = (name: string) => Number.parseFloat(styles.getPropertyValue(name))
+    const widths = {
+      portrait: token("--hm-size-panel-portrait"),
+      square: token("--hm-size-panel-square"),
+      landscape: token("--hm-size-panel-landscape"),
+    }
+    if (Object.values(widths).every((width) => width > 0)) setFrameWidths(widths)
+
+    // Height is the one panel dimension that holds still, so it is the only one
+    // the images are allowed to depend on.
+    const observer = new ResizeObserver(([entry]) => {
+      if (!entry) return
+      const { height } = entry.contentRect
+      if (height) setPanelHeight(height)
+    })
+    observer.observe(panel)
+    return () => observer.disconnect()
+  }, [])
 
   React.useEffect(() => {
     if (photos.length < 2) return
@@ -45,35 +73,58 @@ export function PhotoPanel({
     return () => clearInterval(id)
   }, [photos.length, intervalMs, tick])
 
-  const current = photos[index]!
-  const shape = shapes[index] ?? "landscape"
+  React.useEffect(() => {
+    setIndex((currentIndex) => Math.min(currentIndex, Math.max(0, photos.length - 1)))
+  }, [photos.length])
+
+  const current = photos[index]
+  // Landscape until the image loads and reports its real aspect, matching the
+  // widest panel so the first frame doesn't visibly grow into place.
+  const currentAspectRatio = current ? aspectRatios[current.src] : undefined
+  const shape = currentAspectRatio ? shapeOf(currentAspectRatio) : "landscape"
 
   return (
     <section
+      ref={panelRef}
       data-slot="photo-panel"
       aria-label="Photo slideshow"
       className={cn(
-        "relative min-w-0 flex-1 overflow-hidden rounded-hm-panel bg-hm-photo [filter:var(--hm-photo-filter)]",
+        "relative min-w-0 flex-none overflow-hidden rounded-hm-panel bg-hm-photo [filter:var(--hm-photo-filter)]",
         "transition-[width,filter] duration-900 ease-hm-panel",
-        "kiosk:flex-none",
-        KIOSK_WIDTH[shape],
-        "mobile:order-1 mobile:aspect-[4/3] mobile:w-full mobile:flex-none",
+        PANEL_WIDTH[shape],
         className,
       )}
       {...props}
     >
-      {photos.map((p, i) => (
-        <img
-          key={p.src}
-          src={p.src}
-          alt={p.alt}
-          onLoad={(e) => {
-            const { naturalWidth: w, naturalHeight: h } = e.currentTarget
-            if (w && h) setShapes((s) => (s[i] === shapeOf(w, h) ? s : { ...s, [i]: shapeOf(w, h) }))
-          }}
-          className={cn("absolute inset-0 size-full object-cover transition-opacity duration-900", i === index ? "opacity-100" : "opacity-0")}
-        />
-      ))}
+      {photos.map((p, i) => {
+        const aspectRatio = aspectRatios[p.src]
+        const geometry =
+          aspectRatio && panelHeight && frameWidths
+            ? focalGeometry(aspectRatio, frameWidths[shapeOf(aspectRatio)], panelHeight, p.focus)
+            : undefined
+        return (
+          <img
+            key={p.src}
+            src={p.src}
+            alt={p.alt}
+            onLoad={(e) => {
+              const { naturalWidth: w, naturalHeight: h } = e.currentTarget
+              if (w && h) {
+                setAspectRatios((ratios) => ratios[p.src] === w / h ? ratios : { ...ratios, [p.src]: w / h })
+              }
+            }}
+            style={geometry}
+            className={cn(
+              "absolute transition-opacity duration-[1200ms] ease-in-out",
+              // max-w-none: preflight caps images at 100%, which would pull the
+              // width back onto the animating panel. Cover the panel the old way
+              // until the natural size is known.
+              geometry ? "max-w-none" : "inset-0 size-full object-cover",
+              i === index ? "opacity-100" : "opacity-0",
+            )}
+          />
+        )
+      })}
       <button
         type="button"
         aria-label="Next photo"
@@ -94,4 +145,37 @@ export function PhotoPanel({
       )}
     </section>
   )
+}
+
+/**
+ * Sizes an image to cover `frameWidth` × `frameHeight` and offsets it so the
+ * focal region lands in the middle of that frame, clamped to the image's edges.
+ * The frame is the panel's *resting* width for this photo's shape, never the
+ * width mid-animation, so a resize reveals and hides pixels instead of
+ * rescaling. Falls back to the centre when a photo has no focal region.
+ */
+function focalGeometry(
+  aspectRatio: number,
+  frameWidth: number,
+  frameHeight: number,
+  focus?: Photo["focus"],
+): { width: number; height: number; left: number; top: number } {
+  let width = frameHeight * aspectRatio
+  let height = frameHeight
+  if (width < frameWidth) {
+    width = frameWidth
+    height = frameWidth / aspectRatio
+  }
+  const focusX = focus ? focus.x + focus.width / 2 : 0.5
+  const focusY = focus ? focus.y + focus.height / 2 : 0.5
+  return {
+    width,
+    height,
+    left: clamp(frameWidth / 2 - focusX * width, frameWidth - width, 0),
+    top: clamp(frameHeight / 2 - focusY * height, frameHeight - height, 0),
+  }
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value))
 }

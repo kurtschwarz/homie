@@ -93,7 +93,7 @@ final class PeopleManager {
     }
 
     private func perform(_ query: String, variables: [String: Any] = [:]) async throws -> PeopleResponse {
-        var request = URLRequest(url: Self.apiEndpoint)
+        var request = URLRequest(url: HomieEndpoint.graphQLURL)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: ["query": query, "variables": variables])
@@ -105,12 +105,4 @@ final class PeopleManager {
         return result
     }
 
-    private static var apiEndpoint: URL {
-        let configuredURL = UserDefaults.standard.string(forKey: "HomieAPIURL")
-            ?? ProcessInfo.processInfo.environment["HOMIE_API_URL"]
-        if let configuredURL, let url = URL(string: configuredURL), url.host() != nil {
-            return url.path().isEmpty || url.path() == "/" ? url.appending(path: "graphql") : url
-        }
-        return URL(string: "http://homie:3000/graphql")!
-    }
 }

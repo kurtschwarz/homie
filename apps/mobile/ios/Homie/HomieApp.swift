@@ -26,7 +26,10 @@ struct HomieApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environment(peopleManager)
         }
         .modelContainer(sharedModelContainer)
     }
+
+    @State private var peopleManager = PeopleManager()
 }

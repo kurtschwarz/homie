@@ -25,9 +25,7 @@ struct SettingsView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("FAMILY")
-                        .font(.caption.bold())
-                        .tracking(1.5)
+                    Text("FAMILY").font(.caption.bold()).tracking(1.5).foregroundStyle(.secondary)
                     RoundedCard {
                         ForEach(Array(peopleManager.people.enumerated()), id: \.element.id) { index, person in
                             Button { editorRoute = .edit(person) } label: {

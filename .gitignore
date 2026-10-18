@@ -20,5 +20,14 @@ dist/
 # build output
 /dist/
 
+# iOS / Xcode
+**/DerivedData/
+**/build/
+**/xcuserdata/
+*.xcuserstate
+*.xccheckout
+*.moved-aside
+*.hmap
+
 # OS
 .DS_Store

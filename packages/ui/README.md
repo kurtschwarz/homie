@@ -70,7 +70,7 @@ Everything Homie is prefixed `hm-` so it never collides with shadcn's own names 
 
 | What | Utilities | Examples |
 | --- | --- | --- |
-| Colours | `bg-hm-*`, `text-hm-*`, `border-hm-*` | `bg-hm-surface`, `text-hm-ink-2`, `bg-hm-accent-soft`, `bg-hm-person-a-tint`, `bg-hm-scrim` |
+| Colours | `bg-hm-*`, `text-hm-*`, `border-hm-*` | `bg-hm-surface`, `text-hm-ink-2`, `bg-hm-accent-soft`, `bg-hm-scrim` |
 | Type roles | `text-hm-<role>` sets size, line height, tracking and weight for the surface | `text-hm-headline`, `text-hm-clock`, `text-hm-lead`, `text-hm-item`, `text-hm-body`, `text-hm-caption`, `text-hm-eyebrow` (add `uppercase`) |
 | Surface layout | `h-`/`w-`/`size-`/`p-`/`gap-` | `h-hm-touch`, `h-hm-button`, `size-hm-badge-lg`, `p-hm-screen`, `gap-hm-column`, `w-(--hm-time-col)` |
 | Density spacing | any spacing utility with `hm-<kiosk px>` | `p-hm-16`, `gap-hm-12`, `size-hm-28`, `mb-hm-8` |
@@ -98,7 +98,7 @@ Stock shadcn components pick up Homie through these:
 | `border`, `input` | `line` |
 | `ring` | `accent` |
 | `radius` | the surface's `control-radius` (22 / 12 / 12px) |
-| `destructive` | **placeholder** (`person-a`). Homie doesn't define an error colour yet. |
+| `destructive` | **placeholder** (`swatch-clay`). Homie doesn't define an error colour yet. |
 
 To add stock shadcn components into this package, run the shadcn CLI from `packages/homie-ui`. `components.json` says `"style": "base-nova"`; change it to whichever Base UI style your app already uses.
 
@@ -125,9 +125,9 @@ All are plain React (19) with Tailwind classes. Interactive ones are `"use clien
 | `PhotoPanel` | | Crossfading slideshow with an EXIF place/date caption. Kiosk: resizes to each photo's shape. Desktop: fills beside the events. Mobile: a 4:3 card. |
 | `HomieThemeProvider`, `useHomieTheme`, `useNow`, `useIdle` | | Theme schedule and surface, a ticking clock, and the kiosk's 60 s drift back home. |
 
-People are `{ key: "a" | "b" | "c" | "family" | "grownups", name, emoji? }`. Colour always comes with the emoji and the name.
+People are `{ id, name, emoji?, swatch }`, where `swatch` is one of the ten curated keys in `SWATCHES` (`clay`, `amber`, `moss`, `pine`, `teal`, `sky`, `iris`, `orchid`, `plum`, `slate`). Each theme supplies its own value for a swatch, so colour stays legible against `--hm-on-person` when the kiosk switches themes — which a stored hex could not do. Colour always comes with the emoji and the name.
 
-Time helpers in `@homie/ui` follow the content rules: `formatTime` → `5:45 pm`, `formatRange` → `3:30–4:15 pm`, `until` → `in 2 hr 17 min`, `dayLabel` → `Today` / `Tomorrow` / weekday, `formatTakenAt` → `Fri, Aug 14 · 8:12 pm`.
+Time helpers in `@homie/ui` follow the content rules: `formatTime` → `5:45 pm`, `formatRange` → `3:30–4:15 pm`, `until` → `in 2 hr 17 min`, `dayLabel` → `Today` / `Tomorrow` / weekday / `Wed, Oct 28` from a week out, `formatTakenAt` → `Fri, Aug 14 · 8:12 pm`.
 
 See `examples/screens.tsx` for the Home, Week and Weather screens, written once and working on every surface.
 

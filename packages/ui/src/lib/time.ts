@@ -31,10 +31,16 @@ const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDat
 export const dayDiff = (d: Date, now = new Date()) =>
   Math.round((startOfDay(d).getTime() - startOfDay(now).getTime()) / 86_400_000)
 
-/** "Today", "Tomorrow", then the weekday */
+/**
+ * "Today", "Tomorrow", the weekday within the coming week, then "Wed, Oct 28".
+ * A bare weekday stops being an answer once the date is a week out, because
+ * "Wednesday" then names two different days and the reader picks the wrong one.
+ */
 export const dayLabel = (d: Date, now = new Date()) => {
   const k = dayDiff(d, now)
-  return k === 0 ? "Today" : k === 1 ? "Tomorrow" : DAYS[d.getDay()]!
+  if (k === 0) return "Today"
+  if (k === 1) return "Tomorrow"
+  return k < 7 ? DAYS[d.getDay()]! : formatShortDate(d)
 }
 
 /** "Today", then "Fri", "Sat" ... for week columns and the daily forecast */

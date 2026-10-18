@@ -1,6 +1,6 @@
 import * as React from "react"
 
-import { personVars, type Person } from "../lib/people"
+import { varsFor, type Person } from "../lib/people"
 import { cn } from "../lib/utils"
 import { PersonBadges } from "./person-badge"
 
@@ -49,7 +49,7 @@ export function EventCard({
     <div
       data-slot="event-card"
       className={cn(
-        people[0] && personVars[people[0].key],
+        people[0] && varsFor(people[0]),
         "flex flex-col gap-hm-8 rounded-hm-16 bg-(--p-tint) px-hm-16 pt-hm-14 pb-hm-16",
         past && "opacity-(--hm-opacity-past)",
         className,

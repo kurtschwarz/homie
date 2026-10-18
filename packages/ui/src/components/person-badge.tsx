@@ -1,6 +1,6 @@
 import * as React from "react"
 
-import { badgeFor, personVars, type Person, type PersonKey } from "../lib/people"
+import { badgeFor, varsFor, type Person, type Swatch } from "../lib/people"
 import { cn } from "../lib/utils"
 
 const SIZES = {
@@ -28,7 +28,7 @@ export function PersonBadge({
       data-slot="person-badge"
       title={person.name}
       className={cn(
-        personVars[person.key],
+        varsFor(person),
         "grid flex-none place-items-center rounded-full bg-(--p) leading-none text-hm-on-person",
         "font-[Apple_Color_Emoji,Segoe_UI_Emoji,Noto_Color_Emoji,var(--font-sans)] [filter:var(--hm-emoji-filter)]",
         SIZES[size],
@@ -47,7 +47,7 @@ export function PersonBadges({ people, size = "md", ring, className }: { people:
   return (
     <span className={cn("flex flex-none", size === "sm" ? "gap-hm-4" : "gap-hm-6", className)}>
       {people.map((p) => (
-        <PersonBadge key={p.key} person={p} size={size} ring={ring} />
+        <PersonBadge key={p.id} person={p} size={size} ring={ring} />
       ))}
     </span>
   )
@@ -59,7 +59,7 @@ export function PersonLegend({ person, className, ...props }: React.ComponentPro
     <span
       data-slot="person-legend"
       className={cn(
-        personVars[person.key],
+        varsFor(person),
         "inline-flex h-hm-52 items-center gap-hm-10 rounded-full bg-(--p-tint) pr-hm-20 pl-hm-8 text-hm-caption font-medium whitespace-nowrap text-hm-ink",
         className,
       )}
@@ -71,4 +71,4 @@ export function PersonLegend({ person, className, ...props }: React.ComponentPro
   )
 }
 
-export type { Person, PersonKey }
+export type { Person, Swatch }

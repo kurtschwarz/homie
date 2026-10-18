@@ -77,7 +77,7 @@ const SEMANTIC = [
 out.push(
   "/* shadcn semantic variables, declared wherever a theme is set so they resolve against that theme. */\n:root,\n.light,\n.dark,\n.night,\n[data-theme] {\n" +
     SEMANTIC.map(([a, b]) => `  --${a}: var(--hm-${b});`).join("\n") +
-    "\n  /* Homie has no error colour yet. This placeholder keeps stock shadcn components rendering; replace it. */\n  --destructive: var(--hm-person-a);\n}\n" +
+    "\n  /* Homie has no error colour yet. This placeholder keeps stock shadcn components rendering; replace it. */\n  --destructive: var(--hm-swatch-clay);\n}\n" +
     "/* shadcn's radius follows the surface's control radius. */\n:root,\n[data-surface] {\n  --radius: var(--hm-control-radius);\n}\n",
 )
 writeFileSync(join(root, "src/styles/tokens.css"), out.join("\n"))
@@ -100,8 +100,8 @@ const styles = roles.map((r) => {
 const theme = `/* GENERATED from tokens.json by scripts/build-tokens.mjs; edit tokens.json, not this file. */
 
 @theme inline {
-  /* Colours: bg-hm-surface, text-hm-ink-2, bg-hm-person-a-tint ... */
-${T.color.tokens.map((t) => `  --color-hm-${t.name}: var(--hm-${t.name});`).join("\n")}
+  /* Colours: bg-hm-surface, text-hm-ink-2 ... Swatches and tint-strength have no utility; they are chosen via lib/people.ts, not Tailwind classes. */
+${T.color.tokens.filter((t) => !t.name.startsWith("swatch-") && t.name !== "tint-strength").map((t) => `  --color-hm-${t.name}: var(--hm-${t.name});`).join("\n")}
 
   /* Type roles, sized by the active surface: text-hm-headline, text-hm-body ... */
 ${styles.join("\n")}

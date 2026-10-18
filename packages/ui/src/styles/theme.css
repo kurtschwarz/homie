@@ -1,7 +1,7 @@
 /* GENERATED from tokens.json by scripts/build-tokens.mjs; edit tokens.json, not this file. */
 
 @theme inline {
-  /* Colours: bg-hm-surface, text-hm-ink-2, bg-hm-person-a-tint ... */
+  /* Colours: bg-hm-surface, text-hm-ink-2 ... Swatches and tint-strength have no utility; they are chosen via lib/people.ts, not Tailwind classes. */
   --color-hm-bg: var(--hm-bg);
   --color-hm-surface: var(--hm-surface);
   --color-hm-ink: var(--hm-ink);
@@ -15,16 +15,6 @@
   --color-hm-scrim: var(--hm-scrim);
   --color-hm-on-scrim: var(--hm-on-scrim);
   --color-hm-on-scrim-2: var(--hm-on-scrim-2);
-  --color-hm-person-a: var(--hm-person-a);
-  --color-hm-person-b: var(--hm-person-b);
-  --color-hm-person-c: var(--hm-person-c);
-  --color-hm-person-family: var(--hm-person-family);
-  --color-hm-person-grownups: var(--hm-person-grownups);
-  --color-hm-person-a-tint: var(--hm-person-a-tint);
-  --color-hm-person-b-tint: var(--hm-person-b-tint);
-  --color-hm-person-c-tint: var(--hm-person-c-tint);
-  --color-hm-person-family-tint: var(--hm-person-family-tint);
-  --color-hm-person-grownups-tint: var(--hm-person-grownups-tint);
   --color-hm-on-person: var(--hm-on-person);
 
   /* Type roles, sized by the active surface: text-hm-headline, text-hm-body ... */
@@ -184,7 +174,6 @@
     0%, 49.9% { opacity: 1; }
     50%, 100% { opacity: 0.18; }
   }
-
 }
 
 /* Surface variants. mobile: = under 768px (or data-surface="mobile"); kiosk: = data-surface="kiosk". */

@@ -1,5 +1,8 @@
 pi_host := "homie"
 pi_dir := "/opt/homie"
+ios_simulator_id := env_var_or_default("IOS_SIMULATOR_ID", "6106C956-E47A-4099-81F5-851AB83AB540")
+ios_derived_data := "/tmp/homie-ios-derived-data"
+ios_app := ios_derived_data + "/Build/Products/Debug-iphonesimulator/Homie.app"
 
 # Run the API (with hot reload) and both Vite dev servers in Docker.
 dev:
@@ -8,6 +11,19 @@ dev:
 # Build the Photo Sync macOS test app.
 photo-sync:
     ./apps/photo-sync/build.sh
+
+# Build, install, and launch Homie in the iPhone 17 simulator.
+# Override IOS_SIMULATOR_ID to target another booted or available simulator.
+ios-sim:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    xcodebuild -project apps/mobile/ios/Homie.xcodeproj -scheme Homie -configuration Debug -sdk iphonesimulator -destination "platform=iOS Simulator,id={{ios_simulator_id}}" -derivedDataPath "{{ios_derived_data}}" CODE_SIGNING_ALLOWED=NO build
+    xcrun simctl boot "{{ios_simulator_id}}" 2>/dev/null || true
+    xcrun simctl bootstatus "{{ios_simulator_id}}" -b
+    open -a Simulator --args -CurrentDeviceUDID "{{ios_simulator_id}}"
+    xcrun simctl install "{{ios_simulator_id}}" "{{ios_app}}"
+    xcrun simctl terminate "{{ios_simulator_id}}" com.schw.ar.Homie 2>/dev/null || true
+    xcrun simctl launch "{{ios_simulator_id}}" com.schw.ar.Homie
 
 # Regenerate gqlgen code after editing services/api/graph/*.graphqls.
 codegen:

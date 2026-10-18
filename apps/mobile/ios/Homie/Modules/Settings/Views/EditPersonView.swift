@@ -3,11 +3,12 @@ import SwiftUI
 struct EditPersonView: View {
     @Environment(PeopleManager.self) private var peopleManager
     @Environment(\.dismiss) private var dismiss
-    let person: Person?
+
     @State private var name: String
     @State private var emoji: String
     @State private var swatch: String
 
+    let person: Person?
     private let emojis = ["🦊", "🐢", "🦋", "🐻", "🐼", "🐸", "🦁", "🐯", "🐨", "🐙", "🦄", "🐝", "🐬", "🦉", "🐧", "🌻", "🏠", "☕️"]
 
     init(person: Person?) {

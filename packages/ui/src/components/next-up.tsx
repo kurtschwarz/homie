@@ -9,6 +9,15 @@ import { PersonBadges } from "./person-badge"
 /** Steps relative to the surface's `headline` size (112 → 96 → 84 → 72 → 60 on kiosk). */
 const STEPS = [1, 0.857, 0.75, 0.643, 0.536] as const
 
+/**
+ * How long the column width must hold still before the headline is re-measured.
+ * PhotoPanel animates its width over 900ms and the events column flexes against
+ * it, so a width change means "an animation is mid-flight", not "a new column to
+ * fit into". Re-fitting every frame both thrashes layout and lets the step
+ * oscillate, because changing the font size resizes the very element we observe.
+ */
+const SETTLE_MS = 150
+
 /** Picks the largest step whose title fits in two lines of its column (three lines at the last step). */
 function useHeadlineStep(ref: React.RefObject<HTMLElement | null>, title: string) {
   const [step, setStep] = React.useState(0)
@@ -33,9 +42,27 @@ function useHeadlineStep(ref: React.RefObject<HTMLElement | null>, title: string
       setStep(chosen)
     }
     fit()
-    const ro = new ResizeObserver(fit)
-    if (el.parentElement) ro.observe(el.parentElement)
-    return () => ro.disconnect()
+
+    const parent = el.parentElement
+    if (!parent) return
+
+    let lastWidth = parent.getBoundingClientRect().width
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const ro = new ResizeObserver(([entry]) => {
+      if (!entry) return
+      // Height is ignored on purpose: our own font-size change alters it, and
+      // reacting to that is what closed the loop.
+      const width = entry.contentRect.width
+      if (width === lastWidth) return
+      lastWidth = width
+      clearTimeout(timer)
+      timer = setTimeout(fit, SETTLE_MS)
+    })
+    ro.observe(parent)
+    return () => {
+      clearTimeout(timer)
+      ro.disconnect()
+    }
   }, [ref, title])
   return step
 }

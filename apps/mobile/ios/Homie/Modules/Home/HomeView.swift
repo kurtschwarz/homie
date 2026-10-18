@@ -20,6 +20,7 @@ struct HomeView: View {
                         }
 
                     Greeting(weather: homeManager.weather, remainingToday: homeManager.remainingToday)
+                        .padding(.top, 20)
 
                     Button {
                         // Dismissing from the form can leave the selection on

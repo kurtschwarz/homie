@@ -13,6 +13,23 @@ import (
 	"github.com/kurtschwarz/homie/services/api/internal/graph/model"
 )
 
+// CreateEvent is the resolver for the createEvent field.
+func (r *mutationResolver) CreateEvent(ctx context.Context, input model.EventInput) (*model.Event, error) {
+	if r.Resolver.Events == nil {
+		return nil, errEventsNotConfigured
+	}
+	draft, err := fromModelEventInput(input)
+	if err != nil {
+		return nil, err
+	}
+	created, err := r.Resolver.Events.CreateEvent(ctx, draft)
+	if err != nil {
+		return nil, err
+	}
+	result := toModelEvent(created)
+	return &result, nil
+}
+
 // SavePerson is the resolver for the savePerson field.
 func (r *mutationResolver) SavePerson(ctx context.Context, input model.PersonInput) (*model.Person, error) {
 	if r.Resolver.Events == nil {

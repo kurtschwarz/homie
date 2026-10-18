@@ -2,6 +2,7 @@ package events_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -17,6 +18,26 @@ type stubFetcher struct {
 
 func (s stubFetcher) Report(context.Context, time.Time, time.Time) ([]caldav.Occurrence, error) {
 	return s.occurrences, s.err
+}
+
+// stubWriter is a Fetcher+Writer whose Put appends to the occurrences the
+// next Report (and therefore the next Refresh) will return, standing in for
+// a round trip through a real CalDAV server.
+type stubWriter struct {
+	occurrences *[]caldav.Occurrence
+	putErr      error
+}
+
+func (s stubWriter) Report(context.Context, time.Time, time.Time) ([]caldav.Occurrence, error) {
+	return *s.occurrences, nil
+}
+
+func (s stubWriter) Put(_ context.Context, occ caldav.Occurrence) error {
+	if s.putErr != nil {
+		return s.putErr
+	}
+	*s.occurrences = append(*s.occurrences, occ)
+	return nil
 }
 
 func seedEvent(t *testing.T, repo events.Repository, uid string, start time.Time, categories []string) {
@@ -399,6 +420,152 @@ func TestRefreshIsANoOpWithoutAClient(t *testing.T) {
 	_, service := newEventsService(t)
 	if err := service.Refresh(context.Background()); err != nil {
 		t.Fatalf("expected Refresh to be a no-op without a client, got %v", err)
+	}
+}
+
+func TestCreateEventWithoutAWriterIsReadOnly(t *testing.T) {
+	_, service := newEventsService(t)
+	service.Client = stubFetcher{}
+	start := time.Now().Add(time.Hour)
+	personID, err := uuid.NewRandom()
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = service.CreateEvent(context.Background(), events.Draft{
+		Summary: "Dentist", Start: start, End: start.Add(time.Hour), PersonIDs: []uuid.UUID{personID},
+	})
+	if !errors.Is(err, events.ErrEventsReadOnly) {
+		t.Fatalf("expected ErrEventsReadOnly, got %v", err)
+	}
+}
+
+func TestCreateEventRoundTripsThroughRefresh(t *testing.T) {
+	repo, service := newEventsService(t)
+	ctx := context.Background()
+	personID, err := uuid.NewRandom()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.UpsertPerson(ctx, events.Person{ID: personID, Name: "Lana", Swatch: "sky"}); err != nil {
+		t.Fatal(err)
+	}
+	var occurrences []caldav.Occurrence
+	service.Client = stubWriter{occurrences: &occurrences}
+
+	start := time.Now().Add(time.Hour).Truncate(time.Second)
+	end := start.Add(time.Hour)
+	got, err := service.CreateEvent(ctx, events.Draft{
+		Summary: "Dentist", Location: "123 Main St", Start: start, End: end, PersonIDs: []uuid.UUID{personID},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Summary != "Dentist" || got.Location != "123 Main St" {
+		t.Fatalf("expected the created event back, got %+v", got)
+	}
+	if len(got.People) != 1 || got.People[0].ID != personID {
+		t.Fatalf("expected the event attributed to Lana, got %+v", got.People)
+	}
+
+	mappings, err := repo.ListTagMappings(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(mappings) != 1 || mappings[0].Tag != "lana" || mappings[0].PersonID == nil || *mappings[0].PersonID != personID {
+		t.Fatalf("expected a lana->Lana tag mapping to be created, got %+v", mappings)
+	}
+
+	stored, err := repo.ListWindow(ctx, start, end.Add(time.Second))
+	if err != nil || len(stored) != 1 {
+		t.Fatalf("expected the event to survive the sync it triggered: got=%+v err=%v", stored, err)
+	}
+}
+
+func TestCreateEventReusesAnExistingPersonTag(t *testing.T) {
+	repo, service := newEventsService(t)
+	ctx := context.Background()
+	personID, err := uuid.NewRandom()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.UpsertPerson(ctx, events.Person{ID: personID, Name: "Lana", Swatch: "sky"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.UpsertTagMapping(ctx, events.TagMapping{Tag: "lana-nickname", Label: "Lana Nickname", Kind: events.TagKindPerson, PersonID: &personID}); err != nil {
+		t.Fatal(err)
+	}
+	var occurrences []caldav.Occurrence
+	service.Client = stubWriter{occurrences: &occurrences}
+
+	start := time.Now().Add(time.Hour).Truncate(time.Second)
+	if _, err := service.CreateEvent(ctx, events.Draft{Summary: "Dentist", Start: start, End: start.Add(time.Hour), PersonIDs: []uuid.UUID{personID}}); err != nil {
+		t.Fatal(err)
+	}
+
+	mappings, err := repo.ListTagMappings(ctx)
+	if err != nil || len(mappings) != 1 {
+		t.Fatalf("expected the existing mapping to be reused, not a second one created: got=%+v err=%v", mappings, err)
+	}
+}
+
+func TestCreateEventRejectsATagAlreadyTakenBySomeoneElse(t *testing.T) {
+	repo, service := newEventsService(t)
+	ctx := context.Background()
+	lanaID, err := uuid.NewRandom()
+	if err != nil {
+		t.Fatal(err)
+	}
+	elinaID, err := uuid.NewRandom()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.UpsertPerson(ctx, events.Person{ID: lanaID, Name: "Lana", Swatch: "sky"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.UpsertPerson(ctx, events.Person{ID: elinaID, Name: "Elina", Swatch: "amber"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.UpsertTagMapping(ctx, events.TagMapping{Tag: "lana", Label: "Lana", Kind: events.TagKindPerson, PersonID: &elinaID}); err != nil {
+		t.Fatal(err)
+	}
+	var occurrences []caldav.Occurrence
+	service.Client = stubWriter{occurrences: &occurrences}
+
+	start := time.Now().Add(time.Hour)
+	_, err = service.CreateEvent(ctx, events.Draft{Summary: "Dentist", Start: start, End: start.Add(time.Hour), PersonIDs: []uuid.UUID{lanaID}})
+	if !errors.Is(err, events.ErrTagTaken) {
+		t.Fatalf("expected ErrTagTaken, got %v", err)
+	}
+}
+
+func TestCreateEventRejectsUnknownPerson(t *testing.T) {
+	_, service := newEventsService(t)
+	var occurrences []caldav.Occurrence
+	service.Client = stubWriter{occurrences: &occurrences}
+	personID, err := uuid.NewRandom()
+	if err != nil {
+		t.Fatal(err)
+	}
+	start := time.Now().Add(time.Hour)
+	_, err = service.CreateEvent(context.Background(), events.Draft{
+		Summary: "Dentist", Start: start, End: start.Add(time.Hour), PersonIDs: []uuid.UUID{personID},
+	})
+	if err == nil {
+		t.Fatal("expected an unknown person error")
+	}
+	if len(occurrences) != 0 {
+		t.Fatalf("event was written before validating the person: %+v", occurrences)
+	}
+}
+
+func TestCreateEventRejectsInvalidDraft(t *testing.T) {
+	_, service := newEventsService(t)
+	start := time.Now()
+	_, err := service.CreateEvent(context.Background(), events.Draft{
+		Summary: " ", Start: start, End: start,
+	})
+	if !errors.Is(err, events.ErrInvalidDraft) {
+		t.Fatalf("expected ErrInvalidDraft, got %v", err)
 	}
 }
 

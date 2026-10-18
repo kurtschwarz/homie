@@ -1,6 +1,7 @@
 package caldav
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"net/http"
@@ -8,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/emersion/go-ical"
 )
 
 const multistatusFixture = `<?xml version="1.0" encoding="UTF-8"?>
@@ -248,6 +251,109 @@ func TestReportReturnsDistinguishableUnauthorizedError(t *testing.T) {
 	if err != ErrUnauthorized {
 		t.Fatalf("expected ErrUnauthorized, got %v", err)
 	}
+}
+
+func TestPutRoundTripsATimedEvent(t *testing.T) {
+	occ := Occurrence{
+		UID:        "new-event-1",
+		Summary:    "Dentist",
+		Location:   "123 Main St",
+		Start:      time.Date(2026, 10, 20, 15, 0, 0, 0, time.UTC),
+		End:        time.Date(2026, 10, 20, 16, 0, 0, 0, time.UTC),
+		Categories: []string{"lana"},
+	}
+	got := putAndReparse(t, occ)
+	if got.UID != occ.UID || got.Summary != occ.Summary || got.Location != occ.Location {
+		t.Fatalf("expected %+v, got %+v", occ, got)
+	}
+	if got.AllDay {
+		t.Fatalf("expected a timed event, got all-day: %+v", got)
+	}
+	if !got.Start.Equal(occ.Start) || !got.End.Equal(occ.End) {
+		t.Fatalf("expected start/end %s/%s, got %s/%s", occ.Start, occ.End, got.Start, got.End)
+	}
+	if len(got.Categories) != 1 || got.Categories[0] != "lana" {
+		t.Fatalf("expected categories [lana], got %+v", got.Categories)
+	}
+}
+
+func TestPutReturnsDistinguishableUnauthorizedError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	defer server.Close()
+	client, err := New(Config{URL: server.URL, User: "kurt@schw.ar", Password: "revoked", HTTPClient: server.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = client.Put(context.Background(), Occurrence{
+		UID: "unauthorized", Summary: "Test",
+		Start: time.Date(2026, 10, 20, 15, 0, 0, 0, time.UTC),
+		End:   time.Date(2026, 10, 20, 16, 0, 0, 0, time.UTC),
+	})
+	if err != ErrUnauthorized {
+		t.Fatalf("expected ErrUnauthorized, got %v", err)
+	}
+}
+
+func TestPutRoundTripsAnAllDayEvent(t *testing.T) {
+	toronto, err := time.LoadLocation("America/Toronto")
+	if err != nil {
+		t.Skipf("tzdata unavailable: %v", err)
+	}
+	occ := Occurrence{
+		UID:     "new-event-2",
+		Summary: "Birthday",
+		AllDay:  true,
+		Start:   time.Date(2026, 10, 20, 0, 0, 0, 0, toronto),
+		End:     time.Date(2026, 10, 21, 0, 0, 0, 0, toronto),
+	}
+	got := putAndReparse(t, occ, toronto)
+	if !got.AllDay {
+		t.Fatalf("expected an all-day event, got %+v", got)
+	}
+	if !got.Start.Equal(occ.Start) || !got.End.Equal(occ.End) {
+		t.Fatalf("expected start/end %s/%s, got %s/%s", occ.Start, occ.End, got.Start, got.End)
+	}
+}
+
+func putAndReparse(t *testing.T, occ Occurrence, locations ...*time.Location) Occurrence {
+	t.Helper()
+	location := time.UTC
+	if len(locations) > 0 {
+		location = locations[0]
+	}
+	var body []byte
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPut {
+			t.Errorf("unexpected method: %s", r.Method)
+		}
+		body, _ = io.ReadAll(r.Body)
+		w.WriteHeader(http.StatusCreated)
+	}))
+	defer server.Close()
+
+	client, err := New(Config{URL: server.URL, User: "kurt@schw.ar", Password: "app-password", HTTPClient: server.Client(), Location: location})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := client.Put(context.Background(), occ); err != nil {
+		t.Fatal(err)
+	}
+
+	decoded, err := ical.NewDecoder(bytes.NewReader(body)).Decode()
+	if err != nil {
+		t.Fatalf("decode PUT body: %v", err)
+	}
+	events := decoded.Events()
+	if len(events) != 1 {
+		t.Fatalf("expected exactly 1 VEVENT, got %d", len(events))
+	}
+	reparsed, err := occurrenceFromEvent(events[0], location)
+	if err != nil {
+		t.Fatalf("reparse: %v", err)
+	}
+	return reparsed
 }
 
 func mustParseFixture(t *testing.T) []Occurrence {

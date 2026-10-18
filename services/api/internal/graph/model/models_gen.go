@@ -24,6 +24,15 @@ type Event struct {
 	People   []Person `json:"people"`
 }
 
+type EventInput struct {
+	Title     string   `json:"title"`
+	Location  *string  `json:"location,omitempty"`
+	Start     int      `json:"start"`
+	End       int      `json:"end"`
+	AllDay    bool     `json:"allDay"`
+	PersonIds []string `json:"personIds"`
+}
+
 // A normalized region of interest, with top-left origin.
 type FocalRegion struct {
 	X      float64 `json:"x"`

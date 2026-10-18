@@ -42,6 +42,15 @@ input TagMappingInput {
   personId: ID
 }
 
+input EventInput {
+  title: String!
+  location: String
+  start: Int!
+  end: Int!
+  allDay: Boolean!
+  personIds: [ID!]!
+}
+
 extend type Query {
   events(days: Int = 21): [Event!]!
   people: [Person!]!
@@ -50,6 +59,7 @@ extend type Query {
 }
 
 extend type Mutation {
+  createEvent(input: EventInput!): Event!
   savePerson(input: PersonInput!): Person!
   deletePerson(id: ID!): Boolean!
   saveTagMapping(input: TagMappingInput!): TagMapping!

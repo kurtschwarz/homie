@@ -3,6 +3,7 @@ package events
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"sort"
 	"strings"
@@ -42,6 +43,36 @@ type DisplayEvent struct {
 // Fetcher is the portion of the CalDAV client used by Service.
 type Fetcher interface {
 	Report(ctx context.Context, from, to time.Time) ([]caldav.Occurrence, error)
+}
+
+// Writer is the portion of the CalDAV client used to create events. It is
+// separate from Fetcher so a Client that can only read keeps CreateEvent
+// returning ErrEventsReadOnly instead of panicking on a failed type assertion.
+type Writer interface {
+	Put(ctx context.Context, occ caldav.Occurrence) error
+}
+
+// ErrEventsReadOnly is returned by CreateEvent when the configured CalDAV
+// client cannot write (typically: CalDAV is not configured at all).
+var ErrEventsReadOnly = errors.New("events: CalDAV client cannot create events")
+
+// ErrTagTaken is returned when a person has no PERSON tag mapping and their
+// normalised name collides with an existing mapping for someone else, or
+// with an INCLUDE mapping.
+var ErrTagTaken = errors.New("events: tag already mapped to something else")
+
+// ErrInvalidDraft is returned when a draft is missing a title or person, or
+// has an invalid time range.
+var ErrInvalidDraft = errors.New("events: invalid event draft")
+
+// Draft is a locally authored event awaiting a CalDAV UID.
+type Draft struct {
+	Summary   string
+	Location  string
+	Start     time.Time
+	End       time.Time
+	AllDay    bool
+	PersonIDs []uuid.UUID
 }
 
 // Service serves displayable events and the people/mapping surface backing
@@ -99,6 +130,160 @@ func (s *Service) Refresh(ctx context.Context) error {
 	}
 	s.logger().InfoContext(ctx, "events refresh", "fetched", len(occurrences), "written", len(newEvents), "untagged", untagged)
 	return nil
+}
+
+// CreateEvent writes a new VEVENT to CalDAV, syncs it back in, and returns
+// it attributed to its people. CalDAV stays the only writer to the events
+// table, so the periodic ReplaceWindow sync can never clobber it.
+func (s *Service) CreateEvent(ctx context.Context, draft Draft) (DisplayEvent, error) {
+	if strings.TrimSpace(draft.Summary) == "" || !draft.End.After(draft.Start) || len(draft.PersonIDs) == 0 {
+		return DisplayEvent{}, ErrInvalidDraft
+	}
+	if s.Client == nil {
+		return DisplayEvent{}, ErrEventsReadOnly
+	}
+	writer, ok := s.Client.(Writer)
+	if !ok {
+		return DisplayEvent{}, ErrEventsReadOnly
+	}
+
+	categories, err := s.tagsForPeople(ctx, draft.PersonIDs)
+	if err != nil {
+		return DisplayEvent{}, err
+	}
+
+	id, err := uuid.NewV7()
+	if err != nil {
+		return DisplayEvent{}, err
+	}
+	occurrence := caldav.Occurrence{
+		UID:        id.String() + "@homie",
+		Summary:    draft.Summary,
+		Location:   draft.Location,
+		Start:      draft.Start,
+		End:        draft.End,
+		AllDay:     draft.AllDay,
+		Categories: categories,
+	}
+	if err := writer.Put(ctx, occurrence); err != nil {
+		return DisplayEvent{}, err
+	}
+
+	if err := s.Refresh(ctx); err != nil {
+		// The event is saved; a failed sync just means it will not be
+		// visible until the next periodic refresh. Return it as created
+		// rather than reporting a save failure that did not happen.
+		s.logger().WarnContext(ctx, "events refresh after create failed", "error", err)
+	}
+
+	events, err := s.repo.ListWindow(ctx, draft.Start, draft.Start.Add(time.Second))
+	if err == nil {
+		for _, event := range events {
+			if event.UID == occurrence.UID {
+				return DisplayEvent{Event: event, People: s.peopleForIDs(ctx, draft.PersonIDs)}, nil
+			}
+		}
+	}
+
+	return DisplayEvent{
+		Event: Event{
+			ID: id, UID: occurrence.UID, Summary: draft.Summary, Location: draft.Location,
+			Start: draft.Start, End: draft.End, AllDay: draft.AllDay, Categories: categories,
+		},
+		People: s.peopleForIDs(ctx, draft.PersonIDs),
+	}, nil
+}
+
+// tagsForPeople resolves each person to a PERSON tag, creating one from
+// their normalised name when they have none. It errors rather than steal a
+// tag already mapped to someone else.
+func (s *Service) tagsForPeople(ctx context.Context, personIDs []uuid.UUID) ([]string, error) {
+	if len(personIDs) == 0 {
+		return nil, nil
+	}
+	people, err := s.repo.ListPeople(ctx)
+	if err != nil {
+		return nil, err
+	}
+	peopleByID := make(map[uuid.UUID]Person, len(people))
+	for _, p := range people {
+		peopleByID[p.ID] = p
+	}
+	for _, personID := range personIDs {
+		if _, ok := peopleByID[personID]; !ok {
+			return nil, fmt.Errorf("events: person %s does not exist", personID)
+		}
+	}
+	mappings, err := s.repo.ListTagMappings(ctx)
+	if err != nil {
+		return nil, err
+	}
+	mappingByTag := make(map[string]TagMapping, len(mappings))
+	tagByPerson := make(map[uuid.UUID]string, len(mappings))
+	for _, m := range mappings {
+		mappingByTag[m.Tag] = m
+		if m.Kind == TagKindPerson && m.PersonID != nil {
+			if _, ok := tagByPerson[*m.PersonID]; !ok {
+				tagByPerson[*m.PersonID] = m.Tag
+			}
+		}
+	}
+
+	var tags []string
+	seenPeople := make(map[uuid.UUID]struct{}, len(personIDs))
+	for _, personID := range personIDs {
+		if _, duplicate := seenPeople[personID]; duplicate {
+			continue
+		}
+		seenPeople[personID] = struct{}{}
+		if tag, ok := tagByPerson[personID]; ok {
+			tags = append(tags, tag)
+			continue
+		}
+		person, ok := peopleByID[personID]
+		if !ok {
+			continue // validated above
+		}
+		tag := normalizeTag(person.Name)
+		if existing, ok := mappingByTag[tag]; ok && (existing.Kind != TagKindPerson || existing.PersonID == nil || *existing.PersonID != personID) {
+			return nil, fmt.Errorf("%w: %q", ErrTagTaken, tag)
+		}
+		mapping := TagMapping{Tag: tag, Label: person.Name, Kind: TagKindPerson, PersonID: &personID}
+		if err := s.repo.UpsertTagMapping(ctx, mapping); err != nil {
+			return nil, err
+		}
+		mappingByTag[tag] = mapping
+		tagByPerson[personID] = tag
+		tags = append(tags, tag)
+	}
+	return tags, nil
+}
+
+func (s *Service) peopleForIDs(ctx context.Context, personIDs []uuid.UUID) []Person {
+	if len(personIDs) == 0 {
+		return nil
+	}
+	people, err := s.repo.ListPeople(ctx)
+	if err != nil {
+		return nil
+	}
+	peopleByID := make(map[uuid.UUID]Person, len(people))
+	for _, p := range people {
+		peopleByID[p.ID] = p
+	}
+	var result []Person
+	seen := make(map[uuid.UUID]struct{}, len(personIDs))
+	for _, id := range personIDs {
+		if _, duplicate := seen[id]; duplicate {
+			continue
+		}
+		seen[id] = struct{}{}
+		if p, ok := peopleByID[id]; ok {
+			result = append(result, p)
+		}
+	}
+	sort.Slice(result, func(i, j int) bool { return result[i].Order < result[j].Order })
+	return result
 }
 
 func (s *Service) logger() *slog.Logger {

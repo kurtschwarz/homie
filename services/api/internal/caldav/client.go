@@ -146,6 +146,52 @@ func (c *Client) Report(ctx context.Context, from, to time.Time) ([]Occurrence, 
 	return occurrences, nil
 }
 
+// Put creates one VEVENT on the calendar collection. occ.UID must be unique;
+// callers mint it with uuid.NewV7 so retries do not create duplicates.
+func (c *Client) Put(ctx context.Context, occ Occurrence) error {
+	event := ical.NewEvent()
+	event.Props.SetText(ical.PropUID, occ.UID)
+	event.Props.SetDateTime(ical.PropDateTimeStamp, time.Now().UTC())
+	event.Props.SetText(ical.PropSummary, occ.Summary)
+	if occ.Location != "" {
+		event.Props.SetText(ical.PropLocation, occ.Location)
+	}
+	if len(occ.Categories) > 0 {
+		prop := ical.NewProp(ical.PropCategories)
+		prop.SetTextList(occ.Categories)
+		event.Props.Add(prop)
+	}
+	if occ.AllDay {
+		// VALUE=DATE has no timezone in iCalendar. Use the configured
+		// calendar location so a UTC instant from GraphQL keeps its intended
+		// local calendar date when converted to YYYYMMDD.
+		start := occ.Start.In(c.location)
+		end := occ.End.In(c.location)
+		event.Props.SetDate(ical.PropDateTimeStart, start)
+		// DTEND is exclusive for VALUE=DATE; occurrenceFromEvent relies on
+		// the ValueType of DTSTART (not DTEND) to detect all-day, so this
+		// only needs to be a date one day past the last included day.
+		event.Props.SetDate(ical.PropDateTimeEnd, end)
+	} else {
+		event.Props.SetDateTime(ical.PropDateTimeStart, occ.Start)
+		event.Props.SetDateTime(ical.PropDateTimeEnd, occ.End)
+	}
+
+	cal := ical.NewCalendar()
+	cal.Props.SetText(ical.PropVersion, "2.0")
+	cal.Props.SetText(ical.PropProductID, "-//homie//homie-api//EN")
+	cal.Children = append(cal.Children, event.Component)
+
+	path := c.path + occ.UID + ".ics"
+	if _, err := c.inner.PutCalendarObject(ctx, path, cal); err != nil {
+		if strings.HasPrefix(err.Error(), fmt.Sprintf("%d ", http.StatusUnauthorized)) {
+			return ErrUnauthorized
+		}
+		return fmt.Errorf("caldav put: %w", err)
+	}
+	return nil
+}
+
 func occurrenceFromEvent(event ical.Event, loc *time.Location) (Occurrence, error) {
 	uid, err := event.Props.Text(ical.PropUID)
 	if err != nil {

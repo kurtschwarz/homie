@@ -17,6 +17,8 @@ struct AddToHomieSheet: View {
 
     /// Owned by the presenter, which is where presentationDetents is applied.
     @Binding var detent: PresentationDetent
+    /// Forwarded to NewEventView so the presenter can refresh its event count.
+    var onEventSaved: () -> Void = {}
 
     @State private var mode: Mode = .chooser
 
@@ -35,7 +37,7 @@ struct AddToHomieSheet: View {
                 chooser.transition(Self.fadeThrough)
             case .event:
                 NavigationStack {
-                    NewEventView(close: { show(.chooser, at: .medium) })
+                    NewEventView(close: { show(.chooser, at: .medium) }, onSaved: onEventSaved)
                 }
                 .transition(Self.fadeThrough)
             }

@@ -3,6 +3,7 @@ package graph
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/kurtschwarz/homie/services/api/internal/events"
@@ -31,6 +32,25 @@ func toModelPerson(person events.Person) model.Person {
 		ID: person.ID.String(), Name: person.Name, Emoji: person.Emoji,
 		Swatch: person.Swatch, IsFamily: person.IsFamily,
 	}
+}
+
+func fromModelEventInput(input model.EventInput) (events.Draft, error) {
+	personIDs := make([]uuid.UUID, 0, len(input.PersonIds))
+	for _, raw := range input.PersonIds {
+		id, err := uuid.Parse(raw)
+		if err != nil {
+			return events.Draft{}, err
+		}
+		personIDs = append(personIDs, id)
+	}
+	draft := events.Draft{
+		Summary: input.Title, Start: time.Unix(int64(input.Start), 0), End: time.Unix(int64(input.End), 0),
+		AllDay: input.AllDay, PersonIDs: personIDs,
+	}
+	if input.Location != nil {
+		draft.Location = *input.Location
+	}
+	return draft, nil
 }
 
 func toModelEvent(event events.DisplayEvent) model.Event {

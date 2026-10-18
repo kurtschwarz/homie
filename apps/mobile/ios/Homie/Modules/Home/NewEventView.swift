@@ -1,21 +1,23 @@
 import SwiftUI
 
 /// The new-event form reached from ``AddToHomieSheet``.
-///
-/// The form is complete but cannot save yet: the API exposes events read-only
-/// (see events.graphqls), so there is no mutation to post this to. "Add" closes
-/// the sheet until a createEvent mutation exists.
 struct NewEventView: View {
     @Environment(PeopleManager.self) private var peopleManager
     @Environment(\.dismiss) private var dismiss
     /// Returns to the chooser. Supplied by the sheet, which resizes as it swaps.
     let close: () -> Void
+    /// Called after a successful save, so the presenter can refresh its own
+    /// event count without this view knowing about HomeManager.
+    var onSaved: () -> Void = {}
 
     @State private var title = ""
+    @State private var location = ""
     @State private var personID: String?
     @State private var day = Calendar.current.startOfDay(for: Date())
     @State private var time = Self.nextHalfHour()
     @State private var isAllDay = false
+    @State private var isSaving = false
+    @State private var errorMessage: String?
 
     /// How far ahead the day strip runs.
     private let dayCount = 14
@@ -39,13 +41,38 @@ struct NewEventView: View {
                     }
                 }
 
-                section("For") { peoplePicker }
+                section("Where") {
+                    RoundedCard {
+                        TextField("Location (optional)", text: $location)
+                            .padding(16)
+                    }
+                }
+
+                section("For") {
+                    if peopleManager.people.isEmpty {
+                        if peopleManager.isLoading {
+                            ProgressView("Loading people")
+                        } else {
+                            Text(peopleManager.errorMessage ?? "Add a person in Settings before creating an event.")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                    } else {
+                        peoplePicker
+                    }
+                }
 
                 section("When") {
                     VStack(alignment: .leading, spacing: 12) {
                         dayStrip
                         timeRow
                     }
+                }
+
+                if let errorMessage {
+                    Text(errorMessage)
+                        .font(.subheadline)
+                        .foregroundStyle(.red)
                 }
 
                 kitchenPreview
@@ -64,18 +91,70 @@ struct NewEventView: View {
                 Button("Cancel", systemImage: "chevron.left") { close() }
                     .labelStyle(.iconOnly)
                     .font(.system(size: 13, weight: .semibold))
+                    .disabled(isSaving)
             }
             ToolbarItem(placement: .confirmationAction) {
-                // TODO: post the event once the API can create one.
-                // Nothing was pushed, so this dismisses the sheet itself
-                // rather than stepping back to the chooser.
-                Button("Add") { dismiss() }
-                    .disabled(trimmedTitle.isEmpty)
+                if isSaving {
+                    ProgressView()
+                } else {
+                    Button("Add") { Task { await save() } }
+                        .disabled(trimmedTitle.isEmpty || personID == nil)
+                }
             }
         }
         .task {
             await peopleManager.loadPeople()
             if personID == nil { personID = peopleManager.people.first?.id }
+        }
+    }
+
+    /// Start of the event: `day`'s date combined with `time`'s time of day,
+    /// or `day` itself at midnight when all-day.
+    private var start: Date {
+        guard !isAllDay else { return day }
+        let calendar = Calendar.current
+        let timeParts = calendar.dateComponents([.hour, .minute], from: time)
+        return calendar.date(bySettingHour: timeParts.hour ?? 0, minute: timeParts.minute ?? 0, second: 0, of: day) ?? day
+    }
+
+    /// End of the event: one day after `start` when all-day (DTEND is
+    /// exclusive), otherwise an hour after `start`.
+    private var end: Date {
+        let calendar = Calendar.current
+        if isAllDay {
+            return calendar.date(byAdding: .day, value: 1, to: start) ?? start
+        }
+        return calendar.date(byAdding: .hour, value: 1, to: start) ?? start
+    }
+
+    private func save() async {
+        isSaving = true
+        errorMessage = nil
+        defer { isSaving = false }
+        do {
+            var input: [String: Any] = [
+                "title": trimmedTitle,
+                "start": Int(start.timeIntervalSince1970),
+                "end": Int(end.timeIntervalSince1970),
+                "allDay": isAllDay,
+                "personIds": personID.map { [$0] } ?? [],
+            ]
+            let trimmedLocation = location.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmedLocation.isEmpty { input["location"] = trimmedLocation }
+            struct Payload: Decodable { let createEvent: CreatedEvent }
+            struct CreatedEvent: Decodable { let id: String }
+            let _: Payload = try await HomieAPI.perform(
+                """
+                mutation($input: EventInput!) {
+                    createEvent(input: $input) { id }
+                }
+                """,
+                variables: ["input": input]
+            )
+            onSaved()
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 

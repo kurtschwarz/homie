@@ -47,7 +47,7 @@ struct HomeView: View {
                 await homeManager.load()
             }
             .sheet(isPresented: $isAdding, onDismiss: { addDetent = .medium }) {
-                AddToHomieSheet(detent: $addDetent)
+                AddToHomieSheet(detent: $addDetent, onEventSaved: { Task { await homeManager.load() } })
                     .presentationDetents([.medium, .large], selection: $addDetent)
                     .presentationCornerRadius(CardStyle.cornerRadius)
                     .presentationDragIndicator(.visible)

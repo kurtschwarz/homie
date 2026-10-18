@@ -150,7 +150,7 @@ struct EditPersonView: View {
     }
 
     private func sectionLabel(_ title: String) -> some View {
-        Text(title.uppercased()).font(.subheadline.bold()).tracking(1.5).foregroundStyle(.secondary)
+        Text(title.uppercased()).font(.caption.bold()).tracking(1.5).foregroundStyle(.secondary)
     }
 
     private func color(for value: String) -> Color {

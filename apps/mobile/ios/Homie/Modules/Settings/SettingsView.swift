@@ -23,35 +23,47 @@ struct SettingsView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                Section {
-                    ForEach(peopleManager.people) { person in
-                        Button {
-                            editorRoute = .edit(person)
-                        } label: {
-                            PersonRow(person: person)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("FAMILY")
+                        .font(.caption.bold())
+                        .tracking(1.5)
+                    VStack(spacing: 0) {
+                        ForEach(Array(peopleManager.people.enumerated()), id: \.element.id) { index, person in
+                            Button { editorRoute = .edit(person) } label: {
+                                PersonRow(person: person)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.horizontal, 20)
+                                    .padding(.vertical, 12)
+                            }
+                            .buttonStyle(.plain)
+                            if index < peopleManager.people.count - 1 || !peopleManager.people.isEmpty {
+                                Divider()
+                            }
+                        }
+                        Button { editorRoute = .add } label: {
+                            Label("Add someone", systemImage: "plus.circle")
+                                .font(.headline).foregroundStyle(.tint)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 16)
                         }
                         .buttonStyle(.plain)
-                        .alignmentGuide(.listRowSeparatorLeading) { _ in -16 }
-                        .alignmentGuide(.listRowSeparatorTrailing) { dimensions in dimensions.width + 16 }
                     }
-                    Button {
-                        editorRoute = .add
-                    } label: {
-                        Label("Add someone", systemImage: "plus.circle")
-                            .font(.headline).foregroundStyle(.tint).padding(.vertical, 6)
-                    }
-                    .alignmentGuide(.listRowSeparatorLeading) { _ in -16 }
-                    .alignmentGuide(.listRowSeparatorTrailing) { dimensions in dimensions.width + 16 }
-                } header: { Text("FAMILY") }
-                Section {
+                    .background(Color(uiColor: .secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+
                     Text("Everyone’s emoji and colour mark their events on the kitchen screen. Tap someone to change them.")
-                        .font(.callout).foregroundStyle(.secondary)
+                        .font(.caption)
+                    if let errorMessage = peopleManager.errorMessage {
+                        Text(errorMessage).foregroundStyle(.red)
+                    }
                 }
-                if let errorMessage = peopleManager.errorMessage {
-                    Section { Text(errorMessage).foregroundStyle(.red) }
-                }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
             }
+            .background(Color(uiColor: .systemGroupedBackground))
+            .listRowSpacing(0)
             .overlay {
                 if peopleManager.isLoading && peopleManager.people.isEmpty {
                     ProgressView("Loading people…")
@@ -70,4 +82,5 @@ struct SettingsView: View {
             .task { await peopleManager.loadPeople() }
         }
     }
+
 }

@@ -22,6 +22,8 @@ struct HomeView: View {
                     Greeting(weather: homeManager.weather, remainingToday: homeManager.remainingToday)
                         .padding(.top, 20)
 
+                    QuickActions()
+
                     Button {
                         // Dismissing from the form can leave the selection on
                         // .large, so the chooser's height is set on the way in.
@@ -142,6 +144,134 @@ private struct Greeting: View {
         case 1: "1 thing today"
         default: "\(count) things today"
         }
+    }
+}
+
+private struct QuickActions: View {
+    private let columns = [GridItem(.flexible()), GridItem(.flexible())]
+    @State private var isStartingTimer = false
+
+    var body: some View {
+        LazyVGrid(columns: columns, spacing: 12) {
+            QuickAction(symbol: "timer", title: "Start a timer") {
+                isStartingTimer = true
+            }
+
+            QuickAction(symbol: "bubble.left", title: "Show a message") {
+                // Message actions are not built yet.
+            }
+        }
+        .sheet(isPresented: $isStartingTimer) {
+            StartTimerSheet()
+                .presentationDetents([.medium, .large])
+                .presentationCornerRadius(CardStyle.cornerRadius)
+                .presentationDragIndicator(.visible)
+        }
+    }
+}
+
+private struct StartTimerSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var title = "Pasta"
+    @State private var emoji = "🍝"
+    @State private var minutes = 5
+    @State private var isSaving = false
+    @State private var errorMessage: String?
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Timer") {
+                    TextField("Name", text: $title)
+                    TextField("Emoji", text: $emoji)
+                        .textInputAutocapitalization(.never)
+                    Stepper("Duration: \(minutes) min", value: $minutes, in: 1...120)
+                }
+
+                if let errorMessage {
+                    Text(errorMessage)
+                        .foregroundStyle(.red)
+                }
+            }
+            .navigationTitle("Start a timer")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                        .disabled(isSaving)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(isSaving ? "Starting…" : "Start") {
+                        Task { await startTimer() }
+                    }
+                    .disabled(isSaving || title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+        }
+    }
+
+    private func startTimer() async {
+        isSaving = true
+        errorMessage = nil
+        defer { isSaving = false }
+
+        do {
+            let _: StartTimerPayload = try await HomieAPI.perform(
+                """
+                mutation StartTimer($title: String!, $emoji: String!, $durationSeconds: Int!) {
+                    startTimer(title: $title, emoji: $emoji, durationSeconds: $durationSeconds) { title }
+                }
+                """,
+                variables: [
+                    "title": title.trimmingCharacters(in: .whitespacesAndNewlines),
+                    "emoji": emoji,
+                    "durationSeconds": minutes * 60,
+                ]
+            )
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+}
+
+private struct StartTimerPayload: Decodable {
+    let startTimer: StartedTimer
+}
+
+private struct StartedTimer: Decodable {
+    let title: String
+}
+
+private struct QuickAction: View {
+    let symbol: String
+    let title: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 0) {
+                Image(systemName: symbol)
+                    .font(.title2)
+                    .foregroundStyle(.tint)
+
+                Spacer(minLength: 12)
+
+                Text(title)
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                    .multilineTextAlignment(.leading)
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(height: 104)
+            .contentShape(Rectangle())
+            .background {
+                RoundedRectangle(cornerRadius: CardStyle.cornerRadius)
+                    .fill(Color(uiColor: .secondarySystemGroupedBackground))
+            }
+        }
+        .buttonStyle(.plain)
     }
 }
 

@@ -6,4 +6,22 @@ type Health {
 
 type Query {
   health: Health!
+  timer: Timer
+}
+
+type Timer {
+  title: String!
+  emoji: String!
+  durationSeconds: Int!
+  remainingSeconds: Int!
+  endsAt: Int!
+  paused: Boolean!
+}
+
+extend type Mutation {
+  startTimer(title: String!, emoji: String!, durationSeconds: Int!): Timer!
+  addTimerMinute: Timer!
+  pauseTimer: Timer!
+  resumeTimer: Timer!
+  cancelTimer: Boolean!
 }

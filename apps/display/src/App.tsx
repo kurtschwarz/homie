@@ -13,10 +13,13 @@ import { useWeather } from "./useWeather";
 import { usePhotos } from "./usePhotos";
 import { useEvents } from "./useEvents";
 import { splitEvents, toRows } from "./events";
+import { useTimer } from "./useTimer";
+import { TimerScreen } from "./TimerScreen";
 
 const SWIPE_AREA_ROWS = 4;
 
 export function App() {
+  const timer = useTimer();
   const now = useNow();
   const weather = useWeather();
   const photos = usePhotos();
@@ -27,6 +30,8 @@ export function App() {
   const allEvents = events.kind === "ready" ? events.events : [];
   const { headline, upcoming } = splitEvents(allEvents, now);
   const rows = toRows(upcoming, now);
+
+  if (timer.timer) return <TimerScreen timer={timer.timer} addMinute={timer.addMinute} togglePause={timer.togglePause} cancel={timer.cancel} />;
 
   return (
     <HomeLayout>

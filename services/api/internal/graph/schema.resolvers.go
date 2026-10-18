@@ -7,10 +7,66 @@ package graph
 
 import (
 	"context"
+	"errors"
+	"strings"
 	"time"
 
 	"github.com/kurtschwarz/homie/services/api/internal/graph/model"
 )
+
+// StartTimer is the resolver for the startTimer field.
+func (r *mutationResolver) StartTimer(ctx context.Context, title string, emoji string, durationSeconds int) (*model.Timer, error) {
+	if strings.TrimSpace(title) == "" || durationSeconds < 1 || durationSeconds > 24*60*60 {
+		return nil, errors.New("timer title and duration from 1 second to 24 hours are required")
+	}
+	r.Resolver.TimerMu.Lock()
+	defer r.Resolver.TimerMu.Unlock()
+	r.Resolver.Timer = &TimerState{Title: title, Emoji: emoji, DurationSeconds: durationSeconds, EndsAt: time.Now().Add(time.Duration(durationSeconds) * time.Second)}
+	return timerModel(r.Resolver.Timer, time.Now()), nil
+}
+
+// AddTimerMinute is the resolver for the addTimerMinute field.
+func (r *mutationResolver) AddTimerMinute(ctx context.Context) (*model.Timer, error) {
+	return r.updateTimer(func(timer *TimerState, now time.Time) {
+		timer.DurationSeconds += 60
+		if timer.Paused {
+			timer.Remaining += time.Minute
+		} else {
+			timer.EndsAt = timer.EndsAt.Add(time.Minute)
+		}
+	})
+}
+
+// PauseTimer is the resolver for the pauseTimer field.
+func (r *mutationResolver) PauseTimer(ctx context.Context) (*model.Timer, error) {
+	return r.updateTimer(func(timer *TimerState, now time.Time) {
+		if !timer.Paused {
+			timer.Remaining = timer.EndsAt.Sub(now)
+			if timer.Remaining < 0 {
+				timer.Remaining = 0
+			}
+			timer.Paused = true
+		}
+	})
+}
+
+// ResumeTimer is the resolver for the resumeTimer field.
+func (r *mutationResolver) ResumeTimer(ctx context.Context) (*model.Timer, error) {
+	return r.updateTimer(func(timer *TimerState, now time.Time) {
+		if timer.Paused {
+			timer.EndsAt = now.Add(timer.Remaining)
+			timer.Paused = false
+		}
+	})
+}
+
+// CancelTimer is the resolver for the cancelTimer field.
+func (r *mutationResolver) CancelTimer(ctx context.Context) (bool, error) {
+	r.Resolver.TimerMu.Lock()
+	defer r.Resolver.TimerMu.Unlock()
+	r.Resolver.Timer = nil
+	return true, nil
+}
 
 // Health is the resolver for the health field.
 func (r *queryResolver) Health(ctx context.Context) (*model.Health, error) {
@@ -19,6 +75,21 @@ func (r *queryResolver) Health(ctx context.Context) (*model.Health, error) {
 		Version:       r.Version,
 		UptimeSeconds: int(time.Since(r.StartedAt).Seconds()),
 	}, nil
+}
+
+// Timer is the resolver for the timer field.
+func (r *queryResolver) Timer(ctx context.Context) (*model.Timer, error) {
+	r.Resolver.TimerMu.Lock()
+	defer r.Resolver.TimerMu.Unlock()
+	if r.Resolver.Timer == nil {
+		return nil, nil
+	}
+	now := time.Now()
+	if !r.Resolver.Timer.Paused && !r.Resolver.Timer.EndsAt.After(now) {
+		r.Resolver.Timer = nil
+		return nil, nil
+	}
+	return timerModel(r.Resolver.Timer, now), nil
 }
 
 // Query returns QueryResolver implementation.

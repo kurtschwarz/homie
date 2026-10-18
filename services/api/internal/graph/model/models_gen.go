@@ -114,6 +114,15 @@ type TagMappingInput struct {
 	PersonID *string `json:"personId,omitempty"`
 }
 
+type Timer struct {
+	Title            string `json:"title"`
+	Emoji            string `json:"emoji"`
+	DurationSeconds  int    `json:"durationSeconds"`
+	RemainingSeconds int    `json:"remainingSeconds"`
+	EndsAt           int    `json:"endsAt"`
+	Paused           bool   `json:"paused"`
+}
+
 type Weather struct {
 	Condition     WeatherCondition `json:"condition"`
 	ConditionCode string           `json:"conditionCode"`

@@ -65,12 +65,17 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
+		AddTimerMinute   func(childComplexity int) int
+		CancelTimer      func(childComplexity int) int
 		CreateEvent      func(childComplexity int, input model.EventInput) int
 		DeletePerson     func(childComplexity int, id string) int
 		DeleteTagMapping func(childComplexity int, tag string) int
+		PauseTimer       func(childComplexity int) int
 		RefreshEvents    func(childComplexity int) int
+		ResumeTimer      func(childComplexity int) int
 		SavePerson       func(childComplexity int, input model.PersonInput) int
 		SaveTagMapping   func(childComplexity int, input model.TagMappingInput) int
+		StartTimer       func(childComplexity int, title string, emoji string, durationSeconds int) int
 		UploadPhoto      func(childComplexity int, input model.PhotoUploadInput, file graphql.Upload) int
 	}
 
@@ -100,6 +105,7 @@ type ComplexityRoot struct {
 		People       func(childComplexity int) int
 		Photos       func(childComplexity int, limit *int) int
 		TagMappings  func(childComplexity int) int
+		Timer        func(childComplexity int) int
 		Weather      func(childComplexity int) int
 	}
 
@@ -108,6 +114,15 @@ type ComplexityRoot struct {
 		Label  func(childComplexity int) int
 		Person func(childComplexity int) int
 		Tag    func(childComplexity int) int
+	}
+
+	Timer struct {
+		DurationSeconds  func(childComplexity int) int
+		Emoji            func(childComplexity int) int
+		EndsAt           func(childComplexity int) int
+		Paused           func(childComplexity int) int
+		RemainingSeconds func(childComplexity int) int
+		Title            func(childComplexity int) int
 	}
 
 	Weather struct {
@@ -131,9 +146,15 @@ type MutationResolver interface {
 	SaveTagMapping(ctx context.Context, input model.TagMappingInput) (*model.TagMapping, error)
 	DeleteTagMapping(ctx context.Context, tag string) (bool, error)
 	RefreshEvents(ctx context.Context) (bool, error)
+	StartTimer(ctx context.Context, title string, emoji string, durationSeconds int) (*model.Timer, error)
+	AddTimerMinute(ctx context.Context) (*model.Timer, error)
+	PauseTimer(ctx context.Context) (*model.Timer, error)
+	ResumeTimer(ctx context.Context) (*model.Timer, error)
+	CancelTimer(ctx context.Context) (bool, error)
 }
 type QueryResolver interface {
 	Health(ctx context.Context) (*model.Health, error)
+	Timer(ctx context.Context) (*model.Timer, error)
 	Events(ctx context.Context, days *int) ([]model.Event, error)
 	People(ctx context.Context) ([]model.Person, error)
 	TagMappings(ctx context.Context) ([]model.TagMapping, error)
@@ -260,6 +281,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.Health.Version(childComplexity), true
 
+	case "Mutation.addTimerMinute":
+		if e.ComplexityRoot.Mutation.AddTimerMinute == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Mutation.AddTimerMinute(childComplexity), true
+	case "Mutation.cancelTimer":
+		if e.ComplexityRoot.Mutation.CancelTimer == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Mutation.CancelTimer(childComplexity), true
 	case "Mutation.createEvent":
 		if e.ComplexityRoot.Mutation.CreateEvent == nil {
 			break
@@ -293,12 +326,24 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.DeleteTagMapping(childComplexity, args["tag"].(string)), true
+	case "Mutation.pauseTimer":
+		if e.ComplexityRoot.Mutation.PauseTimer == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Mutation.PauseTimer(childComplexity), true
 	case "Mutation.refreshEvents":
 		if e.ComplexityRoot.Mutation.RefreshEvents == nil {
 			break
 		}
 
 		return e.ComplexityRoot.Mutation.RefreshEvents(childComplexity), true
+	case "Mutation.resumeTimer":
+		if e.ComplexityRoot.Mutation.ResumeTimer == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Mutation.ResumeTimer(childComplexity), true
 	case "Mutation.savePerson":
 		if e.ComplexityRoot.Mutation.SavePerson == nil {
 			break
@@ -321,6 +366,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.SaveTagMapping(childComplexity, args["input"].(model.TagMappingInput)), true
+	case "Mutation.startTimer":
+		if e.ComplexityRoot.Mutation.StartTimer == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_startTimer_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.StartTimer(childComplexity, args["title"].(string), args["emoji"].(string), args["durationSeconds"].(int)), true
 	case "Mutation.uploadPhoto":
 		if e.ComplexityRoot.Mutation.UploadPhoto == nil {
 			break
@@ -460,6 +516,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.TagMappings(childComplexity), true
+	case "Query.timer":
+		if e.ComplexityRoot.Query.Timer == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Query.Timer(childComplexity), true
 	case "Query.weather":
 		if e.ComplexityRoot.Query.Weather == nil {
 			break
@@ -491,6 +553,43 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.TagMapping.Tag(childComplexity), true
+
+	case "Timer.durationSeconds":
+		if e.ComplexityRoot.Timer.DurationSeconds == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Timer.DurationSeconds(childComplexity), true
+	case "Timer.emoji":
+		if e.ComplexityRoot.Timer.Emoji == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Timer.Emoji(childComplexity), true
+	case "Timer.endsAt":
+		if e.ComplexityRoot.Timer.EndsAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Timer.EndsAt(childComplexity), true
+	case "Timer.paused":
+		if e.ComplexityRoot.Timer.Paused == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Timer.Paused(childComplexity), true
+	case "Timer.remainingSeconds":
+		if e.ComplexityRoot.Timer.RemainingSeconds == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Timer.RemainingSeconds(childComplexity), true
+	case "Timer.title":
+		if e.ComplexityRoot.Timer.Title == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Timer.Title(childComplexity), true
 
 	case "Weather.condition":
 		if e.ComplexityRoot.Weather.Condition == nil {
@@ -748,6 +847,24 @@ type Mutation {
 
 type Query {
   health: Health!
+  timer: Timer
+}
+
+type Timer {
+  title: String!
+  emoji: String!
+  durationSeconds: Int!
+  remainingSeconds: Int!
+  endsAt: Int!
+  paused: Boolean!
+}
+
+extend type Mutation {
+  startTimer(title: String!, emoji: String!, durationSeconds: Int!): Timer!
+  addTimerMinute: Timer!
+  pauseTimer: Timer!
+  resumeTimer: Timer!
+  cancelTimer: Boolean!
 }
 `, BuiltIn: false},
 	{Name: "../../graph/weather.graphqls", Input: `enum WeatherCondition {
@@ -883,6 +1000,24 @@ func (ec *executionContext) childFields_TagMapping(ctx context.Context, field gr
 		return ec.fieldContext_TagMapping_person(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type TagMapping", field.Name)
+}
+
+func (ec *executionContext) childFields_Timer(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "title":
+		return ec.fieldContext_Timer_title(ctx, field)
+	case "emoji":
+		return ec.fieldContext_Timer_emoji(ctx, field)
+	case "durationSeconds":
+		return ec.fieldContext_Timer_durationSeconds(ctx, field)
+	case "remainingSeconds":
+		return ec.fieldContext_Timer_remainingSeconds(ctx, field)
+	case "endsAt":
+		return ec.fieldContext_Timer_endsAt(ctx, field)
+	case "paused":
+		return ec.fieldContext_Timer_paused(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type Timer", field.Name)
 }
 
 func (ec *executionContext) childFields_Weather(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -1084,6 +1219,36 @@ func (ec *executionContext) field_Mutation_saveTagMapping_args(ctx context.Conte
 		return nil, err
 	}
 	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_startTimer_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "title",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNString2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["title"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "emoji",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNString2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["emoji"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "durationSeconds",
+		func(ctx context.Context, v any) (int, error) {
+			return ec.unmarshalNInt2int(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["durationSeconds"] = arg2
 	return args, nil
 }
 
@@ -1875,6 +2040,169 @@ func (ec *executionContext) fieldContext_Mutation_refreshEvents(_ context.Contex
 	return graphql.NewScalarFieldContext("Mutation", field, true, true, errors.New("field of type Boolean does not have child fields"))
 }
 
+func (ec *executionContext) _Mutation_startTimer(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_startTimer(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().StartTimer(ctx, fc.Args["title"].(string), fc.Args["emoji"].(string), fc.Args["durationSeconds"].(int))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Timer) graphql.Marshaler {
+			return ec.marshalNTimer2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐTimer(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_startTimer(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Timer(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_startTimer_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_addTimerMinute(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_addTimerMinute(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Mutation().AddTimerMinute(ctx)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Timer) graphql.Marshaler {
+			return ec.marshalNTimer2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐTimer(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_addTimerMinute(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Timer(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_pauseTimer(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_pauseTimer(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Mutation().PauseTimer(ctx)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Timer) graphql.Marshaler {
+			return ec.marshalNTimer2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐTimer(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_pauseTimer(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Timer(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_resumeTimer(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_resumeTimer(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Mutation().ResumeTimer(ctx)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Timer) graphql.Marshaler {
+			return ec.marshalNTimer2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐTimer(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_resumeTimer(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Timer(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_cancelTimer(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_cancelTimer(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Mutation().CancelTimer(ctx)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_cancelTimer(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Mutation", field, true, true, errors.New("field of type Boolean does not have child fields"))
+}
+
 func (ec *executionContext) _Person_id(ctx context.Context, field graphql.CollectedField, obj *model.Person) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -2219,6 +2547,38 @@ func (ec *executionContext) fieldContext_Query_health(_ context.Context, field g
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return ec.childFields_Health(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_timer(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_timer(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Query().Timer(ctx)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Timer) graphql.Marshaler {
+			return ec.marshalOTimer2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐTimer(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Query_timer(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Timer(ctx, field)
 		},
 	}
 	return fc, nil
@@ -2606,6 +2966,144 @@ func (ec *executionContext) fieldContext_TagMapping_person(_ context.Context, fi
 		},
 	}
 	return fc, nil
+}
+
+func (ec *executionContext) _Timer_title(ctx context.Context, field graphql.CollectedField, obj *model.Timer) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Timer_title(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Title, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Timer_title(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Timer", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Timer_emoji(ctx context.Context, field graphql.CollectedField, obj *model.Timer) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Timer_emoji(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Emoji, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Timer_emoji(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Timer", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Timer_durationSeconds(ctx context.Context, field graphql.CollectedField, obj *model.Timer) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Timer_durationSeconds(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.DurationSeconds, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Timer_durationSeconds(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Timer", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _Timer_remainingSeconds(ctx context.Context, field graphql.CollectedField, obj *model.Timer) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Timer_remainingSeconds(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.RemainingSeconds, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Timer_remainingSeconds(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Timer", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _Timer_endsAt(ctx context.Context, field graphql.CollectedField, obj *model.Timer) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Timer_endsAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.EndsAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Timer_endsAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Timer", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _Timer_paused(ctx context.Context, field graphql.CollectedField, obj *model.Timer) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Timer_paused(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Paused, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Timer_paused(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Timer", field, false, false, errors.New("field of type Boolean does not have child fields"))
 }
 
 func (ec *executionContext) _Weather_condition(ctx context.Context, field graphql.CollectedField, obj *model.Weather) (ret graphql.Marshaler) {
@@ -4382,6 +4880,41 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "startTimer":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_startTimer(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "addTimerMinute":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_addTimerMinute(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "pauseTimer":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_pauseTimer(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "resumeTimer":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_resumeTimer(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "cancelTimer":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_cancelTimer(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -4565,6 +5098,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 				}()
 				res = ec._Query_health(ctx, field)
 				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "timer":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_timer(ctx, field)
+				if res == graphql.RequiredNull {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
 				return res
@@ -4773,6 +5328,69 @@ func (ec *executionContext) _TagMapping(ctx context.Context, sel ast.SelectionSe
 		case "person":
 			out.Values[i] = ec._TagMapping_person(ctx, field, obj)
 			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferLabelToView), math.MaxInt32)))
+
+	ec.ProcessDeferredGroup(graphql.DeferredGroup{
+		Defers:   deferLabelToView,
+		Path:     graphql.GetPath(ctx),
+		FieldSet: deferredFieldSet,
+		Context:  ctx,
+	})
+
+	return out
+}
+
+var timerImplementors = []string{"Timer"}
+
+func (ec *executionContext) _Timer(ctx context.Context, sel ast.SelectionSet, obj *model.Timer) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, timerImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferredFieldSet := graphql.NewFieldSet(nil)
+	deferLabelToView := make(map[string]*graphql.FieldSetView)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Timer")
+		case "title":
+			out.Values[i] = ec._Timer_title(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "emoji":
+			out.Values[i] = ec._Timer_emoji(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "durationSeconds":
+			out.Values[i] = ec._Timer_durationSeconds(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "remainingSeconds":
+			out.Values[i] = ec._Timer_remainingSeconds(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "endsAt":
+			out.Values[i] = ec._Timer_endsAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "paused":
+			out.Values[i] = ec._Timer_paused(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
 		default:
@@ -5544,6 +6162,16 @@ func (ec *executionContext) unmarshalNTagMappingInput2githubᚗcomᚋkurtschwarz
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) marshalNTimer2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐTimer(ctx context.Context, sel ast.SelectionSet, v *model.Timer) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Timer(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNUpload2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚐUpload(ctx context.Context, v any) (graphql.Upload, error) {
 	res, err := graphql.UnmarshalUpload(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -5848,6 +6476,13 @@ func (ec *executionContext) marshalOString2ᚖstring(ctx context.Context, sel as
 	_ = ctx
 	res := graphql.MarshalString(*v)
 	return res
+}
+
+func (ec *executionContext) marshalOTimer2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐTimer(ctx context.Context, sel ast.SelectionSet, v *model.Timer) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Timer(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalO__EnumValue2ᚕgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐEnumValueᚄ(ctx context.Context, sel ast.SelectionSet, v []introspection.EnumValue) graphql.Marshaler {

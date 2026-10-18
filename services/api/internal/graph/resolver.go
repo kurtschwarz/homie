@@ -6,6 +6,7 @@ package graph
 // here.
 
 import (
+	"sync"
 	"time"
 
 	"github.com/kurtschwarz/homie/services/api/internal/events"
@@ -14,6 +15,8 @@ import (
 )
 
 type Resolver struct {
+	TimerMu   sync.Mutex
+	Timer     *TimerState
 	Version   string
 	StartedAt time.Time
 	Weather   *weather.Service

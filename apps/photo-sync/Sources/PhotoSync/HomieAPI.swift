@@ -43,8 +43,30 @@ struct GraphQLResponse: Decodable {
 }
 
 struct HomieAPI {
-    // Local development endpoint for this test app.
-    private let endpoint = URL(string: "http://localhost:3030/graphql")!
+    // The Pi that runs Homie. A bundle launched by `open` does not inherit
+    // the shell environment, so UserDefaults is the override that actually
+    // works from the command line:
+    //   defaults write ar.schw.homie.photo-sync HomieAPIURL http://localhost:3030
+    static let defaultEndpoint = URL(string: "http://homie:3000/graphql")!
+
+    let endpoint: URL
+
+    init(endpoint: URL = HomieAPI.configuredEndpoint()) {
+        self.endpoint = endpoint
+    }
+
+    // A bare origin gets /graphql appended so the override can be spelled the
+    // same way as HOMIE_API_URL is for the web apps.
+    static func configuredEndpoint(
+        defaults: UserDefaults = .standard,
+        environment: [String: String] = ProcessInfo.processInfo.environment
+    ) -> URL {
+        for override in [defaults.string(forKey: "HomieAPIURL"), environment["HOMIE_API_URL"]] {
+            guard let override, let url = URL(string: override), url.host() != nil else { continue }
+            return url.path().isEmpty || url.path() == "/" ? url.appending(path: "graphql") : url
+        }
+        return defaultEndpoint
+    }
 
     func upload(_ input: PhotoUploadInput, jpeg: Data, filename: String) async throws -> UploadedPhoto {
         let boundary = "HomiePhotoSync-\(UUID().uuidString)"
@@ -74,10 +96,12 @@ struct HomieAPI {
         do {
             (data, response) = try await URLSession.shared.data(for: request)
         } catch {
-            throw HomieAPIError.network(error.localizedDescription)
+            throw HomieAPIError.network(message: error.localizedDescription, endpoint: endpoint)
         }
         guard let response = response as? HTTPURLResponse else { throw HomieAPIError.invalidResponse }
-        guard !data.isEmpty else { throw HomieAPIError.emptyResponse(status: response.statusCode) }
+        guard !data.isEmpty else {
+            throw HomieAPIError.emptyResponse(status: response.statusCode, endpoint: endpoint)
+        }
         let result: GraphQLResponse
         do {
             result = try JSONDecoder().decode(GraphQLResponse.self, from: data)
@@ -99,19 +123,20 @@ struct HomieAPI {
 
 enum HomieAPIError: LocalizedError {
     case invalidResponse
-    case emptyResponse(status: Int)
+    case emptyResponse(status: Int, endpoint: URL)
     case http(Int)
     case graphQL(String)
-    case network(String)
+    case network(message: String, endpoint: URL)
     case unexpectedResponse(status: Int, body: String, reason: String)
 
     var errorDescription: String? {
         switch self {
         case .invalidResponse: "The server returned an invalid response."
-        case .emptyResponse(let status): "The server returned an empty response (HTTP \(status)). Is the API running at http://localhost:3030?"
+        case .emptyResponse(let status, let endpoint):
+            "The server returned an empty response (HTTP \(status)). Is the API running at \(endpoint.absoluteString)?"
         case .http(let status): "The server returned HTTP \(status)."
         case .graphQL(let message): message
-        case .network(let message): "Could not reach http://localhost:3030/graphql: \(message)"
+        case .network(let message, let endpoint): "Could not reach \(endpoint.absoluteString): \(message)"
         case .unexpectedResponse(let status, let body, let reason):
             "Unexpected server response (HTTP \(status)): \(reason). Body: \(body)"
         }

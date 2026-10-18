@@ -20,5 +20,12 @@
 	<string>NSApplication</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Photo Sync reads your Homie album to preview photos and their metadata.</string>
+	<!-- The API is plain HTTP on the local network. localhost is exempt from
+	     App Transport Security but the Pi's hostname is not. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 </dict>
 </plist>

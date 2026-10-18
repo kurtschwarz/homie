@@ -13,8 +13,12 @@ import (
 	"strconv"
 	"syscall"
 	"time"
+	_ "time/tzdata" // a minimal Raspberry Pi image may have no system zoneinfo
 
 	assets "github.com/kurtschwarz/homie/services/api"
+	"github.com/kurtschwarz/homie/services/api/internal/caldav"
+	"github.com/kurtschwarz/homie/services/api/internal/events"
+	eventsjobs "github.com/kurtschwarz/homie/services/api/internal/events/jobs"
 	"github.com/kurtschwarz/homie/services/api/internal/graph"
 	"github.com/kurtschwarz/homie/services/api/internal/photos"
 	"github.com/kurtschwarz/homie/services/api/internal/queue"
@@ -59,12 +63,29 @@ func main() {
 			photosFS = library.FS()
 		}
 	}
+	var eventsService *events.Service
+	if db != nil {
+		eventsService = events.New(events.NewSQLiteRepository(db))
+		caldavClient, err := configureCalDAV()
+		if err != nil {
+			logger.Error("configure CalDAV; events will stay empty until fixed", "error", err)
+		} else if caldavClient != nil {
+			eventsService.Client = caldavClient
+			eventsService.Logger = logger
+		}
+	}
+
 	var refresher weatherjobs.Refresher
 	if weatherService != nil {
 		refresher = weatherService
 	}
+	var eventsRefresher eventsjobs.Refresher
+	if eventsService != nil {
+		eventsRefresher = eventsService
+	}
 	workers := river.NewWorkers()
 	river.AddWorker(workers, weatherjobs.NewRefreshWorker(refresher, logger))
+	river.AddWorker(workers, eventsjobs.NewRefreshWorker(eventsRefresher, logger))
 
 	display, err := fs.Sub(assets.DisplayFS, "web/display")
 	if err != nil {
@@ -83,6 +104,7 @@ func main() {
 			StartedAt: time.Now(),
 			Weather:   weatherService,
 			Photos:    photosService,
+			Events:    eventsService,
 		},
 		Display:    display,
 		Manager:    manager,
@@ -102,7 +124,7 @@ func main() {
 		DBPath:       envOr("HOMIE_RIVER_DB_PATH", "/var/lib/homie/river.db"),
 		Logger:       logger,
 		Workers:      workers,
-		PeriodicJobs: []*river.PeriodicJob{weatherjobs.PeriodicJob()},
+		PeriodicJobs: []*river.PeriodicJob{weatherjobs.PeriodicJob(), eventsjobs.PeriodicJob()},
 	})
 	if err != nil {
 		logger.Error("configure background queue", "error", err)
@@ -190,6 +212,19 @@ func configureWeather(repository weather.Repository, logger *slog.Logger) (*weat
 		Client: client, Repository: repository,
 		Latitude: lat, Longitude: lon, Logger: logger,
 	})
+}
+
+func configureCalDAV() (*caldav.Client, error) {
+	url := os.Getenv("HOMIE_CALDAV_URL")
+	user := os.Getenv("HOMIE_CALDAV_USER")
+	password := os.Getenv("HOMIE_CALDAV_PASSWORD")
+	if url == "" && user == "" && password == "" {
+		return nil, nil
+	}
+	if url == "" || user == "" || password == "" {
+		return nil, errors.New("all HOMIE_CALDAV_* values are required")
+	}
+	return caldav.New(caldav.Config{URL: url, User: user, Password: password, Location: time.Local})
 }
 
 // watchdogLoop pings systemd's WatchdogSec at roughly half its interval, as

@@ -41,6 +41,16 @@ type ComplexityRoot struct {
 		Longitude func(childComplexity int) int
 	}
 
+	Event struct {
+		AllDay   func(childComplexity int) int
+		End      func(childComplexity int) int
+		ID       func(childComplexity int) int
+		Location func(childComplexity int) int
+		People   func(childComplexity int) int
+		Start    func(childComplexity int) int
+		Title    func(childComplexity int) int
+	}
+
 	FocalRegion struct {
 		Height func(childComplexity int) int
 		Width  func(childComplexity int) int
@@ -55,7 +65,20 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		UploadPhoto func(childComplexity int, input model.PhotoUploadInput, file graphql.Upload) int
+		DeletePerson     func(childComplexity int, id string) int
+		DeleteTagMapping func(childComplexity int, tag string) int
+		RefreshEvents    func(childComplexity int) int
+		SavePerson       func(childComplexity int, input model.PersonInput) int
+		SaveTagMapping   func(childComplexity int, input model.TagMappingInput) int
+		UploadPhoto      func(childComplexity int, input model.PhotoUploadInput, file graphql.Upload) int
+	}
+
+	Person struct {
+		Emoji    func(childComplexity int) int
+		ID       func(childComplexity int) int
+		IsFamily func(childComplexity int) int
+		Name     func(childComplexity int) int
+		Swatch   func(childComplexity int) int
 	}
 
 	Photo struct {
@@ -70,9 +93,20 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		Health  func(childComplexity int) int
-		Photos  func(childComplexity int, limit *int) int
-		Weather func(childComplexity int) int
+		CalendarTags func(childComplexity int) int
+		Events       func(childComplexity int, days *int) int
+		Health       func(childComplexity int) int
+		People       func(childComplexity int) int
+		Photos       func(childComplexity int, limit *int) int
+		TagMappings  func(childComplexity int) int
+		Weather      func(childComplexity int) int
+	}
+
+	TagMapping struct {
+		Kind   func(childComplexity int) int
+		Label  func(childComplexity int) int
+		Person func(childComplexity int) int
+		Tag    func(childComplexity int) int
 	}
 
 	Weather struct {
@@ -90,9 +124,18 @@ type ComplexityRoot struct {
 
 type MutationResolver interface {
 	UploadPhoto(ctx context.Context, input model.PhotoUploadInput, file graphql.Upload) (*model.Photo, error)
+	SavePerson(ctx context.Context, input model.PersonInput) (*model.Person, error)
+	DeletePerson(ctx context.Context, id string) (bool, error)
+	SaveTagMapping(ctx context.Context, input model.TagMappingInput) (*model.TagMapping, error)
+	DeleteTagMapping(ctx context.Context, tag string) (bool, error)
+	RefreshEvents(ctx context.Context) (bool, error)
 }
 type QueryResolver interface {
 	Health(ctx context.Context) (*model.Health, error)
+	Events(ctx context.Context, days *int) ([]model.Event, error)
+	People(ctx context.Context) ([]model.Person, error)
+	TagMappings(ctx context.Context) ([]model.TagMapping, error)
+	CalendarTags(ctx context.Context) ([]string, error)
 	Photos(ctx context.Context, limit *int) ([]model.Photo, error)
 	Weather(ctx context.Context) (*model.Weather, error)
 }
@@ -127,6 +170,49 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Coordinate.Longitude(childComplexity), true
+
+	case "Event.allDay":
+		if e.ComplexityRoot.Event.AllDay == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Event.AllDay(childComplexity), true
+	case "Event.end":
+		if e.ComplexityRoot.Event.End == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Event.End(childComplexity), true
+	case "Event.id":
+		if e.ComplexityRoot.Event.ID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Event.ID(childComplexity), true
+	case "Event.location":
+		if e.ComplexityRoot.Event.Location == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Event.Location(childComplexity), true
+	case "Event.people":
+		if e.ComplexityRoot.Event.People == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Event.People(childComplexity), true
+	case "Event.start":
+		if e.ComplexityRoot.Event.Start == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Event.Start(childComplexity), true
+	case "Event.title":
+		if e.ComplexityRoot.Event.Title == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Event.Title(childComplexity), true
 
 	case "FocalRegion.height":
 		if e.ComplexityRoot.FocalRegion.Height == nil {
@@ -172,6 +258,56 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.Health.Version(childComplexity), true
 
+	case "Mutation.deletePerson":
+		if e.ComplexityRoot.Mutation.DeletePerson == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deletePerson_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.DeletePerson(childComplexity, args["id"].(string)), true
+	case "Mutation.deleteTagMapping":
+		if e.ComplexityRoot.Mutation.DeleteTagMapping == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deleteTagMapping_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.DeleteTagMapping(childComplexity, args["tag"].(string)), true
+	case "Mutation.refreshEvents":
+		if e.ComplexityRoot.Mutation.RefreshEvents == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Mutation.RefreshEvents(childComplexity), true
+	case "Mutation.savePerson":
+		if e.ComplexityRoot.Mutation.SavePerson == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_savePerson_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.SavePerson(childComplexity, args["input"].(model.PersonInput)), true
+	case "Mutation.saveTagMapping":
+		if e.ComplexityRoot.Mutation.SaveTagMapping == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_saveTagMapping_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.SaveTagMapping(childComplexity, args["input"].(model.TagMappingInput)), true
 	case "Mutation.uploadPhoto":
 		if e.ComplexityRoot.Mutation.UploadPhoto == nil {
 			break
@@ -183,6 +319,37 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.UploadPhoto(childComplexity, args["input"].(model.PhotoUploadInput), args["file"].(graphql.Upload)), true
+
+	case "Person.emoji":
+		if e.ComplexityRoot.Person.Emoji == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Person.Emoji(childComplexity), true
+	case "Person.id":
+		if e.ComplexityRoot.Person.ID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Person.ID(childComplexity), true
+	case "Person.isFamily":
+		if e.ComplexityRoot.Person.IsFamily == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Person.IsFamily(childComplexity), true
+	case "Person.name":
+		if e.ComplexityRoot.Person.Name == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Person.Name(childComplexity), true
+	case "Person.swatch":
+		if e.ComplexityRoot.Person.Swatch == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Person.Swatch(childComplexity), true
 
 	case "Photo.coordinate":
 		if e.ComplexityRoot.Photo.Coordinate == nil {
@@ -233,6 +400,23 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.Photo.Width(childComplexity), true
 
+	case "Query.calendarTags":
+		if e.ComplexityRoot.Query.CalendarTags == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Query.CalendarTags(childComplexity), true
+	case "Query.events":
+		if e.ComplexityRoot.Query.Events == nil {
+			break
+		}
+
+		args, err := ec.field_Query_events_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Query.Events(childComplexity, args["days"].(*int)), true
 	case "Query.health":
 		if e.ComplexityRoot.Query.Health == nil {
 			break
@@ -240,6 +424,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.Query.Health(childComplexity), true
 
+	case "Query.people":
+		if e.ComplexityRoot.Query.People == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Query.People(childComplexity), true
 	case "Query.photos":
 		if e.ComplexityRoot.Query.Photos == nil {
 			break
@@ -251,12 +441,43 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.Photos(childComplexity, args["limit"].(*int)), true
+	case "Query.tagMappings":
+		if e.ComplexityRoot.Query.TagMappings == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Query.TagMappings(childComplexity), true
 	case "Query.weather":
 		if e.ComplexityRoot.Query.Weather == nil {
 			break
 		}
 
 		return e.ComplexityRoot.Query.Weather(childComplexity), true
+
+	case "TagMapping.kind":
+		if e.ComplexityRoot.TagMapping.Kind == nil {
+			break
+		}
+
+		return e.ComplexityRoot.TagMapping.Kind(childComplexity), true
+	case "TagMapping.label":
+		if e.ComplexityRoot.TagMapping.Label == nil {
+			break
+		}
+
+		return e.ComplexityRoot.TagMapping.Label(childComplexity), true
+	case "TagMapping.person":
+		if e.ComplexityRoot.TagMapping.Person == nil {
+			break
+		}
+
+		return e.ComplexityRoot.TagMapping.Person(childComplexity), true
+	case "TagMapping.tag":
+		if e.ComplexityRoot.TagMapping.Tag == nil {
+			break
+		}
+
+		return e.ComplexityRoot.TagMapping.Tag(childComplexity), true
 
 	case "Weather.condition":
 		if e.ComplexityRoot.Weather.Condition == nil {
@@ -298,7 +519,9 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	ec := newExecutionContext(opCtx, e, make(chan graphql.DeferredResult))
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
 		ec.unmarshalInputFocalRegionInput,
+		ec.unmarshalInputPersonInput,
 		ec.unmarshalInputPhotoUploadInput,
+		ec.unmarshalInputTagMappingInput,
 	)
 	first := true
 
@@ -374,6 +597,70 @@ func newExecutionContext(
 }
 
 var sources = []*ast.Source{
+	{Name: "../../graph/events.graphqls", Input: `type Person {
+  id: ID!
+  name: String!
+  emoji: String!
+  swatch: String!
+  isFamily: Boolean!
+}
+
+type Event {
+  id: ID!
+  title: String!
+  location: String
+  start: Int!
+  end: Int!
+  allDay: Boolean!
+  people: [Person!]!
+}
+
+enum TagKind {
+  PERSON
+  INCLUDE
+}
+
+type TagMapping {
+  tag: String!
+  label: String!
+  kind: TagKind!
+  person: Person
+}
+
+input PersonInput {
+  id: ID
+  name: String!
+  emoji: String!
+  swatch: String!
+  isFamily: Boolean!
+}
+
+input TagMappingInput {
+  tag: String!
+  kind: TagKind!
+  personId: ID
+}
+
+extend type Query {
+  events(days: Int = 21): [Event!]!
+  people: [Person!]!
+  tagMappings: [TagMapping!]!
+  calendarTags: [String!]!
+}
+
+extend type Mutation {
+  savePerson(input: PersonInput!): Person!
+  deletePerson(id: ID!): Boolean!
+  saveTagMapping(input: TagMappingInput!): TagMapping!
+  deleteTagMapping(tag: String!): Boolean!
+  """
+  Syncs the calendar window from CalDAV and waits for it to finish. This runs
+  the refresh inline rather than enqueuing the periodic job, whose uniqueness
+  window would swallow a manual request made soon after a scheduled one.
+  """
+  refreshEvents: Boolean!
+}
+`, BuiltIn: false},
 	{Name: "../../graph/photos.graphqls", Input: `type Coordinate {
   latitude: Float!
   longitude: Float!
@@ -476,6 +763,26 @@ func (ec *executionContext) childFields_Coordinate(ctx context.Context, field gr
 	return nil, fmt.Errorf("no field named %q was found under type Coordinate", field.Name)
 }
 
+func (ec *executionContext) childFields_Event(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "id":
+		return ec.fieldContext_Event_id(ctx, field)
+	case "title":
+		return ec.fieldContext_Event_title(ctx, field)
+	case "location":
+		return ec.fieldContext_Event_location(ctx, field)
+	case "start":
+		return ec.fieldContext_Event_start(ctx, field)
+	case "end":
+		return ec.fieldContext_Event_end(ctx, field)
+	case "allDay":
+		return ec.fieldContext_Event_allDay(ctx, field)
+	case "people":
+		return ec.fieldContext_Event_people(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type Event", field.Name)
+}
+
 func (ec *executionContext) childFields_FocalRegion(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "x":
@@ -502,6 +809,22 @@ func (ec *executionContext) childFields_Health(ctx context.Context, field graphq
 	return nil, fmt.Errorf("no field named %q was found under type Health", field.Name)
 }
 
+func (ec *executionContext) childFields_Person(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "id":
+		return ec.fieldContext_Person_id(ctx, field)
+	case "name":
+		return ec.fieldContext_Person_name(ctx, field)
+	case "emoji":
+		return ec.fieldContext_Person_emoji(ctx, field)
+	case "swatch":
+		return ec.fieldContext_Person_swatch(ctx, field)
+	case "isFamily":
+		return ec.fieldContext_Person_isFamily(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type Person", field.Name)
+}
+
 func (ec *executionContext) childFields_Photo(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "id":
@@ -522,6 +845,20 @@ func (ec *executionContext) childFields_Photo(ctx context.Context, field graphql
 		return ec.fieldContext_Photo_focus(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type Photo", field.Name)
+}
+
+func (ec *executionContext) childFields_TagMapping(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "tag":
+		return ec.fieldContext_TagMapping_tag(ctx, field)
+	case "label":
+		return ec.fieldContext_TagMapping_label(ctx, field)
+	case "kind":
+		return ec.fieldContext_TagMapping_kind(ctx, field)
+	case "person":
+		return ec.fieldContext_TagMapping_person(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type TagMapping", field.Name)
 }
 
 func (ec *executionContext) childFields_Weather(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -656,6 +993,62 @@ func (ec *executionContext) childFields___Type(ctx context.Context, field graphq
 
 // region    ***************************** args.gotpl *****************************
 
+func (ec *executionContext) field_Mutation_deletePerson_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_deleteTagMapping_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "tag",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNString2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["tag"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_savePerson_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.PersonInput, error) {
+			return ec.unmarshalNPersonInput2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPersonInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_saveTagMapping_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.TagMappingInput, error) {
+			return ec.unmarshalNTagMappingInput2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐTagMappingInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_uploadPhoto_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -689,6 +1082,20 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 		return nil, err
 	}
 	args["name"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_events_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "days",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["days"] = arg0
 	return args, nil
 }
 
@@ -810,6 +1217,176 @@ func (ec *executionContext) _Coordinate_longitude(ctx context.Context, field gra
 }
 func (ec *executionContext) fieldContext_Coordinate_longitude(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("Coordinate", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
+func (ec *executionContext) _Event_id(ctx context.Context, field graphql.CollectedField, obj *model.Event) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Event_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNID2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Event_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Event", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _Event_title(ctx context.Context, field graphql.CollectedField, obj *model.Event) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Event_title(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Title, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Event_title(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Event", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Event_location(ctx context.Context, field graphql.CollectedField, obj *model.Event) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Event_location(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Location, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Event_location(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Event", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Event_start(ctx context.Context, field graphql.CollectedField, obj *model.Event) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Event_start(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Start, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Event_start(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Event", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _Event_end(ctx context.Context, field graphql.CollectedField, obj *model.Event) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Event_end(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.End, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Event_end(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Event", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _Event_allDay(ctx context.Context, field graphql.CollectedField, obj *model.Event) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Event_allDay(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.AllDay, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Event_allDay(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Event", field, false, false, errors.New("field of type Boolean does not have child fields"))
+}
+
+func (ec *executionContext) _Event_people(ctx context.Context, field graphql.CollectedField, obj *model.Event) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Event_people(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.People, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.Person) graphql.Marshaler {
+			return ec.marshalNPerson2ᚕgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPersonᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Event_people(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Event",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Person(ctx, field)
+		},
+	}
+	return fc, nil
 }
 
 func (ec *executionContext) _FocalRegion_x(ctx context.Context, field graphql.CollectedField, obj *model.FocalRegion) (ret graphql.Marshaler) {
@@ -1015,6 +1592,320 @@ func (ec *executionContext) fieldContext_Mutation_uploadPhoto(ctx context.Contex
 		return fc, err
 	}
 	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_savePerson(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_savePerson(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().SavePerson(ctx, fc.Args["input"].(model.PersonInput))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Person) graphql.Marshaler {
+			return ec.marshalNPerson2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPerson(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_savePerson(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Person(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_savePerson_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_deletePerson(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_deletePerson(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().DeletePerson(ctx, fc.Args["id"].(string))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_deletePerson(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_deletePerson_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_saveTagMapping(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_saveTagMapping(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().SaveTagMapping(ctx, fc.Args["input"].(model.TagMappingInput))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.TagMapping) graphql.Marshaler {
+			return ec.marshalNTagMapping2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐTagMapping(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_saveTagMapping(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_TagMapping(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_saveTagMapping_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_deleteTagMapping(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_deleteTagMapping(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().DeleteTagMapping(ctx, fc.Args["tag"].(string))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_deleteTagMapping(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_deleteTagMapping_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_refreshEvents(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_refreshEvents(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Mutation().RefreshEvents(ctx)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_refreshEvents(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Mutation", field, true, true, errors.New("field of type Boolean does not have child fields"))
+}
+
+func (ec *executionContext) _Person_id(ctx context.Context, field graphql.CollectedField, obj *model.Person) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Person_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNID2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Person_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Person", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _Person_name(ctx context.Context, field graphql.CollectedField, obj *model.Person) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Person_name(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Name, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Person_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Person", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Person_emoji(ctx context.Context, field graphql.CollectedField, obj *model.Person) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Person_emoji(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Emoji, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Person_emoji(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Person", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Person_swatch(ctx context.Context, field graphql.CollectedField, obj *model.Person) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Person_swatch(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Swatch, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Person_swatch(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Person", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Person_isFamily(ctx context.Context, field graphql.CollectedField, obj *model.Person) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Person_isFamily(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.IsFamily, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Person_isFamily(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Person", field, false, false, errors.New("field of type Boolean does not have child fields"))
 }
 
 func (ec *executionContext) _Photo_id(ctx context.Context, field graphql.CollectedField, obj *model.Photo) (ret graphql.Marshaler) {
@@ -1251,6 +2142,137 @@ func (ec *executionContext) fieldContext_Query_health(_ context.Context, field g
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_events(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_events(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Query().Events(ctx, fc.Args["days"].(*int))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.Event) graphql.Marshaler {
+			return ec.marshalNEvent2ᚕgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐEventᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_events(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Event(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_events_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_people(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_people(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Query().People(ctx)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.Person) graphql.Marshaler {
+			return ec.marshalNPerson2ᚕgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPersonᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_people(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Person(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_tagMappings(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_tagMappings(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Query().TagMappings(ctx)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.TagMapping) graphql.Marshaler {
+			return ec.marshalNTagMapping2ᚕgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐTagMappingᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_tagMappings(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_TagMapping(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_calendarTags(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_calendarTags(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Query().CalendarTags(ctx)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []string) graphql.Marshaler {
+			return ec.marshalNString2ᚕstringᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_calendarTags(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Query", field, true, true, errors.New("field of type String does not have child fields"))
+}
+
 func (ec *executionContext) _Query_photos(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -1398,6 +2420,107 @@ func (ec *executionContext) fieldContext_Query___schema(_ context.Context, field
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return ec.childFields___Schema(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _TagMapping_tag(ctx context.Context, field graphql.CollectedField, obj *model.TagMapping) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_TagMapping_tag(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Tag, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_TagMapping_tag(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("TagMapping", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _TagMapping_label(ctx context.Context, field graphql.CollectedField, obj *model.TagMapping) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_TagMapping_label(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Label, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_TagMapping_label(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("TagMapping", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _TagMapping_kind(ctx context.Context, field graphql.CollectedField, obj *model.TagMapping) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_TagMapping_kind(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Kind, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v model.TagKind) graphql.Marshaler {
+			return ec.marshalNTagKind2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐTagKind(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_TagMapping_kind(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("TagMapping", field, false, false, errors.New("field of type TagKind does not have child fields"))
+}
+
+func (ec *executionContext) _TagMapping_person(ctx context.Context, field graphql.CollectedField, obj *model.TagMapping) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_TagMapping_person(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Person, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Person) graphql.Marshaler {
+			return ec.marshalOPerson2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPerson(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_TagMapping_person(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "TagMapping",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Person(ctx, field)
 		},
 	}
 	return fc, nil
@@ -2635,6 +3758,64 @@ func (ec *executionContext) unmarshalInputFocalRegionInput(ctx context.Context, 
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputPersonInput(ctx context.Context, obj any) (model.PersonInput, error) {
+	var it model.PersonInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"id", "name", "emoji", "swatch", "isFamily"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "id":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+			data, err := ec.unmarshalOID2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ID = data
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		case "emoji":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("emoji"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Emoji = data
+		case "swatch":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("swatch"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Swatch = data
+		case "isFamily":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("isFamily"))
+			data, err := ec.unmarshalNBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.IsFamily = data
+		}
+	}
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputPhotoUploadInput(ctx context.Context, obj any) (model.PhotoUploadInput, error) {
 	var it model.PhotoUploadInput
 	if obj == nil {
@@ -2721,6 +3902,50 @@ func (ec *executionContext) unmarshalInputPhotoUploadInput(ctx context.Context, 
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputTagMappingInput(ctx context.Context, obj any) (model.TagMappingInput, error) {
+	var it model.TagMappingInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"tag", "kind", "personId"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "tag":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("tag"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Tag = data
+		case "kind":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("kind"))
+			data, err := ec.unmarshalNTagKind2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐTagKind(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Kind = data
+		case "personId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("personId"))
+			data, err := ec.unmarshalOID2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PersonID = data
+		}
+	}
+	return it, nil
+}
+
 // endregion **************************** input.gotpl *****************************
 
 // region    ************************** interface.gotpl ***************************
@@ -2748,6 +3973,74 @@ func (ec *executionContext) _Coordinate(ctx context.Context, sel ast.SelectionSe
 			}
 		case "longitude":
 			out.Values[i] = ec._Coordinate_longitude(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferLabelToView), math.MaxInt32)))
+
+	ec.ProcessDeferredGroup(graphql.DeferredGroup{
+		Defers:   deferLabelToView,
+		Path:     graphql.GetPath(ctx),
+		FieldSet: deferredFieldSet,
+		Context:  ctx,
+	})
+
+	return out
+}
+
+var eventImplementors = []string{"Event"}
+
+func (ec *executionContext) _Event(ctx context.Context, sel ast.SelectionSet, obj *model.Event) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, eventImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferredFieldSet := graphql.NewFieldSet(nil)
+	deferLabelToView := make(map[string]*graphql.FieldSetView)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Event")
+		case "id":
+			out.Values[i] = ec._Event_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "title":
+			out.Values[i] = ec._Event_title(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "location":
+			out.Values[i] = ec._Event_location(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		case "start":
+			out.Values[i] = ec._Event_start(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "end":
+			out.Values[i] = ec._Event_end(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "allDay":
+			out.Values[i] = ec._Event_allDay(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "people":
+			out.Values[i] = ec._Event_people(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -2900,6 +4193,99 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "savePerson":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_savePerson(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "deletePerson":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_deletePerson(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "saveTagMapping":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_saveTagMapping(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "deleteTagMapping":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_deleteTagMapping(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "refreshEvents":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_refreshEvents(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferLabelToView), math.MaxInt32)))
+
+	ec.ProcessDeferredGroup(graphql.DeferredGroup{
+		Defers:   deferLabelToView,
+		Path:     graphql.GetPath(ctx),
+		FieldSet: deferredFieldSet,
+		Context:  ctx,
+	})
+
+	return out
+}
+
+var personImplementors = []string{"Person"}
+
+func (ec *executionContext) _Person(ctx context.Context, sel ast.SelectionSet, obj *model.Person) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, personImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferredFieldSet := graphql.NewFieldSet(nil)
+	deferLabelToView := make(map[string]*graphql.FieldSetView)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Person")
+		case "id":
+			out.Values[i] = ec._Person_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "name":
+			out.Values[i] = ec._Person_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "emoji":
+			out.Values[i] = ec._Person_emoji(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "swatch":
+			out.Values[i] = ec._Person_swatch(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "isFamily":
+			out.Values[i] = ec._Person_isFamily(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -3036,6 +4422,94 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "events":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_events(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "people":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_people(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "tagMappings":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_tagMappings(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "calendarTags":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_calendarTags(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "photos":
 			field := field
 
@@ -3093,6 +4567,59 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			})
 			if out.Values[i] == graphql.RequiredNull {
 				atomic.AddUint32(&out.Invalids, 1)
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferLabelToView), math.MaxInt32)))
+
+	ec.ProcessDeferredGroup(graphql.DeferredGroup{
+		Defers:   deferLabelToView,
+		Path:     graphql.GetPath(ctx),
+		FieldSet: deferredFieldSet,
+		Context:  ctx,
+	})
+
+	return out
+}
+
+var tagMappingImplementors = []string{"TagMapping"}
+
+func (ec *executionContext) _TagMapping(ctx context.Context, sel ast.SelectionSet, obj *model.TagMapping) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, tagMappingImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferredFieldSet := graphql.NewFieldSet(nil)
+	deferLabelToView := make(map[string]*graphql.FieldSetView)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("TagMapping")
+		case "tag":
+			out.Values[i] = ec._TagMapping_tag(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "label":
+			out.Values[i] = ec._TagMapping_label(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "kind":
+			out.Values[i] = ec._TagMapping_kind(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "person":
+			out.Values[i] = ec._TagMapping_person(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
 			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
@@ -3581,6 +5108,26 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
+func (ec *executionContext) marshalNEvent2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐEvent(ctx context.Context, sel ast.SelectionSet, v model.Event) graphql.Marshaler {
+	return ec._Event(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNEvent2ᚕgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐEventᚄ(ctx context.Context, sel ast.SelectionSet, v []model.Event) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNEvent2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐEvent(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
 func (ec *executionContext) unmarshalNFloat2float64(ctx context.Context, v any) (float64, error) {
 	res, err := graphql.UnmarshalFloatContext(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -3639,6 +5186,41 @@ func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.Selecti
 	return res
 }
 
+func (ec *executionContext) marshalNPerson2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPerson(ctx context.Context, sel ast.SelectionSet, v model.Person) graphql.Marshaler {
+	return ec._Person(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNPerson2ᚕgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPersonᚄ(ctx context.Context, sel ast.SelectionSet, v []model.Person) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNPerson2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPerson(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNPerson2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPerson(ctx context.Context, sel ast.SelectionSet, v *model.Person) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Person(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNPersonInput2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPersonInput(ctx context.Context, v any) (model.PersonInput, error) {
+	res, err := ec.unmarshalInputPersonInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) marshalNPhoto2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPhoto(ctx context.Context, sel ast.SelectionSet, v model.Photo) graphql.Marshaler {
 	return ec._Photo(ctx, sel, &v)
 }
@@ -3688,6 +5270,80 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) unmarshalNString2ᚕstringᚄ(ctx context.Context, v any) ([]string, error) {
+	vSlice := graphql.CoerceList(v)
+	var err error
+	res := make([]string, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNString2string(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNString2ᚕstringᚄ(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNString2string(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) unmarshalNTagKind2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐTagKind(ctx context.Context, v any) (model.TagKind, error) {
+	var res model.TagKind
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNTagKind2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐTagKind(ctx context.Context, sel ast.SelectionSet, v model.TagKind) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) marshalNTagMapping2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐTagMapping(ctx context.Context, sel ast.SelectionSet, v model.TagMapping) graphql.Marshaler {
+	return ec._TagMapping(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNTagMapping2ᚕgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐTagMappingᚄ(ctx context.Context, sel ast.SelectionSet, v []model.TagMapping) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNTagMapping2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐTagMapping(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNTagMapping2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐTagMapping(ctx context.Context, sel ast.SelectionSet, v *model.TagMapping) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._TagMapping(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNTagMappingInput2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐTagMappingInput(ctx context.Context, v any) (model.TagMappingInput, error) {
+	res, err := ec.unmarshalInputTagMappingInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalNUpload2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚐUpload(ctx context.Context, v any) (graphql.Upload, error) {
@@ -3935,6 +5591,24 @@ func (ec *executionContext) unmarshalOFocalRegionInput2ᚖgithubᚗcomᚋkurtsch
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) unmarshalOID2ᚖstring(ctx context.Context, v any) (*string, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := graphql.UnmarshalID(v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOID2ᚖstring(ctx context.Context, sel ast.SelectionSet, v *string) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	_ = sel
+	_ = ctx
+	res := graphql.MarshalID(*v)
+	return res
+}
+
 func (ec *executionContext) unmarshalOInt2ᚖint(ctx context.Context, v any) (*int, error) {
 	if v == nil {
 		return nil, nil
@@ -3951,6 +5625,13 @@ func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.Sele
 	_ = ctx
 	res := graphql.MarshalInt(*v)
 	return res
+}
+
+func (ec *executionContext) marshalOPerson2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPerson(ctx context.Context, sel ast.SelectionSet, v *model.Person) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Person(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOString2ᚖstring(ctx context.Context, v any) (*string, error) {

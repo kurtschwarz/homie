@@ -14,6 +14,16 @@ type Coordinate struct {
 	Longitude float64 `json:"longitude"`
 }
 
+type Event struct {
+	ID       string   `json:"id"`
+	Title    string   `json:"title"`
+	Location *string  `json:"location,omitempty"`
+	Start    int      `json:"start"`
+	End      int      `json:"end"`
+	AllDay   bool     `json:"allDay"`
+	People   []Person `json:"people"`
+}
+
 // A normalized region of interest, with top-left origin.
 type FocalRegion struct {
 	X      float64 `json:"x"`
@@ -37,6 +47,22 @@ type Health struct {
 }
 
 type Mutation struct {
+}
+
+type Person struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Emoji    string `json:"emoji"`
+	Swatch   string `json:"swatch"`
+	IsFamily bool   `json:"isFamily"`
+}
+
+type PersonInput struct {
+	ID       *string `json:"id,omitempty"`
+	Name     string  `json:"name"`
+	Emoji    string  `json:"emoji"`
+	Swatch   string  `json:"swatch"`
+	IsFamily bool    `json:"isFamily"`
 }
 
 type Photo struct {
@@ -66,12 +92,80 @@ type PhotoUploadInput struct {
 type Query struct {
 }
 
+type TagMapping struct {
+	Tag    string  `json:"tag"`
+	Label  string  `json:"label"`
+	Kind   TagKind `json:"kind"`
+	Person *Person `json:"person,omitempty"`
+}
+
+type TagMappingInput struct {
+	Tag      string  `json:"tag"`
+	Kind     TagKind `json:"kind"`
+	PersonID *string `json:"personId,omitempty"`
+}
+
 type Weather struct {
 	Condition     WeatherCondition `json:"condition"`
 	ConditionCode string           `json:"conditionCode"`
 	Temperature   int              `json:"temperature"`
 	FetchedAt     int              `json:"fetchedAt"`
 	Stale         bool             `json:"stale"`
+}
+
+type TagKind string
+
+const (
+	TagKindPerson  TagKind = "PERSON"
+	TagKindInclude TagKind = "INCLUDE"
+)
+
+var AllTagKind = []TagKind{
+	TagKindPerson,
+	TagKindInclude,
+}
+
+func (e TagKind) IsValid() bool {
+	switch e {
+	case TagKindPerson, TagKindInclude:
+		return true
+	}
+	return false
+}
+
+func (e TagKind) String() string {
+	return string(e)
+}
+
+func (e *TagKind) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = TagKind(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid TagKind", str)
+	}
+	return nil
+}
+
+func (e TagKind) MarshalGQL(w io.Writer) {
+	_, _ = fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *TagKind) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e TagKind) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
 }
 
 type WeatherCondition string

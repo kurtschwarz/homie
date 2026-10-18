@@ -8,6 +8,7 @@ package graph
 import (
 	"time"
 
+	"github.com/kurtschwarz/homie/services/api/internal/events"
 	"github.com/kurtschwarz/homie/services/api/internal/photos"
 	"github.com/kurtschwarz/homie/services/api/internal/weather"
 )
@@ -17,4 +18,5 @@ type Resolver struct {
 	StartedAt time.Time
 	Weather   *weather.Service
 	Photos    *photos.Service
+	Events    *events.Service
 }

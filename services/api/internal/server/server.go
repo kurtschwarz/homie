@@ -44,7 +44,9 @@ func New(cfg Config) http.Handler {
 		_, _ = w.Write([]byte("ok"))
 	})
 
-	mux.Handle("/manage/", http.StripPrefix("/manage/", spaHandler(cfg.Manager)))
+	// Strip "/manage" and not "/manage/": the handlers below expect a
+	// rooted path, and "/manage/" alone strips down to "".
+	mux.Handle("/manage/", http.StripPrefix("/manage", spaHandler(cfg.Manager)))
 	mux.Handle("/photos/", http.StripPrefix("/photos/", photoHandler(cfg.Photos)))
 	mux.Handle("/", spaHandler(cfg.Display))
 
@@ -82,7 +84,7 @@ func spaHandler(fsys fs.FS) http.Handler {
 		if path == "" {
 			path = "/"
 		}
-		trimmed := path[1:]
+		trimmed := strings.TrimPrefix(path, "/")
 		if trimmed != "" {
 			if _, err := fs.Stat(fsys, trimmed); err != nil {
 				r = r.Clone(r.Context())

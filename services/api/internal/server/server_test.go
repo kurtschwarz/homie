@@ -10,7 +10,9 @@ import (
 	"net/http/httptest"
 	"net/textproto"
 	"path/filepath"
+	"strings"
 	"testing"
+	"testing/fstest"
 
 	"github.com/kurtschwarz/homie/services/api/internal/graph"
 	"github.com/kurtschwarz/homie/services/api/internal/photos"
@@ -111,6 +113,39 @@ func TestPhotosEndpoint(t *testing.T) {
 		handler.ServeHTTP(response, request)
 		if response.Code != http.StatusNotFound {
 			t.Fatalf("path=%q status=%d, want 404", path, response.Code)
+		}
+	}
+}
+
+// The manager is mounted under a prefix, so its asset paths are the ones
+// at risk of being swallowed by the SPA index.html fallback.
+func TestManagerAssetsAreServedNotFallenBackTo(t *testing.T) {
+	manager := fstest.MapFS{
+		"index.html":             {Data: []byte("<html>manager</html>")},
+		"assets/index-abc123.js": {Data: []byte("console.log('manager')")},
+	}
+	handler := server.New(server.Config{Manager: manager})
+
+	request := httptest.NewRequest(http.MethodGet, "/manage/assets/index-abc123.js", nil)
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("status=%d, want 200", response.Code)
+	}
+	if response.Body.String() != "console.log('manager')" {
+		t.Fatalf("body=%q, want the asset and not index.html", response.Body.String())
+	}
+	if contentType := response.Header().Get("Content-Type"); !strings.HasPrefix(contentType, "text/javascript") {
+		t.Fatalf("content-type=%q, want text/javascript", contentType)
+	}
+
+	// Client-side routes still need the index.html fallback.
+	for _, path := range []string{"/manage/", "/manage/settings"} {
+		request = httptest.NewRequest(http.MethodGet, path, nil)
+		response = httptest.NewRecorder()
+		handler.ServeHTTP(response, request)
+		if response.Code != http.StatusOK || response.Body.String() != "<html>manager</html>" {
+			t.Fatalf("path=%q status=%d body=%q", path, response.Code, response.Body.String())
 		}
 	}
 }

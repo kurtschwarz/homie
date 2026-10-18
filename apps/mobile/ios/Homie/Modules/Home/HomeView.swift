@@ -5,6 +5,8 @@ struct HomeView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var previewPage = WebPage()
     @State private var homeManager = HomeManager()
+    @State private var isAdding = false
+    @State private var addDetent: PresentationDetent = .medium
 
     var body: some View {
         NavigationStack {
@@ -18,6 +20,22 @@ struct HomeView: View {
                         }
 
                     Greeting(weather: homeManager.weather, remainingToday: homeManager.remainingToday)
+
+                    Button {
+                        // Dismissing from the form can leave the selection on
+                        // .large, so the chooser's height is set on the way in.
+                        addDetent = .medium
+                        isAdding = true
+                    } label: {
+                        Label("Add an event or reminder", systemImage: "plus")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    // Matches RoundedCard, so the button squares up with the
+                    // cards it sits above.
+                    .buttonBorderShape(.roundedRectangle(radius: CardStyle.cornerRadius))
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
@@ -27,6 +45,12 @@ struct HomeView: View {
             .task {
                 previewPage.load(URLRequest(url: HomieEndpoint.baseURL))
                 await homeManager.load()
+            }
+            .sheet(isPresented: $isAdding, onDismiss: { addDetent = .medium }) {
+                AddToHomieSheet(detent: $addDetent)
+                    .presentationDetents([.medium, .large], selection: $addDetent)
+                    .presentationCornerRadius(CardStyle.cornerRadius)
+                    .presentationDragIndicator(.visible)
             }
             .onChange(of: scenePhase) { _, phase in
                 guard phase == .active else { return }
@@ -154,5 +178,5 @@ private struct KioskPreview: View {
 }
 
 #Preview {
-    HomeView()
+    HomeView().environment(PeopleManager())
 }

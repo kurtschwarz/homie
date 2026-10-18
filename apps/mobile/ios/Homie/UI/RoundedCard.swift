@@ -1,5 +1,11 @@
 import SwiftUI
 
+/// The corner radius cards share with anything that has to line up with them,
+/// like the add button and the add sheet.
+enum CardStyle {
+    static let cornerRadius: CGFloat = 8
+}
+
 struct RoundedCard<Content: View>: View {
     private let content: Content
 
@@ -12,6 +18,6 @@ struct RoundedCard<Content: View>: View {
             content
         }
         .background(Color(uiColor: .secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .clipShape(RoundedRectangle(cornerRadius: CardStyle.cornerRadius))
     }
 }

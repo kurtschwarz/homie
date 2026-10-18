@@ -28,7 +28,7 @@ struct SettingsView: View {
                     Text("FAMILY")
                         .font(.caption.bold())
                         .tracking(1.5)
-                    VStack(spacing: 0) {
+                    RoundedCard {
                         ForEach(Array(peopleManager.people.enumerated()), id: \.element.id) { index, person in
                             Button { editorRoute = .edit(person) } label: {
                                 PersonRow(person: person)
@@ -50,9 +50,6 @@ struct SettingsView: View {
                         }
                         .buttonStyle(.plain)
                     }
-                    .background(Color(uiColor: .secondarySystemGroupedBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-
                     Text("Everyone’s emoji and colour mark their events on the kitchen screen. Tap someone to change them.")
                         .font(.caption)
                     if let errorMessage = peopleManager.errorMessage {
@@ -63,7 +60,6 @@ struct SettingsView: View {
                 .padding(.top, 8)
             }
             .background(Color(uiColor: .systemGroupedBackground))
-            .listRowSpacing(0)
             .overlay {
                 if peopleManager.isLoading && peopleManager.people.isEmpty {
                     ProgressView("Loading people…")
@@ -82,5 +78,4 @@ struct SettingsView: View {
             .task { await peopleManager.loadPeople() }
         }
     }
-
 }

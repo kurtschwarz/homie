@@ -75,74 +75,77 @@ struct EditPersonView: View {
     }
 
     private var eventPreview: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            HStack(spacing: 16) {
-                Text(avatarText).font(.system(size: 38)).frame(width: 64, height: 64)
-                    .background(avatarColor, in: Circle())
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(name.isEmpty ? "Name" : name).font(.title3.bold()).foregroundStyle(.primary)
-                    Text(swatch.capitalized).font(.body).foregroundStyle(.secondary)
+        RoundedCard {
+            VStack(alignment: .leading, spacing: 24) {
+                HStack(spacing: 16) {
+                    Text(avatarText).font(.system(size: 38)).frame(width: 64, height: 64)
+                        .background(avatarColor, in: Circle())
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(name.isEmpty ? "Name" : name).font(.title3.bold()).foregroundStyle(.primary)
+                        Text(swatch.capitalized).font(.body).foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 0)
                 }
-                Spacer(minLength: 0)
+                Rectangle().fill(Color(uiColor: .separator)).frame(height: 1)
+                HStack(spacing: 18) {
+                    Text("5:45 pm").foregroundStyle(.secondary)
+                    Text(avatarText).font(.body).frame(width: 40, height: 40)
+                        .background(avatarColor, in: Circle())
+                    Text("Swim lessons").font(.body.weight(.semibold)).foregroundStyle(.primary)
+                    Spacer(minLength: 0)
+                }
             }
-            Rectangle().fill(Color(uiColor: .separator)).frame(height: 1)
-            HStack(spacing: 18) {
-                Text("5:45 pm").foregroundStyle(.secondary)
-                Text(avatarText).font(.body).frame(width: 40, height: 40)
-                    .background(avatarColor, in: Circle())
-                Text("Swim lessons").font(.body.weight(.semibold)).foregroundStyle(.primary)
-                Spacer(minLength: 0)
-            }
+            .padding(24)
         }
-        .padding(24)
-        .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 28))
     }
 
     private var nameSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             sectionLabel("Name")
-            TextField("Name", text: $name)
-                .font(.title3)
-                .padding(16)
-                .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+            RoundedCard {
+                TextField("Name", text: $name)
+                    .font(.title3)
+                    .padding(16)
+            }
         }
     }
 
     private var badgeSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             sectionLabel("Badge")
-            VStack(spacing: 18) {
-                HStack(spacing: 8) {
-                    ForEach(Person.swatches, id: \.self) { option in
-                        let color = color(for: option)
-                        Button { swatch = option } label: {
-                            Circle().fill(color).frame(maxWidth: .infinity).aspectRatio(1, contentMode: .fit)
-                                .overlay { if swatch == option { Image(systemName: "checkmark").font(.body.bold()).foregroundStyle(.white) } }
-                                .padding(3)
-                                .overlay(Circle().stroke(swatch == option ? Color.primary : .clear, lineWidth: 2.5))
+            RoundedCard {
+                VStack(spacing: 18) {
+                    HStack(spacing: 8) {
+                        ForEach(Person.swatches, id: \.self) { option in
+                            let color = color(for: option)
+                            Button { swatch = option } label: {
+                                Circle().fill(color).frame(maxWidth: .infinity).aspectRatio(1, contentMode: .fit)
+                                    .overlay { if swatch == option { Image(systemName: "checkmark").font(.body.bold()).foregroundStyle(.white) } }
+                                    .padding(3)
+                                    .overlay(Circle().stroke(swatch == option ? Color.primary : .clear, lineWidth: 2.5))
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
-                }
-                Rectangle().fill(Color(uiColor: .separator)).frame(height: 1)
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 6), spacing: 8) {
-                    ForEach(emojis, id: \.self) { option in
-                        Button { emoji = option } label: {
-                            Text(option).font(.system(size: 18)).frame(width: 40, height: 40)
-                                .background(avatarColor, in: Circle())
-                                .overlay(Circle().stroke(emoji == option ? Color.primary : .clear, lineWidth: 3))
-                                .padding(3)
+                    Rectangle().fill(Color(uiColor: .separator)).frame(height: 1)
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 6), spacing: 8) {
+                        ForEach(emojis, id: \.self) { option in
+                            Button { emoji = option } label: {
+                                Text(option).font(.system(size: 18)).frame(width: 40, height: 40)
+                                    .background(avatarColor, in: Circle())
+                                    .overlay(Circle().stroke(emoji == option ? Color.primary : .clear, lineWidth: 3))
+                                    .padding(3)
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
+                    TextField("Or type any emoji", text: $emoji)
+                        .font(.body)
+                        .padding(16)
+                        .background(Color(uiColor: .systemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
                 }
-                TextField("Or type any emoji", text: $emoji)
-                    .font(.body)
-                    .padding(16)
-                    .background(Color(uiColor: .systemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+                .padding(18)
             }
-            .padding(18)
-            .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 28))
             Text("Choose a colour and emoji that are easy to tell apart from across the kitchen.")
                 .font(.body)
                 .foregroundStyle(.secondary)

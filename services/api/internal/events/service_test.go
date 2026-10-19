@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/kurtschwarz/homie/services/api/internal/caldav"
 	"github.com/kurtschwarz/homie/services/api/internal/events"
+	"github.com/kurtschwarz/homie/services/api/internal/events/caldav"
 )
 
 type stubFetcher struct {

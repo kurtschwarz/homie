@@ -16,8 +16,8 @@ import (
 	_ "time/tzdata" // a minimal Raspberry Pi image may have no system zoneinfo
 
 	assets "github.com/kurtschwarz/homie/services/api"
-	"github.com/kurtschwarz/homie/services/api/internal/caldav"
 	"github.com/kurtschwarz/homie/services/api/internal/events"
+	"github.com/kurtschwarz/homie/services/api/internal/events/caldav"
 	eventsjobs "github.com/kurtschwarz/homie/services/api/internal/events/jobs"
 	"github.com/kurtschwarz/homie/services/api/internal/graph"
 	"github.com/kurtschwarz/homie/services/api/internal/photos"

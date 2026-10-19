@@ -16,7 +16,7 @@ struct HomeView: View {
                         .frame(maxWidth: .infinity)
                         .overlay(alignment: .topLeading) {
                             LivePill()
-                                .padding(12)
+                                .padding(24)
                         }
 
                     Greeting(weather: homeManager.weather, remainingToday: homeManager.remainingToday)
@@ -88,20 +88,8 @@ private struct Greeting: View {
 
     private let now = Date()
 
-    private let ballDiameter: CGFloat = 52
-    /// HomieAvatar draws the ball at 80% of its frame.
-    private var avatarFrame: CGFloat { ballDiameter / 0.8 }
-
     var body: some View {
-        HStack(spacing: 14) {
-            HomieAvatar(showsGroundShadow: false)
-                .frame(width: avatarFrame, height: avatarFrame)
-                // The frame carries transparent margin around the ball; trim it
-                // so the layout box matches the ball you can actually see.
-                .padding(-(avatarFrame - ballDiameter) / 2)
-
-            text
-        }
+        text
     }
 
     private var text: some View {
@@ -285,7 +273,9 @@ private struct KioskPreview: View {
 
     private let kioskWidth: CGFloat = 1920
     private let kioskHeight: CGFloat = 1080
-    private let cornerRadius: CGFloat = 6
+    private let bezelWidth: CGFloat = 12
+    private let screenCornerRadius: CGFloat = 6
+    private let frameCornerRadius: CGFloat = 18
 
     var body: some View {
         GeometryReader { geometry in
@@ -299,11 +289,40 @@ private struct KioskPreview: View {
         // own buttons to VoiceOver, so hide the mirror from accessibility too.
         .accessibilityHidden(true)
         .aspectRatio(kioskWidth / kioskHeight, contentMode: .fit)
-        .background(.white)
-        .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+        .clipShape(RoundedRectangle(cornerRadius: screenCornerRadius))
+        .padding(bezelWidth)
+        .background {
+            RoundedRectangle(cornerRadius: frameCornerRadius)
+                .fill(
+                    LinearGradient(
+                        colors: [Color(white: 0.30), Color(white: 0.06), Color(white: 0.16)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        }
+        .shadow(color: .black.opacity(0.30), radius: 14, x: 0, y: 12)
         .overlay {
-            RoundedRectangle(cornerRadius: cornerRadius)
-                .strokeBorder(.black, lineWidth: 4)
+            RoundedRectangle(cornerRadius: frameCornerRadius)
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [Color(white: 0.54), Color(white: 0.17), Color(white: 0.025), Color(white: 0.22)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1.5
+                )
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: screenCornerRadius)
+                .strokeBorder(.white.opacity(0.26), lineWidth: 1)
+                .padding(bezelWidth)
+        }
+        .overlay(alignment: .bottomLeading) {
+            HomieAvatar(showsGroundShadow: false)
+                .frame(width: 64, height: 64)
+                .background(.white, in: Circle())
+                .offset(x: 17, y: 26)
         }
     }
 }

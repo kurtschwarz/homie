@@ -52,7 +52,7 @@ struct HomeView: View {
             .sheet(isPresented: $isAdding, onDismiss: { addDetent = .medium }) {
                 AddToHomieSheet(detent: $addDetent, onEventSaved: { Task { await homeManager.load() } })
                     .presentationDetents([.medium, .large], selection: $addDetent)
-                    .presentationCornerRadius(CardStyle.cornerRadius)
+                    .presentationBackground(Color(uiColor: .systemGroupedBackground))
                     .presentationDragIndicator(.visible)
             }
             .onChange(of: scenePhase) { _, phase in
@@ -164,7 +164,7 @@ private struct QuickActions: View {
         .sheet(isPresented: $isStartingTimer) {
             StartTimerSheet()
                 .presentationDetents([.medium, .large])
-                .presentationCornerRadius(CardStyle.cornerRadius)
+                .presentationBackground(Color(uiColor: .systemGroupedBackground))
                 .presentationDragIndicator(.visible)
         }
     }

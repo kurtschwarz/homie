@@ -72,6 +72,7 @@ struct SettingsView: View {
             }
             .sheet(item: $editorRoute) { route in
                 EditPersonView(person: route.person)
+                    .presentationBackground(Color(uiColor: .systemGroupedBackground))
             }
             .task { await peopleManager.loadPeople() }
         }

@@ -27,7 +27,7 @@ import (
 	"github.com/kurtschwarz/homie/services/api/internal/store"
 	"github.com/kurtschwarz/homie/services/api/internal/weather"
 	weatherjobs "github.com/kurtschwarz/homie/services/api/internal/weather/jobs"
-	"github.com/kurtschwarz/homie/services/api/internal/weatherkit"
+	"github.com/kurtschwarz/homie/services/api/internal/weather/weatherkit"
 	"github.com/riverqueue/river"
 )
 

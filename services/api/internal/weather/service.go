@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kurtschwarz/homie/services/api/internal/weatherkit"
+	"github.com/kurtschwarz/homie/services/api/internal/weather/weatherkit"
 )
 
 // Condition is the compact set of weather glyphs supported by the UI.

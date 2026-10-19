@@ -12,7 +12,7 @@ import (
 
 	"github.com/kurtschwarz/homie/services/api/internal/store"
 	"github.com/kurtschwarz/homie/services/api/internal/weather"
-	"github.com/kurtschwarz/homie/services/api/internal/weatherkit"
+	"github.com/kurtschwarz/homie/services/api/internal/weather/weatherkit"
 )
 
 type fakeFetcher struct {

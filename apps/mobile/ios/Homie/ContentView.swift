@@ -16,19 +16,14 @@ struct ContentView: View {
             Tab("Photos", image: "phosphor-image", value: Destination.photos) {
                 PhotosView()
             }
-
-            Tab("Settings", image: "phosphor-sliders-horizontal", value: Destination.settings) {
-                SettingsView()
-            }
         }
-        .tint(Color(red: 49.0 / 255, green: 85.0 / 255, blue: 199.0 / 255))
+        .tint(Color(red: 227.0 / 255, green: 96.0 / 255, blue: 42.0 / 255))
     }
 
     private enum Destination: Hashable {
         case home
         case reminders
         case photos
-        case settings
     }
 }
 

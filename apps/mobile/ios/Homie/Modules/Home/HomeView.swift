@@ -6,21 +6,16 @@ struct HomeView: View {
     @State private var previewPage = WebPage()
     @State private var homeManager = HomeManager()
     @State private var isAdding = false
+    @State private var isShowingSettings = false
     @State private var addDetent: PresentationDetent = .medium
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    KioskPreview(page: previewPage)
-                        .frame(maxWidth: .infinity)
-                        .overlay(alignment: .topLeading) {
-                            LivePill()
-                                .padding(24)
-                        }
+                    AgentChatCard(weather: homeManager.weather, remainingToday: homeManager.remainingToday)
 
-                    Greeting(weather: homeManager.weather, remainingToday: homeManager.remainingToday)
-                        .padding(.top, 20)
+                    KitchenScreenSection(page: previewPage)
 
                     QuickActions()
 
@@ -43,8 +38,19 @@ struct HomeView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
             }
-            .background(Color(uiColor: .systemGroupedBackground))
-            .toolbar(.hidden, for: .navigationBar)
+            .background(Color(red: 244.0 / 255, green: 246.0 / 255, blue: 248.0 / 255))
+            .navigationTitle("Homie")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        isShowingSettings = true
+                    } label: {
+                        Image("phosphor-sliders-horizontal")
+                    }
+                    .accessibilityLabel("Settings")
+                }
+            }
             .task {
                 previewPage.load(URLRequest(url: HomieEndpoint.baseURL))
                 await homeManager.load()
@@ -53,6 +59,11 @@ struct HomeView: View {
                 AddToHomieSheet(detent: $addDetent, onEventSaved: { Task { await homeManager.load() } })
                     .presentationDetents([.medium, .large], selection: $addDetent)
                     .presentationBackground(Color(uiColor: .systemGroupedBackground))
+                    .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: $isShowingSettings) {
+                SettingsView()
+                    .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
             }
             .onChange(of: scenePhase) { _, phase in
@@ -64,58 +75,57 @@ struct HomeView: View {
     }
 }
 
-private struct LivePill: View {
-    var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "circle.fill")
-                .font(.system(size: 7))
-                .foregroundStyle(.green)
-                .symbolEffect(.pulse)
-
-            Text("Live")
-                .font(.caption.bold())
-                .foregroundStyle(.white)
-        }
-        .padding(.horizontal, 9)
-        .padding(.vertical, 5)
-        .background(Capsule().fill(.black.opacity(0.6)))
-    }
-}
-
-private struct Greeting: View {
+private struct AgentChatCard: View {
     let weather: HomeManager.Weather?
     let remainingToday: Int
 
     private let now = Date()
 
     var body: some View {
-        text
-    }
+        HStack(alignment: .top, spacing: 12) {
+            HomieAvatar(showsGroundShadow: false)
+                .frame(width: 64, height: 64)
 
-    private var text: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(Self.dateLine(now))
-                .font(.caption.bold())
-                .tracking(1.5)
-                .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("\(Self.salutation(now))!")
+                    .font(.headline)
+                    .foregroundStyle(.primary)
 
-            Text(Self.salutation(now))
-                .font(.system(size: 32, weight: .bold))
-
-            if let weather {
-                HStack(spacing: 8) {
-                    Image(systemName: weather.symbolName)
+                HStack(spacing: 7) {
+                    Image(systemName: weather?.symbolName ?? "cloud.fill")
                         .foregroundStyle(.orange)
-                    Text("\(weather.temperature)° · \(Self.thingsPhrase(remainingToday))")
+                    if let weather {
+                        Text("\(weather.temperature)° · \(Self.weatherDescription(weather.condition))")
+                    } else {
+                        Text("Weather unavailable")
+                    }
                 }
-                .font(.subheadline)
+                .font(.body)
                 .foregroundStyle(.secondary)
+
+                Text(Self.thingsPhrase(remainingToday))
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                Color(uiColor: .secondarySystemGroupedBackground),
+                in: RoundedRectangle(cornerRadius: 24)
+            )
         }
     }
 
-    private static func dateLine(_ date: Date) -> String {
-        date.formatted(.dateTime.weekday(.wide).month(.wide).day()).uppercased()
+    private static func weatherDescription(_ condition: String) -> String {
+        switch condition {
+        case "SUN": "sunny"
+        case "CLOUD_SUN": "partly cloudy"
+        case "CLOUD": "cloudy"
+        case "RAIN": "rainy"
+        case "MOON": "clear tonight"
+        default: "cloudy"
+        }
     }
 
     private static func salutation(_ date: Date) -> String {
@@ -128,9 +138,50 @@ private struct Greeting: View {
 
     private static func thingsPhrase(_ count: Int) -> String {
         switch count {
-        case 0: "nothing else today"
-        case 1: "1 thing today"
-        default: "\(count) things today"
+        case 0: "Nothing else is planned today"
+        case 1: "You have 1 thing left today"
+        default: "You have \(count) things left today"
+        }
+    }
+}
+
+private struct KitchenScreenSection: View {
+    let page: WebPage
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Your home")
+                .font(.title3.bold())
+                .padding(.horizontal, 4)
+
+            HStack(spacing: 14) {
+                KioskPreview(page: page, compact: true)
+                    .frame(width: 138)
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("Kitchen screen")
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(.green)
+                            .frame(width: 7, height: 7)
+                        Text("Live · Kitchen display")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+
+                Spacer(minLength: 0)
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                Color(uiColor: .secondarySystemGroupedBackground),
+                in: RoundedRectangle(cornerRadius: CardStyle.cornerRadius)
+            )
         }
     }
 }
@@ -270,12 +321,18 @@ private struct QuickAction: View {
 /// the web content renders at full kiosk size and is scaled down to fit.
 private struct KioskPreview: View {
     let page: WebPage
+    let compact: Bool
 
     private let kioskWidth: CGFloat = 1920
     private let kioskHeight: CGFloat = 1080
-    private let bezelWidth: CGFloat = 12
-    private let screenCornerRadius: CGFloat = 6
-    private let frameCornerRadius: CGFloat = 18
+    private var bezelWidth: CGFloat { compact ? 4 : 12 }
+    private var screenCornerRadius: CGFloat { compact ? 3 : 6 }
+    private var frameCornerRadius: CGFloat { compact ? 8 : 18 }
+
+    init(page: WebPage, compact: Bool = false) {
+        self.page = page
+        self.compact = compact
+    }
 
     var body: some View {
         GeometryReader { geometry in
@@ -301,7 +358,7 @@ private struct KioskPreview: View {
                     )
                 )
         }
-        .shadow(color: .black.opacity(0.30), radius: 14, x: 0, y: 12)
+        .shadow(color: .black.opacity(0.30), radius: compact ? 4 : 14, x: 0, y: compact ? 2 : 12)
         .overlay {
             RoundedRectangle(cornerRadius: frameCornerRadius)
                 .strokeBorder(
@@ -317,12 +374,6 @@ private struct KioskPreview: View {
             RoundedRectangle(cornerRadius: screenCornerRadius)
                 .strokeBorder(.white.opacity(0.26), lineWidth: 1)
                 .padding(bezelWidth)
-        }
-        .overlay(alignment: .bottomLeading) {
-            HomieAvatar(showsGroundShadow: false)
-                .frame(width: 64, height: 64)
-                .background(.white, in: Circle())
-                .offset(x: 17, y: 26)
         }
     }
 }

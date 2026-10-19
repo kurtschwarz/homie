@@ -63,12 +63,6 @@ struct SettingsView: View {
             }
         }
         .navigationTitle("Settings")
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button { Task { await peopleManager.loadPeople() } } label: { Image(systemName: "arrow.clockwise") }
-                    .accessibilityLabel("Refresh people")
-            }
-        }
         .sheet(item: $editorRoute) { route in
             EditPersonView(person: route.person)
                 .presentationBackground(Color(uiColor: .systemGroupedBackground))

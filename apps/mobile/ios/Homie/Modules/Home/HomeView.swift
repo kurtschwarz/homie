@@ -6,7 +6,6 @@ struct HomeView: View {
     @State private var previewPage = WebPage()
     @State private var homeManager = HomeManager()
     @State private var isAdding = false
-    @State private var isShowingSettings = false
     @State private var addDetent: PresentationDetent = .medium
 
     var body: some View {
@@ -43,8 +42,8 @@ struct HomeView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        isShowingSettings = true
+                    NavigationLink {
+                        SettingsView()
                     } label: {
                         Image("phosphor-sliders-horizontal")
                     }
@@ -59,11 +58,6 @@ struct HomeView: View {
                 AddToHomieSheet(detent: $addDetent, onEventSaved: { Task { await homeManager.load() } })
                     .presentationDetents([.medium, .large], selection: $addDetent)
                     .presentationBackground(Color(uiColor: .systemGroupedBackground))
-                    .presentationDragIndicator(.visible)
-            }
-            .sheet(isPresented: $isShowingSettings) {
-                SettingsView()
-                    .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
             }
             .onChange(of: scenePhase) { _, phase in

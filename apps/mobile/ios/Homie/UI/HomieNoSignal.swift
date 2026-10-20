@@ -59,7 +59,7 @@ public struct HomieNoSignalCard: View {
                 .foregroundColor(.white.opacity(0.7))
                 .multilineTextAlignment(.center)
                 .lineSpacing(3)
-            Button {
+            HomieButton(title: isReconnecting ? "Reconnecting…" : buttonTitle) {
                 guard !isReconnecting else { return }
                 Task {
                     isReconnecting = true
@@ -71,30 +71,15 @@ public struct HomieNoSignalCard: View {
                     }
                     isReconnecting = false
                 }
-            } label: {
-                HStack(spacing: 8) {
-                    Group {
-                        if isReconnecting {
-                            SpinningNotch()
-                        } else {
-                            Image("phosphor-arrow-clockwise")
-                                .resizable()
-                                .renderingMode(.template)
-                                .frame(width: 16, height: 16)
-                        }
-                    }
-                    .frame(width: 16, height: 16)
-                    .accessibilityHidden(true)
-                    Text(isReconnecting ? "Reconnecting…" : buttonTitle)
+            } icon: {
+                if isReconnecting {
+                    SpinningNotch()
+                } else {
+                    Image("phosphor-arrow-clockwise")
+                        .resizable()
+                        .renderingMode(.template)
                 }
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 16)
-                    .frame(height: 40)
-                    .background(MatteOrange())
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
-            .buttonStyle(.plain)
             .disabled(isReconnecting)
             .padding(.top, 12)
         }
@@ -344,19 +329,6 @@ private struct Streaks: View {
             }
         }
         .allowsHitTesting(false)
-    }
-}
-
-private struct MatteOrange: View {
-    var body: some View {
-        LinearGradient(colors: [Color(glitchHex: 0xE8784A), Color(glitchHex: 0xD85A25)], startPoint: .top, endPoint: .bottom)
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .strokeBorder(
-                        LinearGradient(colors: [.white.opacity(0.28), .clear, .black.opacity(0.12)], startPoint: .top, endPoint: .bottom),
-                        lineWidth: 1
-                    )
-            )
     }
 }
 

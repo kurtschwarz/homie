@@ -32,24 +32,17 @@ struct HomeView: View {
                         QuickActions()
                     }
 
-                    Button {
+                    HomieButton(title: "Add an event or reminder", iconSize: 20, fillsWidth: true) {
                         // Dismissing from the form can leave the selection on
                         // .large, so the chooser's height is set on the way in.
                         addDetent = .medium
                         isAdding = true
-                    } label: {
-                        Label("Add an event or reminder", systemImage: "plus")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
-                            .background {
-                                RoundedRectangle(cornerRadius: CardStyle.cornerRadius)
-                                    .fill(Color.accentColor)
-                            }
+                    } icon: {
+                        Image("phosphor-calendar-plus")
+                            .resizable()
+                            .renderingMode(.template)
+                            .scaledToFit()
                     }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: CardStyle.cornerRadius))
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 8)

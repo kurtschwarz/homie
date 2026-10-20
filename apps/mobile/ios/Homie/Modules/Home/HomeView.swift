@@ -1,10 +1,10 @@
 import SwiftUI
-import WebKit
+import Combine
 
 struct HomeView: View {
     @Environment(\.scenePhase) private var scenePhase
-    @State private var previewPage = WebPage()
     @State private var homeManager = HomeManager()
+    @State private var displayManager = DisplayManager()
     @State private var isAdding = false
     @State private var addDetent: PresentationDetent = .medium
 
@@ -14,7 +14,7 @@ struct HomeView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     AgentChatCard(weather: homeManager.weather, remainingToday: homeManager.remainingToday)
 
-                    KitchenScreenSection(page: previewPage)
+                    KitchenScreenSection(photoURL: displayManager.currentPhotoURL, photo: displayManager.currentPhoto, headline: homeManager.headline)
 
                     QuickActions()
 
@@ -51,8 +51,13 @@ struct HomeView: View {
                 }
             }
             .task {
-                previewPage.load(URLRequest(url: HomieEndpoint.baseURL))
                 await homeManager.load()
+                await displayManager.load()
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: displayManager.refreshDelay)
+                    guard !Task.isCancelled else { break }
+                    await displayManager.load()
+                }
             }
             .sheet(isPresented: $isAdding, onDismiss: { addDetent = .medium }) {
                 AddToHomieSheet(detent: $addDetent, onEventSaved: { Task { await homeManager.load() } })
@@ -62,8 +67,10 @@ struct HomeView: View {
             }
             .onChange(of: scenePhase) { _, phase in
                 guard phase == .active else { return }
-                previewPage.reload()
-                Task { await homeManager.load() }
+                Task {
+                    await homeManager.load()
+                    await displayManager.load()
+                }
             }
         }
     }
@@ -140,43 +147,148 @@ private struct AgentChatCard: View {
 }
 
 private struct KitchenScreenSection: View {
-    let page: WebPage
+    let photoURL: URL?
+    let photo: DisplayManager.Photo?
+    let headline: HomeManager.Headline?
+
+    @State private var now = Date()
+    private let clockTimer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Your home")
-                .font(.title3.bold())
-                .padding(.horizontal, 4)
-
-            HStack(spacing: 14) {
-                KioskPreview(page: page, compact: true)
-                    .frame(width: 138)
-
-                VStack(alignment: .leading, spacing: 5) {
-                    Text("Kitchen screen")
-                        .font(.headline)
-                        .foregroundStyle(.primary)
-
-                    HStack(spacing: 6) {
-                        Circle()
-                            .fill(.green)
-                            .frame(width: 7, height: 7)
-                        Text("Live · Kitchen display")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
+        VStack(spacing: 0) {
+            GeometryReader { geometry in
+                let photoWidth = geometry.size.width * 0.49
+                HStack(spacing: 0) {
+                    ZStack(alignment: .topLeading) {
+                        Color(uiColor: .tertiarySystemFill)
+                        if let photoURL {
+                            AsyncImage(url: photoURL) { image in
+                                FocalPhotoCrop(image: image, photo: photo, frameSize: CGSize(width: photoWidth, height: geometry.size.height))
+                                    .frame(width: photoWidth, height: geometry.size.height)
+                                    .clipped()
+                            } placeholder: {
+                                Color(uiColor: .tertiarySystemFill)
+                            }
+                        }
+                        HStack(spacing: 5) {
+                            Circle()
+                                .frame(width: 6, height: 6)
+                            Text("Live")
+                        }
+                            .font(.caption.bold())
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 5)
+                            .background(.black.opacity(0.55), in: Capsule())
+                            .padding(10)
                     }
-                }
+                    .frame(width: photoWidth, height: geometry.size.height)
+                    .clipped()
 
-                Spacer(minLength: 0)
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(now.formatted(.dateTime.hour().minute()))
+                            .font(.system(size: 18, weight: .semibold, design: .rounded))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                        Spacer(minLength: 14)
+                        Text(headline?.label ?? "NEXT")
+                            .font(.caption.weight(.bold))
+                            .tracking(1.2)
+                            .foregroundStyle(Color(red: 0.88, green: 0.36, blue: 0.18))
+                            .lineLimit(1)
+                        Text(headline?.title ?? "Nothing else today")
+                            .font(.headline)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.75)
+                            .padding(.top, 5)
+                        Text(headline?.detail ?? Self.eveningPhrase(now))
+                            .font(.body)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.75)
+                            .padding(.top, 4)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(16)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                }
             }
-            .padding(12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                Color(uiColor: .secondarySystemGroupedBackground),
-                in: RoundedRectangle(cornerRadius: CardStyle.cornerRadius)
-            )
+            .frame(height: 160)
+
+            Rectangle()
+                .fill(Color(uiColor: .separator))
+                .frame(height: 1)
+
+            HStack(spacing: 0) {
+                control(title: "Pause", icon: "phosphor-pause")
+                control(title: "Next", icon: "phosphor-skip-forward")
+                control(title: "Dim", icon: "phosphor-moon")
+            }
+            .padding(.vertical, 12)
         }
+        .background(Color(uiColor: .secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .onReceive(clockTimer) { now = $0 }
+    }
+
+    private func control(title: String, icon: String) -> some View {
+        Button {} label: {
+            HStack(spacing: 6) {
+                Image(icon)
+                    .resizable()
+                    .renderingMode(.template)
+                    .frame(width: 20, height: 20)
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+            }
+            .foregroundStyle(.primary)
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private static func eveningPhrase(_ date: Date) -> String {
+        switch Calendar.current.component(.hour, from: date) {
+        case ..<12: "Enjoy the day"
+        case ..<17: "Enjoy the afternoon"
+        default: "Enjoy the evening"
+        }
+    }
+}
+
+private struct FocalPhotoCrop: View {
+    let image: Image
+    let photo: DisplayManager.Photo?
+    let frameSize: CGSize
+
+    var body: some View {
+        let geometry = photoGeometry(photo: photo, frame: frameSize)
+        image
+            .resizable()
+            .scaledToFill()
+            .frame(width: geometry.size.width, height: geometry.size.height)
+            .offset(x: geometry.offset.width, y: geometry.offset.height)
+    }
+
+    private func photoGeometry(photo: DisplayManager.Photo?, frame: CGSize) -> (size: CGSize, offset: CGSize) {
+        guard let photo else { return (frame, .zero) }
+        let aspectRatio = CGFloat(photo.width) / CGFloat(photo.height)
+        var width = frame.height * aspectRatio
+        var height = frame.height
+        if width < frame.width {
+            width = frame.width
+            height = frame.width / aspectRatio
+        }
+
+        guard let focus = photo.focus else {
+            return (CGSize(width: width, height: height), CGSize(width: (frame.width - width) / 2, height: (frame.height - height) / 2))
+        }
+        let focusX = CGFloat(focus.x + focus.width / 2)
+        let focusY = CGFloat(focus.y + focus.height / 2)
+        let x = min(0, max(frame.width - width, frame.width / 2 - focusX * width))
+        let y = min(0, max(frame.height - height, frame.height / 2 - focusY * height))
+        return (CGSize(width: width, height: height), CGSize(width: x, height: y))
     }
 }
 
@@ -305,70 +417,6 @@ private struct QuickAction: View {
             }
         }
         .buttonStyle(.plain)
-    }
-}
-
-/// A non-interactive miniature of the kitchen display.
-///
-/// The display SPA is laid out to a fixed 1920x1080 kiosk panel
-/// (--hm-size-screen-w/h in @homie/ui) and does not reflow to phone widths, so
-/// the web content renders at full kiosk size and is scaled down to fit.
-private struct KioskPreview: View {
-    let page: WebPage
-    let compact: Bool
-
-    private let kioskWidth: CGFloat = 1920
-    private let kioskHeight: CGFloat = 1080
-    private var bezelWidth: CGFloat { compact ? 4 : 12 }
-    private var screenCornerRadius: CGFloat { compact ? 3 : 6 }
-    private var frameCornerRadius: CGFloat { compact ? 8 : 18 }
-
-    init(page: WebPage, compact: Bool = false) {
-        self.page = page
-        self.compact = compact
-    }
-
-    var body: some View {
-        GeometryReader { geometry in
-            WebView(page)
-                .frame(width: kioskWidth, height: kioskHeight)
-                .scaleEffect(geometry.size.width / kioskWidth, anchor: .topLeading)
-                .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
-                .allowsHitTesting(false)
-        }
-        // allowsHitTesting blocks touches but still exposes the web content's
-        // own buttons to VoiceOver, so hide the mirror from accessibility too.
-        .accessibilityHidden(true)
-        .aspectRatio(kioskWidth / kioskHeight, contentMode: .fit)
-        .clipShape(RoundedRectangle(cornerRadius: screenCornerRadius))
-        .padding(bezelWidth)
-        .background {
-            RoundedRectangle(cornerRadius: frameCornerRadius)
-                .fill(
-                    LinearGradient(
-                        colors: [Color(white: 0.30), Color(white: 0.06), Color(white: 0.16)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-        }
-        .shadow(color: .black.opacity(0.30), radius: compact ? 4 : 14, x: 0, y: compact ? 2 : 12)
-        .overlay {
-            RoundedRectangle(cornerRadius: frameCornerRadius)
-                .strokeBorder(
-                    LinearGradient(
-                        colors: [Color(white: 0.54), Color(white: 0.17), Color(white: 0.025), Color(white: 0.22)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1.5
-                )
-        }
-        .overlay {
-            RoundedRectangle(cornerRadius: screenCornerRadius)
-                .strokeBorder(.white.opacity(0.26), lineWidth: 1)
-                .padding(bezelWidth)
-        }
     }
 }
 

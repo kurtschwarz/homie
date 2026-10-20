@@ -44,6 +44,9 @@ enum HomieAPI {
         var request = URLRequest(url: HomieEndpoint.graphQLURL)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let token = HomieCredential.token {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
         // These are small queries against a machine on the same network. The
         // 60 second default leaves pull to refresh spinning for a minute when
         // the API is unreachable, which reads as a hang.

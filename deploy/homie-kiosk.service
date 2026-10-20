@@ -16,7 +16,7 @@ StandardError=journal
 
 # Core environment configuration
 EnvironmentFile=-/opt/homie/kiosk.env
-Environment=HOMIE_KIOSK_URL=http://localhost:3000
+Environment=HOMIE_KIOSK_URL=http://localhost:3001
 Environment=HOMIE_KIOSK_EXTRA_FLAGS=
 
 # Cursor Configuration (Your custom transparent theme assets)

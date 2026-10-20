@@ -3,6 +3,7 @@ package server_test
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"mime/multipart"
@@ -13,7 +14,9 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
+	"time"
 
+	"github.com/kurtschwarz/homie/services/api/internal/auth"
 	"github.com/kurtschwarz/homie/services/api/internal/graph"
 	"github.com/kurtschwarz/homie/services/api/internal/photos"
 	"github.com/kurtschwarz/homie/services/api/internal/server"
@@ -157,5 +160,74 @@ func TestPhotosEndpointWithoutLibrary(t *testing.T) {
 	handler.ServeHTTP(response, request)
 	if response.Code != http.StatusNotFound {
 		t.Fatalf("status=%d, want 404", response.Code)
+	}
+}
+
+func TestLANListenerProtectsGraphQLAndServesManagerAndSignedPhotos(t *testing.T) {
+	const token = "test-token"
+	library, err := photos.NewLibrary(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := library.Save("photo.jpg", strings.NewReader("jpeg-bytes")); err != nil {
+		t.Fatal(err)
+	}
+	signer := auth.NewSigner(token)
+	handler := server.NewLAN(server.Config{
+		Resolver: &graph.Resolver{}, Token: token, Signer: signer,
+		Photos: library.FS(), Manager: fstest.MapFS{"index.html": {Data: []byte("manager")}},
+	})
+	for _, tc := range []struct {
+		name   string
+		header string
+		want   int
+	}{{"missing", "", http.StatusUnauthorized}, {"wrong", "Bearer wrong", http.StatusUnauthorized}, {"correct", "Bearer " + token, http.StatusOK}} {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "/graphql", strings.NewReader(`{"query":"{ health { status } }"}`))
+			req.Header.Set("Content-Type", "application/json")
+			if tc.header != "" {
+				req.Header.Set("Authorization", tc.header)
+			}
+			res := httptest.NewRecorder()
+			handler.ServeHTTP(res, req)
+			if res.Code != tc.want {
+				t.Fatalf("status=%d, want %d body=%s", res.Code, tc.want, res.Body.String())
+			}
+		})
+	}
+	manager := httptest.NewRecorder()
+	handler.ServeHTTP(manager, httptest.NewRequest(http.MethodGet, "/manage/", nil))
+	if manager.Code != http.StatusOK || manager.Body.String() != "manager" {
+		t.Fatalf("manager status=%d body=%q", manager.Code, manager.Body.String())
+	}
+	for _, path := range []string{"/", "/healthz", "/playground"} {
+		res := httptest.NewRecorder()
+		handler.ServeHTTP(res, httptest.NewRequest(http.MethodGet, path, nil))
+		if res.Code != http.StatusNotFound {
+			t.Fatalf("path=%q status=%d", path, res.Code)
+		}
+	}
+	expiry := time.Now().Add(time.Hour).Unix()
+	signed := fmt.Sprintf("/photos/photo.jpg?exp=%d&sig=%s", expiry, signer.Sign("photo.jpg", expiry))
+	photo := httptest.NewRecorder()
+	handler.ServeHTTP(photo, httptest.NewRequest(http.MethodGet, signed, nil))
+	if photo.Code != http.StatusOK || photo.Body.String() != "jpeg-bytes" {
+		t.Fatalf("signed photo status=%d body=%q", photo.Code, photo.Body.String())
+	}
+	for _, path := range []string{fmt.Sprintf("/photos/photo.jpg?exp=%d&sig=bad", expiry), fmt.Sprintf("/photos/photo.jpg?exp=%d&sig=%s", time.Now().Add(-time.Hour).Unix(), signer.Sign("photo.jpg", time.Now().Add(-time.Hour).Unix()))} {
+		res := httptest.NewRecorder()
+		handler.ServeHTTP(res, httptest.NewRequest(http.MethodGet, path, nil))
+		if res.Code != http.StatusNotFound {
+			t.Fatalf("invalid signed photo status=%d", res.Code)
+		}
+	}
+}
+
+func TestLocalListenerServesWithoutCredentials(t *testing.T) {
+	handler := server.NewLocal(server.Config{Display: fstest.MapFS{"index.html": {Data: []byte("display")}}})
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, httptest.NewRequest(http.MethodGet, "/", nil))
+	if res.Code != http.StatusOK || res.Body.String() != "display" {
+		t.Fatalf("status=%d body=%q", res.Code, res.Body.String())
 	}
 }

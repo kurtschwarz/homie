@@ -89,5 +89,5 @@ kiosk-dev:
 
 # Point the kiosk browser back at the on-device API.
 kiosk-prod:
-    ssh {{pi_host}} "echo HOMIE_KIOSK_URL=http://localhost:3000 > {{pi_dir}}/kiosk.env"
+    ssh {{pi_host}} "echo HOMIE_KIOSK_URL=http://localhost:3001 > {{pi_dir}}/kiosk.env"
     ssh {{pi_host}} "sudo systemctl restart homie-kiosk.service"

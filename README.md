@@ -94,6 +94,9 @@ The API is configured by environment variables. On the Pi they live in
 | Variable | Default | Notes |
 |---|---|---|
 | `HOMIE_ADDR` | `:3000` | Listen address |
+| `HOMIE_LOCAL_ADDR` | *(unset)* | Optional loopback-only listener for the display and manager UI. When enabled, the LAN listener requires `HOMIE_AUTH_TOKEN` (or a generated token at `/var/lib/homie/token`). |
+| `HOMIE_AUTH_TOKEN` | *(generated once)* | API bearer token; stored at `/var/lib/homie/token` if unset. The token is logged at startup for client setup. |
+| `HOMIE_AUTH_TOKEN_PATH` | `/var/lib/homie/token` | Path used for the persisted bearer token. |
 | `HOMIE_PLAYGROUND` | off | Set to `1` to mount `/playground` |
 | `HOMIE_DB_PATH` | `/var/lib/homie/homie.db` | Main database |
 | `HOMIE_RIVER_DB_PATH` | `/var/lib/homie/river.db` | Job queue database |
@@ -103,6 +106,10 @@ The API is configured by environment variables. On the Pi they live in
 
 Install the WeatherKit key on the Pi with `just deploy-weatherkit`, which keeps
 the private key out of the deploy tree.
+
+On the Pi, get the API token with `sudo journalctl -u homie-api.service -b`; paste
+it into the iOS app's Settings and the manager's API token field. Configure Photo
+Sync with `defaults write ar.schw.homie.photo-sync HomieAPIToken '<token>'`.
 
 ## Photos
 
@@ -123,6 +130,9 @@ restarts on deploy because the web apps are baked into the binary.
 
 While working on the frontend, `just kiosk-dev` points the Pi's browser at the
 Vite dev server on your Mac, and `just kiosk-prod` points it back.
+When the API is running on the Pi with LAN auth enabled, start the Vite server
+with `HOMIE_API_URL=http://homie:3000 HOMIE_AUTH_TOKEN=<token>`. The proxy adds
+the token server-side; it is not included in browser code.
 
 ## iOS app
 

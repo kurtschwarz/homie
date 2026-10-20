@@ -8,6 +8,7 @@ import { useSettings, type ManagerPerson, type PersonInput, type TagKind, type T
 export function App() {
   const health = useHealth();
   const settings = useSettings();
+  const [token, setToken] = React.useState(localStorage.getItem("homie-auth-token") ?? "");
 
   return (
     <main className="mx-auto flex max-w-5xl flex-col gap-hm-32 p-hm-screen text-hm-ink">
@@ -24,6 +25,18 @@ export function App() {
           )}
         </p>
       </header>
+
+      <form className="flex flex-wrap items-center gap-hm-8" onSubmit={(event) => {
+        event.preventDefault();
+        localStorage.setItem("homie-auth-token", token.trim());
+        window.location.reload();
+      }}>
+        <label htmlFor="api-token" className="text-hm-body">API token</label>
+        <input id="api-token" type="password" autoComplete="current-password" value={token}
+          onChange={(event) => setToken(event.target.value)} placeholder="Paste token from API log"
+          className="min-w-0 flex-1 rounded-hm-control border-2 border-hm-line bg-hm-surface px-hm-12 py-hm-8 text-hm-body text-hm-ink" />
+        <Button type="submit">Save token</Button>
+      </form>
 
       {settings.state.kind === "loading" && <p className="m-0 text-hm-body text-hm-ink-2">Loading settings…</p>}
       {settings.state.kind === "error" && (

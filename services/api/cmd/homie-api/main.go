@@ -16,6 +16,7 @@ import (
 	_ "time/tzdata" // a minimal Raspberry Pi image may have no system zoneinfo
 
 	assets "github.com/kurtschwarz/homie/services/api"
+	"github.com/kurtschwarz/homie/services/api/internal/auth"
 	"github.com/kurtschwarz/homie/services/api/internal/events"
 	"github.com/kurtschwarz/homie/services/api/internal/events/caldav"
 	eventsjobs "github.com/kurtschwarz/homie/services/api/internal/events/jobs"
@@ -103,8 +104,20 @@ func main() {
 		logger.Error("mount manager assets", "error", err)
 		os.Exit(1)
 	}
+	localAddr := os.Getenv("HOMIE_LOCAL_ADDR")
+	var token string
+	var signer *auth.Signer
+	if localAddr != "" {
+		token, err = auth.Load(envOr("HOMIE_AUTH_TOKEN_PATH", auth.DefaultTokenPath))
+		if err != nil {
+			logger.Error("load API auth token", "error", err)
+			os.Exit(1)
+		}
+		signer = auth.NewSigner(token)
+		logger.Info("API bearer token", "token", token)
+	}
 
-	handler := server.New(server.Config{
+	serverConfig := server.Config{
 		Resolver: &graph.Resolver{
 			Version:       version,
 			StartedAt:     time.Now(),
@@ -112,16 +125,27 @@ func main() {
 			Photos:        photosService,
 			PhotoRotation: photoRotation,
 			Events:        eventsService,
+			PhotoSigner:   signer,
 		},
 		Display:    display,
 		Manager:    manager,
 		Photos:     photosFS,
 		Playground: playground,
-	})
+		Token:      token,
+		Signer:     signer,
+	}
+	apiHandler := server.New(serverConfig)
+	if localAddr != "" {
+		apiHandler = server.NewLAN(serverConfig)
+	}
 
 	httpServer := &http.Server{
 		Addr:    addr,
-		Handler: handler,
+		Handler: apiHandler,
+	}
+	var localServer *http.Server
+	if localAddr != "" {
+		localServer = &http.Server{Addr: localAddr, Handler: server.NewLocal(serverConfig)}
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -156,6 +180,15 @@ func main() {
 			os.Exit(1)
 		}
 	}()
+	if localServer != nil {
+		go func() {
+			logger.Info("listening for local UI", "addr", localAddr, "version", version)
+			if err := localServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				logger.Error("listen for local UI", "error", err)
+				os.Exit(1)
+			}
+		}()
+	}
 
 	if err := sdnotify.Ready(); err != nil {
 		logger.Warn("sdnotify ready", "error", err)
@@ -170,6 +203,11 @@ func main() {
 	defer cancel()
 	if err := httpServer.Shutdown(shutdownCtx); err != nil {
 		logger.Error("shutdown", "error", err)
+	}
+	if localServer != nil {
+		if err := localServer.Shutdown(shutdownCtx); err != nil {
+			logger.Error("shutdown local UI", "error", err)
+		}
 	}
 	if err := backgroundQueue.Stop(shutdownCtx); err != nil {
 		logger.Error("stop background queue", "error", err)

@@ -20,10 +20,21 @@ private enum PersonEditorRoute: Identifiable {
 struct SettingsView: View {
     @Environment(PeopleManager.self) private var peopleManager
     @State private var editorRoute: PersonEditorRoute?
+    @State private var apiToken = HomieCredential.token ?? ""
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
+                Text("API ACCESS").font(.caption.bold()).tracking(1.5).foregroundStyle(.secondary)
+                RoundedCard {
+                    VStack(alignment: .leading, spacing: 8) {
+                        SecureField("Paste API token", text: $apiToken)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                        Button("Save API token") { HomieCredential.token = apiToken.trimmingCharacters(in: .whitespacesAndNewlines) }
+                    }
+                    .padding(16)
+                }
                 Text("FAMILY").font(.caption.bold()).tracking(1.5).foregroundStyle(.secondary)
                 RoundedCard {
                     ForEach(Array(peopleManager.people.enumerated()), id: \.element.id) { index, person in

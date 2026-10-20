@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { graphql } from "./useSettings";
 
 type Health = {
   status: string;
@@ -23,15 +24,8 @@ export function useHealth(): HealthState {
 
     const poll = async () => {
       try {
-        const res = await fetch("/graphql", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ query: QUERY }),
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const body = await res.json();
-        if (body.errors) throw new Error(body.errors[0]?.message ?? "GraphQL error");
-        if (!cancelled) setState({ kind: "ok", health: body.data.health });
+        const data = await graphql<{ health: Health }>(QUERY);
+        if (!cancelled) setState({ kind: "ok", health: data.health });
       } catch (err) {
         if (!cancelled) {
           setState({ kind: "error", message: err instanceof Error ? err.message : String(err) });

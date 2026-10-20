@@ -15,6 +15,9 @@ export default defineConfig({
       "/graphql": {
         target: process.env.HOMIE_API_URL ?? "http://localhost:3000",
         ws: true,
+        configure: (proxy) => proxy.on("proxyReq", (proxyReq) => {
+          if (process.env.HOMIE_AUTH_TOKEN) proxyReq.setHeader("Authorization", `Bearer ${process.env.HOMIE_AUTH_TOKEN}`);
+        }),
       },
     },
   },

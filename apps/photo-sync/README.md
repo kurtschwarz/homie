@@ -21,6 +21,7 @@ Uploads go to `http://homie:3000/graphql`, the Pi, by default. To point the app 
 ```sh
 defaults write ar.schw.homie.photo-sync HomieAPIURL http://localhost:3030
 defaults delete ar.schw.homie.photo-sync HomieAPIURL  # back to the Pi
+defaults write ar.schw.homie.photo-sync HomieAPIToken '<token from the API service log>'
 ```
 
 A bare origin gets `/graphql` appended, so the value is spelled the same way as `HOMIE_API_URL` for the web apps. `HOMIE_API_URL` is also read, but only when the executable is run from a shell: a bundle launched by `open` does not inherit the environment. For a local API, start it with `docker compose up api`, which publishes port 3030.

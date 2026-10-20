@@ -37,12 +37,14 @@ const SETTINGS_QUERY = `
   }
 `;
 
-async function graphql<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
+export async function graphql<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
+  const token = localStorage.getItem("homie-auth-token");
   const response = await fetch("/graphql", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     body: JSON.stringify({ query, variables }),
   });
+  if (response.status === 401) throw new Error("API token missing or invalid");
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   const body = await response.json();
   if (body.errors?.length) throw new Error(body.errors[0]?.message ?? "GraphQL error");

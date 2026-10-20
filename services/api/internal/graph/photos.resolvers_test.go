@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"net/url"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/google/uuid"
+	"github.com/kurtschwarz/homie/services/api/internal/auth"
 	"github.com/kurtschwarz/homie/services/api/internal/graph/model"
 	"github.com/kurtschwarz/homie/services/api/internal/photos"
 	"github.com/kurtschwarz/homie/services/api/internal/store"
@@ -42,13 +44,15 @@ func TestPhotosResolver(t *testing.T) {
 		t.Fatal(err)
 	}
 	resolver.Resolver.Photos = photos.New(repo, library)
+	resolver.Resolver.PhotoSigner = auth.NewSigner("test-token")
 	resolver.Resolver.PhotoRotation = photos.NewRotationService(repo, nil)
 	limit := 3
 	got, err := resolver.Photos(context.Background(), &limit)
 	if err != nil || len(got) != 1 {
 		t.Fatalf("photos query: got=%+v err=%v", got, err)
 	}
-	if got[0].ID != photo.ID.String() || got[0].URL != "/photos/photo.jpg?v=v2" || got[0].Coordinate == nil || got[0].Place != nil {
+	parsed, parseErr := url.Parse(got[0].URL)
+	if parseErr != nil || parsed.Path != "/photos/photo.jpg" || parsed.Query().Get("v") != "v2" || parsed.Query().Get("sig") == "" || got[0].ID != photo.ID.String() || got[0].Coordinate == nil || got[0].Place != nil {
 		t.Fatalf("photo result: %+v", got[0])
 	}
 }

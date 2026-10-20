@@ -74,6 +74,11 @@ struct HomieAPI {
         request.httpMethod = "POST"
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
+        let token = UserDefaults.standard.string(forKey: "HomieAPIToken")
+            ?? ProcessInfo.processInfo.environment["HOMIE_AUTH_TOKEN"]
+        if let token, !token.isEmpty {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
 
         let encoder = JSONEncoder()
         let inputData = try encoder.encode(input)

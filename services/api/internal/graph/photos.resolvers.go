@@ -44,7 +44,7 @@ func (r *mutationResolver) UploadPhoto(ctx context.Context, input model.PhotoUpl
 	if err != nil {
 		return nil, fmt.Errorf("upload photo: %w", err)
 	}
-	result := toModelPhoto(photo)
+	result := toModelPhoto(photo, r.Resolver.PhotoSigner)
 	return &result, nil
 }
 
@@ -57,7 +57,7 @@ func (r *mutationResolver) TrackPhotoShowing(ctx context.Context, source model.P
 	if err != nil {
 		return nil, err
 	}
-	return toModelRotation(current, next), nil
+	return toModelRotation(current, next, r.Resolver.PhotoSigner), nil
 }
 
 // Photos is the resolver for the photos field.
@@ -75,7 +75,7 @@ func (r *queryResolver) Photos(ctx context.Context, limit *int) ([]model.Photo, 
 	}
 	result := make([]model.Photo, 0, len(list))
 	for _, photo := range list {
-		result = append(result, toModelPhoto(photo))
+		result = append(result, toModelPhoto(photo, r.Resolver.PhotoSigner))
 	}
 	return result, nil
 }
@@ -89,7 +89,7 @@ func (r *queryResolver) PhotoShowing(ctx context.Context) (*model.PhotoShowingSt
 	if err != nil {
 		return nil, err
 	}
-	return toModelRotation(current, next), nil
+	return toModelRotation(current, next, r.Resolver.PhotoSigner), nil
 }
 
 // PhotoShowingHistory is the resolver for the photoShowingHistory field.
@@ -107,7 +107,7 @@ func (r *queryResolver) PhotoShowingHistory(ctx context.Context, limit *int) ([]
 	}
 	result := make([]model.PhotoShowing, 0, len(showings))
 	for _, showing := range showings {
-		result = append(result, toModelShowing(showing))
+		result = append(result, toModelShowing(showing, r.Resolver.PhotoSigner))
 	}
 	return result, nil
 }

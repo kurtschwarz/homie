@@ -18,6 +18,9 @@ const buttonVariants = cva(
         /** Outlined button for the one way back or forward on a screen. `button` tall: 88 / 44 / 48px. */
         outline:
           "h-hm-button gap-hm-10 rounded-hm-control border-2 border-hm-line bg-hm-surface pr-hm-32 pl-hm-24 text-hm-label-lg text-hm-ink [&_svg]:size-hm-28",
+        /** Filled primary action for the manager's prominent page action. */
+        solid:
+          "h-hm-button gap-hm-10 rounded-hm-control bg-hm-accent px-hm-20 text-hm-label text-hm-on-accent shadow-hm-raised [&_svg]:size-hm-26",
         /** Text button for a jump beside a section label (Week ›). `touch` tall: 64 / 40 / 44px. */
         text: "h-hm-touch gap-hm-6 rounded-hm-control bg-transparent pr-hm-12 pl-hm-20 text-hm-label text-hm-ink-2 [&_svg]:size-hm-26",
       },

@@ -12,6 +12,7 @@
   --color-hm-accent-soft: var(--hm-accent-soft);
   --color-hm-on-accent: var(--hm-on-accent);
   --color-hm-photo: var(--hm-photo);
+  --color-hm-shell: var(--hm-shell);
   --color-hm-scrim: var(--hm-scrim);
   --color-hm-on-scrim: var(--hm-on-scrim);
   --color-hm-on-scrim-2: var(--hm-on-scrim-2);
@@ -162,6 +163,8 @@
   --shadow-hm-sheet: var(--hm-shadow-sheet);
   --shadow-hm-float: var(--hm-shadow-float);
   --shadow-hm-float-strong: var(--hm-shadow-float-strong);
+  --shadow-hm-panel: var(--hm-shadow-panel);
+  --shadow-hm-raised: var(--hm-shadow-raised);
 }
 
 @theme {

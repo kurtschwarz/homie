@@ -13,10 +13,11 @@
   --hm-ink-2: #4F525A;
   --hm-ink-3: #6B6E76;
   --hm-line: #E2E0DA;
-  --hm-accent: #2550C7;
-  --hm-accent-soft: #E6ECFB;
+  --hm-accent: #C2521F;
+  --hm-accent-soft: #FCE7DC;
   --hm-on-accent: #FFFFFF;
   --hm-photo: #E6E4DE;
+  --hm-shell: #E8E6E0;
   --hm-scrim: rgba(16, 17, 20, 0.62);
   --hm-on-scrim: #FFFFFF;
   --hm-on-scrim-2: rgba(255, 255, 255, 0.82);
@@ -44,10 +45,11 @@
   --hm-ink-2: #B9BBC1;
   --hm-ink-3: #8F929A;
   --hm-line: #26282D;
-  --hm-accent: #7FA2FF;
-  --hm-accent-soft: #1A2440;
+  --hm-accent: #FF9A62;
+  --hm-accent-soft: #3A2118;
   --hm-on-accent: #0E0F11;
   --hm-photo: #1B1C20;
+  --hm-shell: #111214;
   --hm-scrim: rgba(16, 17, 20, 0.62);
   --hm-on-scrim: #FFFFFF;
   --hm-on-scrim-2: rgba(255, 255, 255, 0.82);
@@ -80,6 +82,7 @@
   --hm-accent-soft: #2A1E12;
   --hm-on-accent: #0B0907;
   --hm-photo: #120E0A;
+  --hm-shell: #100D0A;
   --hm-scrim: rgba(16, 17, 20, 0.62);
   --hm-on-scrim: #FFFFFF;
   --hm-on-scrim-2: rgba(255, 255, 255, 0.82);
@@ -168,6 +171,8 @@
   --hm-shadow-sheet: 0 -12px 40px rgba(0, 0, 0, 0.16);
   --hm-shadow-float: 0 16px 48px rgba(0, 0, 0, 0.18), 0 2px 6px rgba(0, 0, 0, 0.08);
   --hm-shadow-float-strong: 0 16px 48px rgba(0, 0, 0, 0.22), 0 2px 6px rgba(0, 0, 0, 0.1);
+  --hm-shadow-panel: 0 0 0 1px rgba(21, 22, 26, 0.05), 0 1px 2px rgba(0, 0, 0, 0.04), 0 12px 32px -14px rgba(0, 0, 0, 0.14);
+  --hm-shadow-raised: 0 0 0 1px rgba(21, 22, 26, 0.05), 0 1px 2px rgba(0, 0, 0, 0.05), 0 4px 10px -6px rgba(0, 0, 0, 0.12);
   --hm-size-screen-w: 1920px;
   --hm-size-screen-h: 1080px;
   --hm-size-photo-nav: 72px;

@@ -2,4 +2,4 @@
 export const HM_TEXT_STYLES = ["display-xl","headline","clock","display","title-lg","clock-sm","title","stat","title-sm","lead","item-lg","item","strong","body","body-sm","label-lg","label","caption","eyebrow-lg","eyebrow","small","micro"] as const
 export const HM_SIZES = ["touch","button","badge-lg","badge","badge-sm","time-col","screen","column","section","2","4","6","8","10","12","14","16","18","20","22","24","26","28","30","32","36","40","44","52","56","64","76","128","screen-w","screen-h","photo-nav","handle","legend","daily-row","panel-portrait","panel-square","panel-landscape","now-card"] as const
 export const HM_RADII = ["panel","control","3","6","16","18","20","22","24","28","32"] as const
-export const HM_SHADOWS = ["sheet","float","float-strong"] as const
+export const HM_SHADOWS = ["sheet","float","float-strong","panel","raised"] as const

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { graphql } from "./useSettings";
+import { graphql } from "./graphql";
 
 type Health = {
   status: string;
@@ -7,7 +7,7 @@ type Health = {
   uptimeSeconds: number;
 };
 
-type HealthState =
+export type HealthState =
   | { kind: "connecting" }
   | { kind: "ok"; health: Health }
   | { kind: "error"; message: string };

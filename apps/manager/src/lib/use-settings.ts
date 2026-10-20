@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Swatch } from "@homie/ui/lib/people";
+import { graphql } from "./graphql";
 
 export type ManagerPerson = {
   id: string;
@@ -36,20 +37,6 @@ const SETTINGS_QUERY = `
     calendarTags
   }
 `;
-
-export async function graphql<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
-  const token = localStorage.getItem("homie-auth-token");
-  const response = await fetch("/graphql", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-    body: JSON.stringify({ query, variables }),
-  });
-  if (response.status === 401) throw new Error("API token missing or invalid");
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  const body = await response.json();
-  if (body.errors?.length) throw new Error(body.errors[0]?.message ?? "GraphQL error");
-  return body.data as T;
-}
 
 export type PersonInput = { id?: string; name: string; emoji: string; swatch: string; isFamily: boolean };
 export type TagMappingInput = { tag: string; kind: TagKind; personId?: string };

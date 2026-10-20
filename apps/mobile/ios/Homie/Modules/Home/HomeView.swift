@@ -78,6 +78,7 @@ struct HomeView: View {
         async let display: Void = displayManager.load()
         _ = await (home, display)
     }
+
 }
 
 private struct AgentChatCard: View {
@@ -90,6 +91,8 @@ private struct AgentChatCard: View {
         HStack(alignment: .top, spacing: 12) {
             HomieAvatar(showsGroundShadow: false)
                 .frame(width: 64, height: 64)
+                .hidesWhileHomieTravels()
+                .homieRefreshAnchor(.chatAvatar)
 
             VStack(alignment: .leading, spacing: 6) {
                 Text("\(Self.salutation(now))!")
@@ -120,6 +123,7 @@ private struct AgentChatCard: View {
                 in: RoundedRectangle(cornerRadius: 24)
             )
         }
+        .homieRefreshAnchor(.chatCard)
     }
 
     private static func weatherDescription(_ condition: String) -> String {

@@ -9,6 +9,7 @@
 //      HomieAvatar()                                   // idle, warm, with ground shadow
 //      HomieAvatar(mood: .thinking)
 //      HomieAvatar(mood: .sleepy, palette: .night)
+//      HomieAvatar(mood: .dizzy)                      // after a pull to refresh
 //      HomieAvatar(mood: .idle, palette: .blue, wobbles: true)
 //          .frame(width: 64, height: 64)
 //
@@ -34,6 +35,9 @@ public struct HomieAvatar: View {
         case talking
         /// Night mode: closed eyes and drifting z's.
         case sleepy
+        /// After a pull to refresh: spiral eyes spinning in opposite directions,
+        /// a queasy wavy mouth, and a woozy wobble. Show it for about 3 s, then go back to idle.
+        case dizzy
 
         var accessibilityDescription: String {
             switch self {
@@ -42,6 +46,7 @@ public struct HomieAvatar: View {
             case .thinking: return "Thinking"
             case .talking: return "Talking"
             case .sleepy: return "Asleep"
+            case .dizzy: return "Dizzy"
             }
         }
     }
@@ -99,10 +104,88 @@ public struct HomieAvatar: View {
     }
 }
 
+// MARK: - Geometry
+
+/// The 100 × 100 design space (ball centred at 50,50 with radius 48) and the shapes drawn in
+/// it, shared by the avatar and the placeholder so the outline lines up with what it stands in
+/// for. The canvas shows -10…110 on both axes.
+private enum HomieGeometry {
+    static let viewMin: CGFloat = -10
+    static let viewSpan: CGFloat = 120
+    static let lineWidth: CGFloat = 4.6
+
+    static let ball = Path(ellipseIn: CGRect(x: 2, y: 2, width: 96, height: 96))
+
+    /// The resting face. Filled, unlike the mouth, which is stroked.
+    static var idleEyes: Path {
+        var eyes = Path()
+        eyes.addPath(ellipse(53, 41, 4.6, 7.2, deg: -14))
+        eyes.addPath(ellipse(72, 33, 4.0, 6.4, deg: -22))
+        return eyes
+    }
+
+    static var idleMouth: Path {
+        var mouth = Path()
+        mouth.move(to: CGPoint(x: 44, y: 57))
+        mouth.addQuadCurve(to: CGPoint(x: 77, y: 56), control: CGPoint(x: 60, y: 71))
+        return mouth
+    }
+
+    /// Centres the design space in the view and scales it to the shorter side.
+    static func apply(to ctx: inout GraphicsContext, size: CGSize) {
+        let s = min(size.width, size.height) / viewSpan
+        ctx.translateBy(x: (size.width - viewSpan * s) / 2, y: (size.height - viewSpan * s) / 2)
+        ctx.scaleBy(x: s, y: s)
+        ctx.translateBy(x: -viewMin, y: -viewMin)
+    }
+
+    static func ellipse(_ cx: CGFloat, _ cy: CGFloat, _ rx: CGFloat, _ ry: CGFloat, deg: Double) -> Path {
+        Path(ellipseIn: CGRect(x: -rx, y: -ry, width: rx * 2, height: ry * 2))
+            .applying(CGAffineTransform(rotationAngle: CGFloat(deg * .pi / 180)))
+            .applying(CGAffineTransform(translationX: cx, y: cy))
+    }
+}
+
+// MARK: - Placeholder
+
+/// The spot Homie left: his outline as a ring of dots, with his resting face inside it.
+/// Shown where the avatar normally sits while he is away rolling up to the refresh indicator,
+/// so the layout keeps a visible hole rather than an empty gap.
+public struct HomieAvatarPlaceholder: View {
+    /// Both the dots and the face. One colour, so it reads as a single absence.
+    public var color: Color
+
+    public init(color: Color = Color.secondary.opacity(0.22)) {
+        self.color = color
+    }
+
+    public var body: some View {
+        Canvas { context, size in
+            var ctx = context
+            HomieGeometry.apply(to: &ctx, size: size)
+            // Zero-length dashes with a round cap are dots. The gap is in design-space
+            // units, so the ring keeps its spacing at any frame size.
+            ctx.stroke(
+                HomieGeometry.ball,
+                with: .color(color),
+                style: StrokeStyle(lineWidth: 4, lineCap: .round, dash: [0.01, 8])
+            )
+            ctx.fill(HomieGeometry.idleEyes, with: .color(color))
+            ctx.stroke(
+                HomieGeometry.idleMouth,
+                with: .color(color),
+                style: StrokeStyle(lineWidth: HomieGeometry.lineWidth, lineCap: .round, lineJoin: .round)
+            )
+        }
+        .aspectRatio(1, contentMode: .fit)
+        .accessibilityHidden(true)
+    }
+}
+
 // MARK: - Renderer
 
-/// Draws Homie in a 100 × 100 design space (ball centred at 50,50 with radius 48), the same
-/// coordinates as the SVG on the design board. The canvas shows -10…110 on both axes.
+/// Draws Homie in `HomieGeometry`'s design space, the same coordinates as the SVG on the
+/// design board.
 private struct HomieAvatarRenderer {
     let mood: HomieAvatar.Mood
     let palette: HomieAvatar.Palette
@@ -112,26 +195,29 @@ private struct HomieAvatarRenderer {
     let time: TimeInterval
     let animated: Bool
 
-    static let viewMin: CGFloat = -10
-    static let viewSpan: CGFloat = 120
-
     private let white = Color.white
-    private let lineWidth: CGFloat = 4.6
+    private let lineWidth = HomieGeometry.lineWidth
 
     func draw(in ctx: inout GraphicsContext, size: CGSize) {
-        let s = min(size.width, size.height) / Self.viewSpan
-        ctx.translateBy(x: (size.width - Self.viewSpan * s) / 2, y: (size.height - Self.viewSpan * s) / 2)
-        ctx.scaleBy(x: s, y: s)
-        ctx.translateBy(x: -Self.viewMin, y: -Self.viewMin)
+        HomieGeometry.apply(to: &ctx, size: size)
 
-        if wobble && animated {
+        // The ground shadow stays put while the ball rocks on top of it.
+        if ground { drawGround(in: ctx) }
+
+        if mood == .dizzy && animated {
+            // Woozy: tips side to side around the chin, much bigger than the idle wobble.
+            let angle = value(period: 1.3, [(0, 0), (0.2, -11), (0.45, 9), (0.7, -6), (0.88, 3), (1, 0)])
+            let dx = value(period: 1.3, [(0, 0), (0.2, -2), (0.45, 2), (0.7, -1), (0.88, 0), (1, 0)])
+            ctx.translateBy(x: 50 + dx, y: 60)
+            ctx.rotate(by: .degrees(angle))
+            ctx.translateBy(x: -50, y: -60)
+        } else if wobble && animated {
             let angle = value(period: 3.2, [(0, 0), (0.25, -4), (0.75, 3), (1, 0)])
             ctx.translateBy(x: 50, y: 50)
             ctx.rotate(by: .degrees(angle))
             ctx.translateBy(x: -50, y: -50)
         }
 
-        if ground { drawGround(in: ctx) }
         if mood == .listening && animated { drawPulse(in: ctx) }
         drawBall(in: ctx)
         drawShade(in: ctx)
@@ -142,12 +228,13 @@ private struct HomieAvatarRenderer {
         case .thinking: drawThinking(in: ctx)
         case .talking: drawTalking(in: ctx)
         case .sleepy: drawSleepy(in: ctx)
+        case .dizzy: drawDizzy(in: ctx)
         }
     }
 
     // MARK: Body
 
-    private var ball: Path { Path(ellipseIn: CGRect(x: 2, y: 2, width: 96, height: 96)) }
+    private var ball: Path { HomieGeometry.ball }
 
     private func drawGround(in ctx: GraphicsContext) {
         var g = ctx
@@ -193,6 +280,7 @@ private struct HomieAvatarRenderer {
         case .thinking: base = CGPoint(x: 2, y: -11)
         case .talking: base = CGPoint(x: 12, y: -2)
         case .sleepy: base = CGPoint(x: 11, y: 1)
+        case .dizzy: base = CGPoint(x: 11, y: -5)
         }
         if mood == .idle && animated {
             base.x += value(period: 9, [(0, 0), (0.38, 0), (0.44, -13), (0.58, -13), (0.64, 3), (0.72, 3), (1, 0)])
@@ -230,15 +318,8 @@ private struct HomieAvatarRenderer {
         }
         // Blink squashes both eyes toward a line 60% down their combined bounds (y ≈ 39.6).
         let squash = CGAffineTransform(translationX: 0, y: 39.6).scaledBy(x: 1, y: blink).translatedBy(x: 0, y: -39.6)
-        var eyes = Path()
-        eyes.addPath(ellipse(53, 41, 4.6, 7.2, deg: -14))
-        eyes.addPath(ellipse(72, 33, 4.0, 6.4, deg: -22))
-        ctx.fill(eyes.applying(squash).applying(look), with: .color(white))
-
-        var mouth = Path()
-        mouth.move(to: CGPoint(x: 44, y: 57))
-        mouth.addQuadCurve(to: CGPoint(x: 77, y: 56), control: CGPoint(x: 60, y: 71))
-        stroke(mouth.applying(look), in: ctx)
+        ctx.fill(HomieGeometry.idleEyes.applying(squash).applying(look), with: .color(white))
+        stroke(HomieGeometry.idleMouth.applying(look), in: ctx)
     }
 
     private func drawListening(in ctx: GraphicsContext) {
@@ -297,6 +378,33 @@ private struct HomieAvatarRenderer {
         drawZ(in: ctx, at: CGPoint(x: 94, y: 2), size: 13, delay: 1.3)
     }
 
+    private func drawDizzy(in ctx: GraphicsContext) {
+        // Spiral eyes, spinning in opposite directions at slightly different speeds.
+        let eyeStyle = StrokeStyle(lineWidth: 3.4, lineCap: .round, lineJoin: .round)
+        let eyes: [(center: CGPoint, radius: CGFloat, period: Double, direction: Double)] = [
+            (CGPoint(x: 50, y: 42), 11, 0.55, 1),
+            (CGPoint(x: 74, y: 33), 9.5, 0.7, -1)
+        ]
+        for eye in eyes {
+            var e = ctx
+            e.translateBy(x: eye.center.x, y: eye.center.y)
+            if animated {
+                let turn = time.truncatingRemainder(dividingBy: eye.period) / eye.period
+                e.rotate(by: .radians(eye.direction * turn * 2 * .pi))
+            }
+            e.stroke(spiral(radius: eye.radius), with: .color(white), style: eyeStyle)
+        }
+
+        // Queasy mouth: "M42 62 q4.5 -5 9 0 t9 0 t9 0 t9 0"
+        var mouth = Path()
+        mouth.move(to: CGPoint(x: 42, y: 62))
+        mouth.addQuadCurve(to: CGPoint(x: 51, y: 62), control: CGPoint(x: 46.5, y: 57))
+        mouth.addQuadCurve(to: CGPoint(x: 60, y: 62), control: CGPoint(x: 55.5, y: 67))
+        mouth.addQuadCurve(to: CGPoint(x: 69, y: 62), control: CGPoint(x: 64.5, y: 57))
+        mouth.addQuadCurve(to: CGPoint(x: 78, y: 62), control: CGPoint(x: 73.5, y: 67))
+        ctx.stroke(mouth, with: .color(white), style: StrokeStyle(lineWidth: 4.2, lineCap: .round, lineJoin: .round))
+    }
+
     private func drawZ(in ctx: GraphicsContext, at point: CGPoint, size: CGFloat, delay: Double) {
         var c = ctx
         var p = point
@@ -317,10 +425,21 @@ private struct HomieAvatarRenderer {
         ctx.stroke(path, with: .color(white), style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
     }
 
+    /// An Archimedean spiral centred on the origin, from the middle out.
+    private func spiral(radius: CGFloat, turns: CGFloat = 2.2, steps: Int = 70) -> Path {
+        var path = Path()
+        for i in 0...steps {
+            let f = CGFloat(i) / CGFloat(steps)
+            let angle = f * turns * 2 * .pi
+            let r = 0.8 + f * (radius - 0.8)
+            let point = CGPoint(x: r * cos(angle), y: r * sin(angle))
+            if i == 0 { path.move(to: point) } else { path.addLine(to: point) }
+        }
+        return path
+    }
+
     private func ellipse(_ cx: CGFloat, _ cy: CGFloat, _ rx: CGFloat, _ ry: CGFloat, deg: Double) -> Path {
-        Path(ellipseIn: CGRect(x: -rx, y: -ry, width: rx * 2, height: ry * 2))
-            .applying(CGAffineTransform(rotationAngle: CGFloat(deg * .pi / 180)))
-            .applying(CGAffineTransform(translationX: cx, y: cy))
+        HomieGeometry.ellipse(cx, cy, rx, ry, deg: deg)
     }
 
     /// Keyframed value, eased in and out between frames like CSS `ease-in-out`.
@@ -380,7 +499,8 @@ private extension Color {
     VStack(spacing: 24) {
         HomieAvatar(wobbles: true)
             .frame(width: 220, height: 220)
-        HStack(spacing: 12) {
+        // Three per row now that there are six moods.
+        LazyVGrid(columns: Array(repeating: GridItem(.fixed(72), spacing: 12), count: 3), spacing: 12) {
             ForEach(HomieAvatar.Mood.allCases, id: \.self) { mood in
                 VStack(spacing: 6) {
                     HomieAvatar(mood: mood, palette: mood == .sleepy ? .night : .warm)

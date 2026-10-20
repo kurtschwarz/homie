@@ -60,6 +60,8 @@ public struct HomieAvatar: View {
         case ink
         /// Dimmed warm, for the kitchen screen at night.
         case night
+        /// Flat grey, for the moment before Homie's data has loaded.
+        case loading
     }
 
     public var mood: Mood
@@ -68,6 +70,8 @@ public struct HomieAvatar: View {
     public var wobbles: Bool
     /// Colour of the sleepy z's. Defaults to the system secondary label colour.
     public var zColor: Color
+    /// Holds Homie at his resting pose instead of blinking, glancing, etc.
+    public var animated: Bool
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -76,17 +80,20 @@ public struct HomieAvatar: View {
         palette: Palette = .warm,
         showsGroundShadow: Bool = true,
         wobbles: Bool = false,
-        zColor: Color = .secondary
+        zColor: Color = .secondary,
+        animated: Bool = true
     ) {
         self.mood = mood
         self.palette = palette
         self.showsGroundShadow = showsGroundShadow
         self.wobbles = wobbles
         self.zColor = zColor
+        self.animated = animated
     }
 
     public var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: reduceMotion)) { timeline in
+        let animates = animated && !reduceMotion
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: !animates)) { timeline in
             let renderer = HomieAvatarRenderer(
                 mood: mood,
                 palette: palette,
@@ -94,7 +101,7 @@ public struct HomieAvatar: View {
                 wobble: wobbles,
                 zColor: zColor,
                 time: timeline.date.timeIntervalSinceReferenceDate,
-                animated: !reduceMotion
+                animated: animates
             )
             Canvas { context, size in
                 renderer.draw(in: &context, size: size)
@@ -477,6 +484,9 @@ private extension HomieAvatar.Palette {
         case .night:
             return [.init(color: Color(hex: 0x8A4A26), location: 0),
                     .init(color: Color(hex: 0x94606A), location: 1)]
+        case .loading:
+            return [.init(color: Color(uiColor: .systemGray4), location: 0),
+                    .init(color: Color(uiColor: .systemGray5), location: 1)]
         }
     }
 }

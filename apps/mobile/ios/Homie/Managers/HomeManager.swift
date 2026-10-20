@@ -34,6 +34,7 @@ final class HomeManager {
     private(set) var remainingToday = 0
     private(set) var headline: Headline?
     private(set) var errorMessage: String?
+    private(set) var hasLoaded = false
 
     private struct Payload: Decodable {
         struct WeatherDTO: Decodable {
@@ -54,6 +55,7 @@ final class HomeManager {
     }
 
     func load() async {
+        defer { hasLoaded = true }
         do {
             let payload: Payload = try await HomieAPI.perform(
                 "{ weather { condition temperature stale } events(days: 21) { id title location start end allDay } }"

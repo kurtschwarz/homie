@@ -12,9 +12,9 @@ struct HomeView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    AgentChatCard(weather: homeManager.weather, remainingToday: homeManager.remainingToday)
+                    AgentChatCard(weather: homeManager.weather, remainingToday: homeManager.remainingToday, isLoading: !homeManager.hasLoaded)
 
-                    KitchenScreenSection(photoURL: displayManager.currentPhotoURL, photo: displayManager.currentPhoto, headline: homeManager.headline)
+                    KitchenScreenSection(photoURL: displayManager.currentPhotoURL, photo: displayManager.currentPhoto, headline: homeManager.headline, isLoading: !homeManager.hasLoaded || !displayManager.hasLoaded)
 
                     QuickActions()
 
@@ -87,13 +87,15 @@ struct HomeView: View {
 private struct AgentChatCard: View {
     let weather: HomeManager.Weather?
     let remainingToday: Int
+    let isLoading: Bool
 
     private let now = Date()
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            HomieAvatar(showsGroundShadow: false)
+            HomieAvatar(palette: isLoading ? .loading : .warm, showsGroundShadow: false, animated: !isLoading)
                 .frame(width: 64, height: 64)
+                .modifier(ShimmerIf(isLoading))
                 .hidesWhileHomieTravels()
                 .homieRefreshAnchor(.chatAvatar)
 
@@ -102,22 +104,27 @@ private struct AgentChatCard: View {
                     .font(.headline)
                     .foregroundStyle(.primary)
 
-                HStack(spacing: 7) {
-                    Image(systemName: weather?.symbolName ?? "cloud.fill")
-                        .foregroundStyle(.orange)
-                    if let weather {
-                        Text("\(weather.temperature)° · \(Self.weatherDescription(weather.condition))")
-                    } else {
-                        Text("Weather unavailable")
+                if isLoading {
+                    SkeletonBlock().frame(width: 140, height: 16)
+                    SkeletonBlock().frame(width: 180, height: 16)
+                } else {
+                    HStack(spacing: 7) {
+                        Image(systemName: weather?.symbolName ?? "cloud.fill")
+                            .foregroundStyle(.orange)
+                        if let weather {
+                            Text("\(weather.temperature)° · \(Self.weatherDescription(weather.condition))")
+                        } else {
+                            Text("Weather unavailable")
+                        }
                     }
-                }
-                .font(.body)
-                .foregroundStyle(.secondary)
-
-                Text(Self.thingsPhrase(remainingToday))
                     .font(.body)
                     .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+
+                    Text(Self.thingsPhrase(remainingToday))
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -161,6 +168,7 @@ private struct KitchenScreenSection: View {
     let photoURL: URL?
     let photo: DisplayManager.Photo?
     let headline: HomeManager.Headline?
+    let isLoading: Bool
 
     @State private var now = Date()
     private let clockTimer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
@@ -172,6 +180,7 @@ private struct KitchenScreenSection: View {
                 HStack(spacing: 0) {
                     ZStack(alignment: .topLeading) {
                         Color(uiColor: .tertiarySystemFill)
+                            .modifier(ShimmerIf(isLoading))
                         if let photoURL {
                             AsyncImage(url: photoURL) { image in
                                 FocalPhotoCrop(image: image, photo: photo, frameSize: CGSize(width: photoWidth, height: geometry.size.height))
@@ -182,9 +191,11 @@ private struct KitchenScreenSection: View {
                             }
                         }
                         HStack(spacing: 5) {
-                            Circle()
-                                .frame(width: 6, height: 6)
-                            Text("Live")
+                            if !isLoading {
+                                Circle()
+                                    .frame(width: 6, height: 6)
+                            }
+                            Text(isLoading ? "Loading…" : "Live")
                         }
                             .font(.caption.bold())
                             .foregroundStyle(.white)
@@ -202,22 +213,28 @@ private struct KitchenScreenSection: View {
                             .lineLimit(1)
                             .minimumScaleFactor(0.7)
                         Spacer(minLength: 14)
-                        Text(headline?.label ?? "NEXT")
-                            .font(.caption.weight(.bold))
-                            .tracking(1.2)
-                            .foregroundStyle(Color(red: 0.88, green: 0.36, blue: 0.18))
-                            .lineLimit(1)
-                        Text(headline?.title ?? "Nothing else today")
-                            .font(.headline)
-                            .lineLimit(2)
-                            .minimumScaleFactor(0.75)
-                            .padding(.top, 5)
-                        Text(headline?.detail ?? Self.eveningPhrase(now))
-                            .font(.body)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(2)
-                            .minimumScaleFactor(0.75)
-                            .padding(.top, 4)
+                        if isLoading {
+                            SkeletonBlock().frame(width: 50, height: 12)
+                            SkeletonBlock().frame(height: 18).padding(.top, 5)
+                            SkeletonBlock().frame(width: 120, height: 14).padding(.top, 4)
+                        } else {
+                            Text(headline?.label ?? "NEXT")
+                                .font(.caption.weight(.bold))
+                                .tracking(1.2)
+                                .foregroundStyle(Color(red: 0.88, green: 0.36, blue: 0.18))
+                                .lineLimit(1)
+                            Text(headline?.title ?? "Nothing else today")
+                                .font(.headline)
+                                .lineLimit(2)
+                                .minimumScaleFactor(0.75)
+                                .padding(.top, 5)
+                            Text(headline?.detail ?? Self.eveningPhrase(now))
+                                .font(.body)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                                .minimumScaleFactor(0.75)
+                                .padding(.top, 4)
+                        }
                         Spacer(minLength: 0)
                     }
                     .padding(16)

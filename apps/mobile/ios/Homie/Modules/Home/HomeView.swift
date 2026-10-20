@@ -18,6 +18,16 @@ struct HomeView: View {
                         HomieNoSignalCard {
                             await loadAll()
                         }
+
+                        HomieOfflineModeCard {
+                            addDetent = .medium
+                            isAdding = true
+                        } buttonIcon: {
+                            Image("phosphor-calendar-plus")
+                                .resizable()
+                                .renderingMode(.template)
+                                .scaledToFit()
+                        }
                     }
 
                     if apiErrorMessage == nil {
@@ -32,16 +42,18 @@ struct HomeView: View {
                         QuickActions()
                     }
 
-                    HomieButton(title: "Add an event or reminder", iconSize: 20, fillsWidth: true) {
-                        // Dismissing from the form can leave the selection on
-                        // .large, so the chooser's height is set on the way in.
-                        addDetent = .medium
-                        isAdding = true
-                    } icon: {
-                        Image("phosphor-calendar-plus")
-                            .resizable()
-                            .renderingMode(.template)
-                            .scaledToFit()
+                    if apiErrorMessage == nil {
+                        HomieButton(title: "Add an event or reminder", iconSize: 20, fillsWidth: true) {
+                            // Dismissing from the form can leave the selection on
+                            // .large, so the chooser's height is set on the way in.
+                            addDetent = .medium
+                            isAdding = true
+                        } icon: {
+                            Image("phosphor-calendar-plus")
+                                .resizable()
+                                .renderingMode(.template)
+                                .scaledToFit()
+                        }
                     }
                 }
                 .padding(.horizontal, 16)

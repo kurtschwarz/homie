@@ -27,3 +27,30 @@ func toModelPhoto(photo photos.Photo) model.Photo {
 		Coordinate: coordinate, Place: place, Focus: focus,
 	}
 }
+
+func toModelShowing(showing photos.Showing) model.PhotoShowing {
+	var endedAt *int
+	if showing.EndedAt != nil {
+		value := int(showing.EndedAt.Unix())
+		endedAt = &value
+	}
+	photo := toModelPhoto(showing.Photo)
+	return model.PhotoShowing{
+		ID: showing.ID.String(), Photo: &photo,
+		StartedAt: int(showing.StartedAt.Unix()), EndsAt: int(showing.EndsAt.Unix()),
+		EndedAt: endedAt, Source: model.PhotoShowingSource(showing.Source),
+	}
+}
+
+func toModelRotation(current, next *photos.Showing) *model.PhotoShowingState {
+	result := &model.PhotoShowingState{}
+	if current != nil {
+		showing := toModelShowing(*current)
+		result.Current = &showing
+	}
+	if next != nil {
+		showing := toModelShowing(*next)
+		result.Next = &showing
+	}
+	return result
+}

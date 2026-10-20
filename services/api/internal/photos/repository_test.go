@@ -126,6 +126,64 @@ func TestSQLiteRepositoryListOrderingAndDeleteMissing(t *testing.T) {
 	}
 }
 
+func TestSQLiteRepositoryShowingsAndCascadeDelete(t *testing.T) {
+	db := openDB(t)
+	repo := photos.NewSQLiteRepository(db)
+	ctx := context.Background()
+	photo := photos.Photo{ID: uuid.MustParse("0192a780-0a00-7000-8000-000000000011"), AssetID: "showing", Version: "1", File: "showing.jpg", Width: 10, Height: 10, TakenAt: time.Unix(100, 0)}
+	if err := repo.Upsert(ctx, photo); err != nil {
+		t.Fatal(err)
+	}
+	started := time.Unix(200, 0)
+	showing := photos.Showing{ID: uuid.MustParse("0192a780-0a00-7000-8000-000000000012"), Photo: photo, StartedAt: started, EndsAt: started.Add(photos.RotationInterval), Source: photos.ShowingSchedule}
+	if err := repo.AppendShowing(ctx, showing); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.AdvanceShowing(ctx, ptrUUID(showing.ID), photos.Showing{ID: uuid.MustParse("0192a780-0a00-7000-8000-000000000013"), Photo: photo, StartedAt: started.Add(5 * time.Second), EndsAt: started.Add(17 * time.Second), Source: photos.ShowingTap}, started.Add(5*time.Second), photos.ShowingTap); err != nil {
+		t.Fatal(err)
+	}
+	current, next, err := repo.Rotation(ctx)
+	if err != nil || current == nil || next != nil {
+		t.Fatalf("rotation current=%+v next=%+v err=%v", current, next, err)
+	}
+	history, err := repo.Showings(ctx, 10)
+	if err != nil || len(history) != 2 {
+		t.Fatalf("history=%+v err=%v", history, err)
+	}
+	if history[1].Photo.ID != photo.ID || history[1].EndedAt == nil || !history[1].EndedAt.Equal(started.Add(5*time.Second)) {
+		t.Fatalf("showing round trip: %+v", history[1])
+	}
+	if _, err := db.ExecContext(ctx, `DELETE FROM photos WHERE id = ?`, photo.ID[:]); err != nil {
+		t.Fatal(err)
+	}
+	history, err = repo.Showings(ctx, 10)
+	if err != nil || len(history) != 0 {
+		t.Fatalf("history after photo cascade=%+v err=%v", history, err)
+	}
+}
+
+func TestSQLiteRepositoryNextPhotoWraps(t *testing.T) {
+	db := openDB(t)
+	repo := photos.NewSQLiteRepository(db)
+	ctx := context.Background()
+	takenAt := time.Unix(100, 0)
+	a := photos.Photo{ID: uuid.MustParse("0192a780-0a00-7000-8000-000000000021"), AssetID: "a", Version: "1", File: "a.jpg", Width: 1, Height: 1, TakenAt: takenAt}
+	b := photos.Photo{ID: uuid.MustParse("0192a780-0a00-7000-8000-000000000022"), AssetID: "b", Version: "1", File: "b.jpg", Width: 1, Height: 1, TakenAt: takenAt}
+	for _, photo := range []photos.Photo{a, b} {
+		if err := repo.Upsert(ctx, photo); err != nil {
+			t.Fatal(err)
+		}
+	}
+	next, found, err := repo.NextPhoto(ctx, b.ID)
+	if err != nil || !found || next.ID != a.ID {
+		t.Fatalf("next=%+v found=%v err=%v", next, found, err)
+	}
+	next, found, err = repo.NextPhoto(ctx, a.ID)
+	if err != nil || !found || next.ID != b.ID {
+		t.Fatalf("wrap next=%+v found=%v err=%v", next, found, err)
+	}
+}
+
 func TestLibrarySaveNameAndRemove(t *testing.T) {
 	library, err := photos.NewLibrary(filepath.Join(t.TempDir(), "photos"))
 	if err != nil {
@@ -163,6 +221,8 @@ func openDB(t *testing.T) *sqlx.DB {
 	t.Cleanup(func() { _ = db.Close() })
 	return db
 }
+
+func ptrUUID(id uuid.UUID) *uuid.UUID { return &id }
 
 func mustOpen(t *testing.T, filesystem interface {
 	Open(string) (fs.File, error)

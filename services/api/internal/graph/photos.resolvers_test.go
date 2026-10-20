@@ -42,6 +42,7 @@ func TestPhotosResolver(t *testing.T) {
 		t.Fatal(err)
 	}
 	resolver.Resolver.Photos = photos.New(repo, library)
+	resolver.Resolver.PhotoRotation = photos.NewRotationService(repo, nil)
 	limit := 3
 	got, err := resolver.Photos(context.Background(), &limit)
 	if err != nil || len(got) != 1 {
@@ -49,6 +50,37 @@ func TestPhotosResolver(t *testing.T) {
 	}
 	if got[0].ID != photo.ID.String() || got[0].URL != "/photos/photo.jpg?v=v2" || got[0].Coordinate == nil || got[0].Place != nil {
 		t.Fatalf("photo result: %+v", got[0])
+	}
+}
+
+func TestPhotoRotationResolvers(t *testing.T) {
+	resolver := &queryResolver{Resolver: &Resolver{}}
+	if _, err := resolver.PhotoShowing(context.Background()); err == nil {
+		t.Fatal("expected unconfigured photo rotation error")
+	}
+	db, err := store.Open(filepath.Join(t.TempDir(), "rotation.db"), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	repo := photos.NewSQLiteRepository(db)
+	photo := photos.Photo{ID: uuid.MustParse("0192a780-0a00-7000-8000-000000000041"), AssetID: "resolver", Version: "1", File: "resolver.jpg", Width: 1, Height: 1, TakenAt: time.Unix(100, 0)}
+	if err := repo.Upsert(context.Background(), photo); err != nil {
+		t.Fatal(err)
+	}
+	resolver.Resolver.PhotoRotation = photos.NewRotationService(repo, nil)
+	mutation := &mutationResolver{Resolver: resolver.Resolver}
+	rotation, err := mutation.TrackPhotoShowing(context.Background(), model.PhotoShowingSourceSchedule)
+	if err != nil || rotation.Current == nil || rotation.Current.Photo.ID != photo.ID.String() {
+		t.Fatalf("advance rotation=%+v err=%v", rotation, err)
+	}
+	got, err := resolver.PhotoShowing(context.Background())
+	if err != nil || got.Current == nil || got.Current.ID != rotation.Current.ID {
+		t.Fatalf("read rotation=%+v err=%v", got, err)
+	}
+	history, err := resolver.PhotoShowingHistory(context.Background(), nil)
+	if err != nil || len(history) != 2 {
+		t.Fatalf("history=%+v err=%v", history, err)
 	}
 }
 

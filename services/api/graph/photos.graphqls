@@ -30,6 +30,25 @@ type Photo {
   focus: FocalRegion
 }
 
+enum PhotoShowingSource {
+  SCHEDULE
+  TAP
+}
+
+type PhotoShowing {
+  id: ID!
+  photo: Photo!
+  startedAt: Int!
+  endsAt: Int!
+  endedAt: Int
+  source: PhotoShowingSource!
+}
+
+type PhotoShowingState {
+  current: PhotoShowing
+  next: PhotoShowing
+}
+
 """Metadata accompanying a photo upload."""
 input PhotoUploadInput {
   assetID: ID!
@@ -47,8 +66,11 @@ scalar Upload
 
 extend type Query {
   photos(limit: Int = 60): [Photo!]!
+  photoShowing: PhotoShowingState!
+  photoShowingHistory(limit: Int = 50): [PhotoShowing!]!
 }
 
 type Mutation {
   uploadPhoto(input: PhotoUploadInput!, file: Upload!): Photo!
+  trackPhotoShowing(source: PhotoShowingSource! = SCHEDULE): PhotoShowingState!
 }

@@ -65,18 +65,19 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		AddTimerMinute   func(childComplexity int) int
-		CancelTimer      func(childComplexity int) int
-		CreateEvent      func(childComplexity int, input model.EventInput) int
-		DeletePerson     func(childComplexity int, id string) int
-		DeleteTagMapping func(childComplexity int, tag string) int
-		PauseTimer       func(childComplexity int) int
-		RefreshEvents    func(childComplexity int) int
-		ResumeTimer      func(childComplexity int) int
-		SavePerson       func(childComplexity int, input model.PersonInput) int
-		SaveTagMapping   func(childComplexity int, input model.TagMappingInput) int
-		StartTimer       func(childComplexity int, title string, emoji string, durationSeconds int) int
-		UploadPhoto      func(childComplexity int, input model.PhotoUploadInput, file graphql.Upload) int
+		AddTimerMinute    func(childComplexity int) int
+		CancelTimer       func(childComplexity int) int
+		CreateEvent       func(childComplexity int, input model.EventInput) int
+		DeletePerson      func(childComplexity int, id string) int
+		DeleteTagMapping  func(childComplexity int, tag string) int
+		PauseTimer        func(childComplexity int) int
+		RefreshEvents     func(childComplexity int) int
+		ResumeTimer       func(childComplexity int) int
+		SavePerson        func(childComplexity int, input model.PersonInput) int
+		SaveTagMapping    func(childComplexity int, input model.TagMappingInput) int
+		StartTimer        func(childComplexity int, title string, emoji string, durationSeconds int) int
+		TrackPhotoShowing func(childComplexity int, source model.PhotoShowingSource) int
+		UploadPhoto       func(childComplexity int, input model.PhotoUploadInput, file graphql.Upload) int
 	}
 
 	Person struct {
@@ -98,15 +99,31 @@ type ComplexityRoot struct {
 		Width      func(childComplexity int) int
 	}
 
+	PhotoShowing struct {
+		EndedAt   func(childComplexity int) int
+		EndsAt    func(childComplexity int) int
+		ID        func(childComplexity int) int
+		Photo     func(childComplexity int) int
+		Source    func(childComplexity int) int
+		StartedAt func(childComplexity int) int
+	}
+
+	PhotoShowingState struct {
+		Current func(childComplexity int) int
+		Next    func(childComplexity int) int
+	}
+
 	Query struct {
-		CalendarTags func(childComplexity int) int
-		Events       func(childComplexity int, days *int) int
-		Health       func(childComplexity int) int
-		People       func(childComplexity int) int
-		Photos       func(childComplexity int, limit *int) int
-		TagMappings  func(childComplexity int) int
-		Timer        func(childComplexity int) int
-		Weather      func(childComplexity int) int
+		CalendarTags        func(childComplexity int) int
+		Events              func(childComplexity int, days *int) int
+		Health              func(childComplexity int) int
+		People              func(childComplexity int) int
+		PhotoShowing        func(childComplexity int) int
+		PhotoShowingHistory func(childComplexity int, limit *int) int
+		Photos              func(childComplexity int, limit *int) int
+		TagMappings         func(childComplexity int) int
+		Timer               func(childComplexity int) int
+		Weather             func(childComplexity int) int
 	}
 
 	TagMapping struct {
@@ -140,6 +157,7 @@ type ComplexityRoot struct {
 
 type MutationResolver interface {
 	UploadPhoto(ctx context.Context, input model.PhotoUploadInput, file graphql.Upload) (*model.Photo, error)
+	TrackPhotoShowing(ctx context.Context, source model.PhotoShowingSource) (*model.PhotoShowingState, error)
 	CreateEvent(ctx context.Context, input model.EventInput) (*model.Event, error)
 	SavePerson(ctx context.Context, input model.PersonInput) (*model.Person, error)
 	DeletePerson(ctx context.Context, id string) (bool, error)
@@ -160,6 +178,8 @@ type QueryResolver interface {
 	TagMappings(ctx context.Context) ([]model.TagMapping, error)
 	CalendarTags(ctx context.Context) ([]string, error)
 	Photos(ctx context.Context, limit *int) ([]model.Photo, error)
+	PhotoShowing(ctx context.Context) (*model.PhotoShowingState, error)
+	PhotoShowingHistory(ctx context.Context, limit *int) ([]model.PhotoShowing, error)
 	Weather(ctx context.Context) (*model.Weather, error)
 }
 
@@ -377,6 +397,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.StartTimer(childComplexity, args["title"].(string), args["emoji"].(string), args["durationSeconds"].(int)), true
+	case "Mutation.trackPhotoShowing":
+		if e.ComplexityRoot.Mutation.TrackPhotoShowing == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_trackPhotoShowing_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.TrackPhotoShowing(childComplexity, args["source"].(model.PhotoShowingSource)), true
 	case "Mutation.uploadPhoto":
 		if e.ComplexityRoot.Mutation.UploadPhoto == nil {
 			break
@@ -469,6 +500,56 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.Photo.Width(childComplexity), true
 
+	case "PhotoShowing.endedAt":
+		if e.ComplexityRoot.PhotoShowing.EndedAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.PhotoShowing.EndedAt(childComplexity), true
+	case "PhotoShowing.endsAt":
+		if e.ComplexityRoot.PhotoShowing.EndsAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.PhotoShowing.EndsAt(childComplexity), true
+	case "PhotoShowing.id":
+		if e.ComplexityRoot.PhotoShowing.ID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.PhotoShowing.ID(childComplexity), true
+	case "PhotoShowing.photo":
+		if e.ComplexityRoot.PhotoShowing.Photo == nil {
+			break
+		}
+
+		return e.ComplexityRoot.PhotoShowing.Photo(childComplexity), true
+	case "PhotoShowing.source":
+		if e.ComplexityRoot.PhotoShowing.Source == nil {
+			break
+		}
+
+		return e.ComplexityRoot.PhotoShowing.Source(childComplexity), true
+	case "PhotoShowing.startedAt":
+		if e.ComplexityRoot.PhotoShowing.StartedAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.PhotoShowing.StartedAt(childComplexity), true
+
+	case "PhotoShowingState.current":
+		if e.ComplexityRoot.PhotoShowingState.Current == nil {
+			break
+		}
+
+		return e.ComplexityRoot.PhotoShowingState.Current(childComplexity), true
+	case "PhotoShowingState.next":
+		if e.ComplexityRoot.PhotoShowingState.Next == nil {
+			break
+		}
+
+		return e.ComplexityRoot.PhotoShowingState.Next(childComplexity), true
+
 	case "Query.calendarTags":
 		if e.ComplexityRoot.Query.CalendarTags == nil {
 			break
@@ -499,6 +580,23 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.People(childComplexity), true
+	case "Query.photoShowing":
+		if e.ComplexityRoot.Query.PhotoShowing == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Query.PhotoShowing(childComplexity), true
+	case "Query.photoShowingHistory":
+		if e.ComplexityRoot.Query.PhotoShowingHistory == nil {
+			break
+		}
+
+		args, err := ec.field_Query_photoShowingHistory_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Query.PhotoShowingHistory(childComplexity, args["limit"].(*int)), true
 	case "Query.photos":
 		if e.ComplexityRoot.Query.Photos == nil {
 			break
@@ -816,6 +914,25 @@ type Photo {
   focus: FocalRegion
 }
 
+enum PhotoShowingSource {
+  SCHEDULE
+  TAP
+}
+
+type PhotoShowing {
+  id: ID!
+  photo: Photo!
+  startedAt: Int!
+  endsAt: Int!
+  endedAt: Int
+  source: PhotoShowingSource!
+}
+
+type PhotoShowingState {
+  current: PhotoShowing
+  next: PhotoShowing
+}
+
 """Metadata accompanying a photo upload."""
 input PhotoUploadInput {
   assetID: ID!
@@ -833,10 +950,13 @@ scalar Upload
 
 extend type Query {
   photos(limit: Int = 60): [Photo!]!
+  photoShowing: PhotoShowingState!
+  photoShowingHistory(limit: Int = 50): [PhotoShowing!]!
 }
 
 type Mutation {
   uploadPhoto(input: PhotoUploadInput!, file: Upload!): Photo!
+  trackPhotoShowing(source: PhotoShowingSource! = SCHEDULE): PhotoShowingState!
 }
 `, BuiltIn: false},
 	{Name: "../../graph/schema.graphqls", Input: `type Health {
@@ -986,6 +1106,34 @@ func (ec *executionContext) childFields_Photo(ctx context.Context, field graphql
 		return ec.fieldContext_Photo_focus(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type Photo", field.Name)
+}
+
+func (ec *executionContext) childFields_PhotoShowing(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "id":
+		return ec.fieldContext_PhotoShowing_id(ctx, field)
+	case "photo":
+		return ec.fieldContext_PhotoShowing_photo(ctx, field)
+	case "startedAt":
+		return ec.fieldContext_PhotoShowing_startedAt(ctx, field)
+	case "endsAt":
+		return ec.fieldContext_PhotoShowing_endsAt(ctx, field)
+	case "endedAt":
+		return ec.fieldContext_PhotoShowing_endedAt(ctx, field)
+	case "source":
+		return ec.fieldContext_PhotoShowing_source(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type PhotoShowing", field.Name)
+}
+
+func (ec *executionContext) childFields_PhotoShowingState(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "current":
+		return ec.fieldContext_PhotoShowingState_current(ctx, field)
+	case "next":
+		return ec.fieldContext_PhotoShowingState_next(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type PhotoShowingState", field.Name)
 }
 
 func (ec *executionContext) childFields_TagMapping(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -1252,6 +1400,20 @@ func (ec *executionContext) field_Mutation_startTimer_args(ctx context.Context, 
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_trackPhotoShowing_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "source",
+		func(ctx context.Context, v any) (model.PhotoShowingSource, error) {
+			return ec.unmarshalNPhotoShowingSource2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPhotoShowingSource(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["source"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_uploadPhoto_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -1299,6 +1461,20 @@ func (ec *executionContext) field_Query_events_args(ctx context.Context, rawArgs
 		return nil, err
 	}
 	args["days"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_photoShowingHistory_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
 	return args, nil
 }
 
@@ -1791,6 +1967,50 @@ func (ec *executionContext) fieldContext_Mutation_uploadPhoto(ctx context.Contex
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_uploadPhoto_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_trackPhotoShowing(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_trackPhotoShowing(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().TrackPhotoShowing(ctx, fc.Args["source"].(model.PhotoShowingSource))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.PhotoShowingState) graphql.Marshaler {
+			return ec.marshalNPhotoShowingState2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPhotoShowingState(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_trackPhotoShowing(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_PhotoShowingState(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_trackPhotoShowing_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -2520,6 +2740,217 @@ func (ec *executionContext) fieldContext_Photo_focus(_ context.Context, field gr
 	return fc, nil
 }
 
+func (ec *executionContext) _PhotoShowing_id(ctx context.Context, field graphql.CollectedField, obj *model.PhotoShowing) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_PhotoShowing_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNID2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_PhotoShowing_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("PhotoShowing", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _PhotoShowing_photo(ctx context.Context, field graphql.CollectedField, obj *model.PhotoShowing) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_PhotoShowing_photo(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Photo, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Photo) graphql.Marshaler {
+			return ec.marshalNPhoto2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPhoto(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_PhotoShowing_photo(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PhotoShowing",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Photo(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PhotoShowing_startedAt(ctx context.Context, field graphql.CollectedField, obj *model.PhotoShowing) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_PhotoShowing_startedAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.StartedAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_PhotoShowing_startedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("PhotoShowing", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _PhotoShowing_endsAt(ctx context.Context, field graphql.CollectedField, obj *model.PhotoShowing) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_PhotoShowing_endsAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.EndsAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_PhotoShowing_endsAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("PhotoShowing", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _PhotoShowing_endedAt(ctx context.Context, field graphql.CollectedField, obj *model.PhotoShowing) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_PhotoShowing_endedAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.EndedAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *int) graphql.Marshaler {
+			return ec.marshalOInt2ᚖint(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_PhotoShowing_endedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("PhotoShowing", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _PhotoShowing_source(ctx context.Context, field graphql.CollectedField, obj *model.PhotoShowing) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_PhotoShowing_source(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Source, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v model.PhotoShowingSource) graphql.Marshaler {
+			return ec.marshalNPhotoShowingSource2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPhotoShowingSource(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_PhotoShowing_source(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("PhotoShowing", field, false, false, errors.New("field of type PhotoShowingSource does not have child fields"))
+}
+
+func (ec *executionContext) _PhotoShowingState_current(ctx context.Context, field graphql.CollectedField, obj *model.PhotoShowingState) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_PhotoShowingState_current(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Current, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.PhotoShowing) graphql.Marshaler {
+			return ec.marshalOPhotoShowing2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPhotoShowing(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_PhotoShowingState_current(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PhotoShowingState",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_PhotoShowing(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PhotoShowingState_next(ctx context.Context, field graphql.CollectedField, obj *model.PhotoShowingState) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_PhotoShowingState_next(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Next, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.PhotoShowing) graphql.Marshaler {
+			return ec.marshalOPhotoShowing2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPhotoShowing(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_PhotoShowingState_next(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PhotoShowingState",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_PhotoShowing(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_health(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -2753,6 +3184,82 @@ func (ec *executionContext) fieldContext_Query_photos(ctx context.Context, field
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_photos_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_photoShowing(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_photoShowing(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Query().PhotoShowing(ctx)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.PhotoShowingState) graphql.Marshaler {
+			return ec.marshalNPhotoShowingState2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPhotoShowingState(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_photoShowing(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_PhotoShowingState(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_photoShowingHistory(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_photoShowingHistory(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Query().PhotoShowingHistory(ctx, fc.Args["limit"].(*int))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.PhotoShowing) graphql.Marshaler {
+			return ec.marshalNPhotoShowing2ᚕgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPhotoShowingᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_photoShowingHistory(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_PhotoShowing(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_photoShowingHistory_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -4838,6 +5345,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "trackPhotoShowing":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_trackPhotoShowing(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "createEvent":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_createEvent(ctx, field)
@@ -5067,6 +5581,112 @@ func (ec *executionContext) _Photo(ctx context.Context, sel ast.SelectionSet, ob
 	return out
 }
 
+var photoShowingImplementors = []string{"PhotoShowing"}
+
+func (ec *executionContext) _PhotoShowing(ctx context.Context, sel ast.SelectionSet, obj *model.PhotoShowing) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, photoShowingImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferredFieldSet := graphql.NewFieldSet(nil)
+	deferLabelToView := make(map[string]*graphql.FieldSetView)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("PhotoShowing")
+		case "id":
+			out.Values[i] = ec._PhotoShowing_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "photo":
+			out.Values[i] = ec._PhotoShowing_photo(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "startedAt":
+			out.Values[i] = ec._PhotoShowing_startedAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "endsAt":
+			out.Values[i] = ec._PhotoShowing_endsAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "endedAt":
+			out.Values[i] = ec._PhotoShowing_endedAt(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		case "source":
+			out.Values[i] = ec._PhotoShowing_source(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferLabelToView), math.MaxInt32)))
+
+	ec.ProcessDeferredGroup(graphql.DeferredGroup{
+		Defers:   deferLabelToView,
+		Path:     graphql.GetPath(ctx),
+		FieldSet: deferredFieldSet,
+		Context:  ctx,
+	})
+
+	return out
+}
+
+var photoShowingStateImplementors = []string{"PhotoShowingState"}
+
+func (ec *executionContext) _PhotoShowingState(ctx context.Context, sel ast.SelectionSet, obj *model.PhotoShowingState) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, photoShowingStateImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferredFieldSet := graphql.NewFieldSet(nil)
+	deferLabelToView := make(map[string]*graphql.FieldSetView)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("PhotoShowingState")
+		case "current":
+			out.Values[i] = ec._PhotoShowingState_current(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		case "next":
+			out.Values[i] = ec._PhotoShowingState_next(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferLabelToView), math.MaxInt32)))
+
+	ec.ProcessDeferredGroup(graphql.DeferredGroup{
+		Defers:   deferLabelToView,
+		Path:     graphql.GetPath(ctx),
+		FieldSet: deferredFieldSet,
+		Context:  ctx,
+	})
+
+	return out
+}
+
 var queryImplementors = []string{"Query"}
 
 func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
@@ -5229,6 +5849,50 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_photos(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "photoShowing":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_photoShowing(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "photoShowingHistory":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_photoShowingHistory(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -6067,6 +6731,46 @@ func (ec *executionContext) marshalNPhoto2ᚖgithubᚗcomᚋkurtschwarzᚋhomie�
 	return ec._Photo(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNPhotoShowing2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPhotoShowing(ctx context.Context, sel ast.SelectionSet, v model.PhotoShowing) graphql.Marshaler {
+	return ec._PhotoShowing(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNPhotoShowing2ᚕgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPhotoShowingᚄ(ctx context.Context, sel ast.SelectionSet, v []model.PhotoShowing) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNPhotoShowing2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPhotoShowing(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) unmarshalNPhotoShowingSource2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPhotoShowingSource(ctx context.Context, v any) (model.PhotoShowingSource, error) {
+	var res model.PhotoShowingSource
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNPhotoShowingSource2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPhotoShowingSource(ctx context.Context, sel ast.SelectionSet, v model.PhotoShowingSource) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) marshalNPhotoShowingState2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPhotoShowingState(ctx context.Context, sel ast.SelectionSet, v *model.PhotoShowingState) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._PhotoShowingState(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNPhotoUploadInput2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPhotoUploadInput(ctx context.Context, v any) (model.PhotoUploadInput, error) {
 	res, err := ec.unmarshalInputPhotoUploadInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -6458,6 +7162,13 @@ func (ec *executionContext) marshalOPerson2ᚖgithubᚗcomᚋkurtschwarzᚋhomie
 		return graphql.Null
 	}
 	return ec._Person(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalOPhotoShowing2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPhotoShowing(ctx context.Context, sel ast.SelectionSet, v *model.PhotoShowing) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._PhotoShowing(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOString2ᚖstring(ctx context.Context, v any) (*string, error) {

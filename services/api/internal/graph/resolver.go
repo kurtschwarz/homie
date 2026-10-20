@@ -15,11 +15,12 @@ import (
 )
 
 type Resolver struct {
-	TimerMu   sync.Mutex
-	Timer     *TimerState
-	Version   string
-	StartedAt time.Time
-	Weather   *weather.Service
-	Photos    *photos.Service
-	Events    *events.Service
+	TimerMu       sync.Mutex
+	Timer         *TimerState
+	Version       string
+	StartedAt     time.Time
+	Weather       *weather.Service
+	Photos        *photos.Service
+	PhotoRotation *photos.RotationService
+	Events        *events.Service
 }

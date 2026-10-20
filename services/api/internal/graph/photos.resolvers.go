@@ -48,6 +48,18 @@ func (r *mutationResolver) UploadPhoto(ctx context.Context, input model.PhotoUpl
 	return &result, nil
 }
 
+// TrackPhotoShowing records a photo showing transition and returns updated rotation state.
+func (r *mutationResolver) TrackPhotoShowing(ctx context.Context, source model.PhotoShowingSource) (*model.PhotoShowingState, error) {
+	if r.Resolver.PhotoRotation == nil {
+		return nil, errors.New("photo rotation is not configured")
+	}
+	current, next, err := r.Resolver.PhotoRotation.Advance(ctx, photos.ShowingSource(source))
+	if err != nil {
+		return nil, err
+	}
+	return toModelRotation(current, next), nil
+}
+
 // Photos is the resolver for the photos field.
 func (r *queryResolver) Photos(ctx context.Context, limit *int) ([]model.Photo, error) {
 	if r.Resolver.Photos == nil {
@@ -64,6 +76,38 @@ func (r *queryResolver) Photos(ctx context.Context, limit *int) ([]model.Photo, 
 	result := make([]model.Photo, 0, len(list))
 	for _, photo := range list {
 		result = append(result, toModelPhoto(photo))
+	}
+	return result, nil
+}
+
+// PhotoShowing is the resolver for the photoShowing field.
+func (r *queryResolver) PhotoShowing(ctx context.Context) (*model.PhotoShowingState, error) {
+	if r.Resolver.PhotoRotation == nil {
+		return nil, errors.New("photo rotation is not configured")
+	}
+	current, next, err := r.Resolver.PhotoRotation.Rotation(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return toModelRotation(current, next), nil
+}
+
+// PhotoShowingHistory is the resolver for the photoShowingHistory field.
+func (r *queryResolver) PhotoShowingHistory(ctx context.Context, limit *int) ([]model.PhotoShowing, error) {
+	if r.Resolver.PhotoRotation == nil {
+		return nil, errors.New("photo rotation is not configured")
+	}
+	pageSize := 50
+	if limit != nil {
+		pageSize = *limit
+	}
+	showings, err := r.Resolver.PhotoRotation.Showings(ctx, pageSize)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]model.PhotoShowing, 0, len(showings))
+	for _, showing := range showings {
+		result = append(result, toModelShowing(showing))
 	}
 	return result, nil
 }

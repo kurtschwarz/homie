@@ -85,6 +85,20 @@ type Photo struct {
 	Focus      *FocalRegion `json:"focus,omitempty"`
 }
 
+type PhotoShowing struct {
+	ID        string             `json:"id"`
+	Photo     *Photo             `json:"photo"`
+	StartedAt int                `json:"startedAt"`
+	EndsAt    int                `json:"endsAt"`
+	EndedAt   *int               `json:"endedAt,omitempty"`
+	Source    PhotoShowingSource `json:"source"`
+}
+
+type PhotoShowingState struct {
+	Current *PhotoShowing `json:"current,omitempty"`
+	Next    *PhotoShowing `json:"next,omitempty"`
+}
+
 // Metadata accompanying a photo upload.
 type PhotoUploadInput struct {
 	AssetID   string            `json:"assetID"`
@@ -129,6 +143,61 @@ type Weather struct {
 	Temperature   int              `json:"temperature"`
 	FetchedAt     int              `json:"fetchedAt"`
 	Stale         bool             `json:"stale"`
+}
+
+type PhotoShowingSource string
+
+const (
+	PhotoShowingSourceSchedule PhotoShowingSource = "SCHEDULE"
+	PhotoShowingSourceTap      PhotoShowingSource = "TAP"
+)
+
+var AllPhotoShowingSource = []PhotoShowingSource{
+	PhotoShowingSourceSchedule,
+	PhotoShowingSourceTap,
+}
+
+func (e PhotoShowingSource) IsValid() bool {
+	switch e {
+	case PhotoShowingSourceSchedule, PhotoShowingSourceTap:
+		return true
+	}
+	return false
+}
+
+func (e PhotoShowingSource) String() string {
+	return string(e)
+}
+
+func (e *PhotoShowingSource) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = PhotoShowingSource(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid PhotoShowingSource", str)
+	}
+	return nil
+}
+
+func (e PhotoShowingSource) MarshalGQL(w io.Writer) {
+	_, _ = fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *PhotoShowingSource) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e PhotoShowingSource) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
 }
 
 type TagKind string

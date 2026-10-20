@@ -41,6 +41,24 @@ type Photo struct {
 	Focus      *FocalRegion
 }
 
+// Showing records one interval during which a photo was displayed.
+type Showing struct {
+	ID        uuid.UUID
+	Photo     Photo
+	StartedAt time.Time
+	EndsAt    time.Time
+	EndedAt   *time.Time
+	Source    ShowingSource
+}
+
+// ShowingSource describes why the previous display interval ended.
+type ShowingSource string
+
+const (
+	ShowingSchedule ShowingSource = "SCHEDULE"
+	ShowingTap      ShowingSource = "TAP"
+)
+
 // ManifestEntry describes the server copy of an Apple photo asset.
 type ManifestEntry struct {
 	ID      uuid.UUID
@@ -54,6 +72,12 @@ type Repository interface {
 	IDForAsset(context.Context, string) (uuid.UUID, bool, error)
 	Upsert(context.Context, Photo) error
 	DeleteMissing(context.Context, []string) ([]string, error)
+	Showings(context.Context, int) ([]Showing, error)
+	Rotation(context.Context) (*Showing, *Showing, error)
+	AppendShowing(context.Context, Showing) error
+	NextPhoto(context.Context, uuid.UUID) (Photo, bool, error)
+	AdvanceShowing(context.Context, *uuid.UUID, Showing, time.Time, ShowingSource) error
+	PruneShowings(context.Context, time.Time) error
 }
 
 // SQLiteRepository implements Repository with SQLite.
@@ -86,6 +110,27 @@ type manifestRow struct {
 	AssetID string `db:"asset_id"`
 	Version string `db:"version"`
 }
+
+type showingRow struct {
+	ID        []byte          `db:"id"`
+	PhotoID   []byte          `db:"photo_id"`
+	StartedAt int64           `db:"started_at"`
+	EndsAt    int64           `db:"ends_at"`
+	EndedAt   sql.NullInt64   `db:"ended_at"`
+	Source    string          `db:"source"`
+	AssetID   string          `db:"asset_id"`
+	Version   string          `db:"version"`
+	File      string          `db:"file"`
+	Width     int             `db:"width"`
+	Height    int             `db:"height"`
+	TakenAt   int64           `db:"taken_at"`
+	Latitude  sql.NullFloat64 `db:"latitude"`
+	Longitude sql.NullFloat64 `db:"longitude"`
+	Place     sql.NullString  `db:"place"`
+	Focus     sql.NullString  `db:"focus"`
+}
+
+var _ Repository = (*SQLiteRepository)(nil)
 
 // List returns photos newest first, with a stable UUID tie-breaker.
 func (r *SQLiteRepository) List(ctx context.Context, limit int) ([]Photo, error) {
@@ -236,6 +281,142 @@ func (r *SQLiteRepository) DeleteMissing(ctx context.Context, keep []string) ([]
 		return nil, err
 	}
 	return files, nil
+}
+
+// Rotation returns the active showing and its scheduled successor, if present.
+func (r *SQLiteRepository) Rotation(ctx context.Context) (*Showing, *Showing, error) {
+	rows, err := r.queryShowings(ctx, `
+		SELECT s.id, s.photo_id, s.started_at, s.ends_at, s.ended_at, s.source,
+		       p.asset_id, p.version, p.file, p.width, p.height, p.taken_at,
+		       p.latitude, p.longitude, p.place, p.focus
+		FROM photo_showings s JOIN photos p ON p.id = s.photo_id
+		WHERE s.ended_at IS NULL ORDER BY s.started_at ASC, s.id ASC LIMIT 2`)
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(rows) == 0 {
+		return nil, nil, nil
+	}
+	current := &rows[0]
+	var next *Showing
+	if len(rows) > 1 {
+		next = &rows[1]
+	}
+	return current, next, nil
+}
+
+// Showings returns recent showing history, newest first.
+func (r *SQLiteRepository) Showings(ctx context.Context, limit int) ([]Showing, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	return r.queryShowings(ctx, `
+		SELECT s.id, s.photo_id, s.started_at, s.ends_at, s.ended_at, s.source,
+		       p.asset_id, p.version, p.file, p.width, p.height, p.taken_at,
+		       p.latitude, p.longitude, p.place, p.focus
+		FROM photo_showings s JOIN photos p ON p.id = s.photo_id
+		ORDER BY s.started_at DESC, s.id DESC LIMIT ?`, limit)
+}
+
+func (r *SQLiteRepository) queryShowings(ctx context.Context, query string, args ...any) ([]Showing, error) {
+	var rows []showingRow
+	if err := r.db.SelectContext(ctx, &rows, query, args...); err != nil {
+		return nil, err
+	}
+	result := make([]Showing, 0, len(rows))
+	for _, row := range rows {
+		photo, err := (photoRow{ID: row.PhotoID, AssetID: row.AssetID, Version: row.Version, File: row.File,
+			Width: row.Width, Height: row.Height, TakenAt: row.TakenAt, Latitude: row.Latitude,
+			Longitude: row.Longitude, Place: row.Place, Focus: row.Focus}).photo()
+		if err != nil {
+			return nil, err
+		}
+		id, err := uuid.FromBytes(row.ID)
+		if err != nil {
+			return nil, fmt.Errorf("decode showing id: %w", err)
+		}
+		showing := Showing{ID: id, Photo: photo, StartedAt: time.Unix(row.StartedAt, 0), EndsAt: time.Unix(row.EndsAt, 0), Source: ShowingSource(row.Source)}
+		if row.EndedAt.Valid {
+			ended := time.Unix(row.EndedAt.Int64, 0)
+			showing.EndedAt = &ended
+		}
+		result = append(result, showing)
+	}
+	return result, nil
+}
+
+// AppendShowing persists a scheduled showing.
+func (r *SQLiteRepository) AppendShowing(ctx context.Context, showing Showing) error {
+	_, err := r.db.ExecContext(ctx, `INSERT INTO photo_showings (id, photo_id, started_at, ends_at, ended_at, source) VALUES (?, ?, ?, ?, ?, ?)`,
+		showing.ID[:], showing.Photo.ID[:], showing.StartedAt.Unix(), showing.EndsAt.Unix(), nullableUnix(showing.EndedAt), showing.Source)
+	return err
+}
+
+// AdvanceShowing atomically closes the current row when needed and appends a
+// new showing. expectedCurrent nil means the timeline is still empty.
+func (r *SQLiteRepository) AdvanceShowing(ctx context.Context, expectedCurrent *uuid.UUID, showing Showing, endedAt time.Time, source ShowingSource) error {
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	var currentID []byte
+	if expectedCurrent != nil {
+		err = tx.GetContext(ctx, &currentID, `SELECT id FROM photo_showings WHERE id = ? AND ended_at IS NULL`, expectedCurrent[:])
+	} else {
+		err = tx.GetContext(ctx, &currentID, `SELECT id FROM photo_showings WHERE ended_at IS NULL LIMIT 1`)
+	}
+	if err == sql.ErrNoRows {
+		if expectedCurrent != nil {
+			return fmt.Errorf("photo rotation changed while advancing")
+		}
+	} else if err != nil {
+		return err
+	} else if expectedCurrent == nil || string(currentID) != string(expectedCurrent[:]) {
+		return fmt.Errorf("photo rotation changed while advancing")
+	} else {
+		if _, err := tx.ExecContext(ctx, `UPDATE photo_showings SET ended_at = ? WHERE id = ? AND ended_at IS NULL`, endedAt.Unix(), currentID); err != nil {
+			return err
+		}
+	}
+	if _, err := tx.ExecContext(ctx, `INSERT INTO photo_showings (id, photo_id, started_at, ends_at, ended_at, source) VALUES (?, ?, ?, ?, ?, ?)`,
+		showing.ID[:], showing.Photo.ID[:], showing.StartedAt.Unix(), showing.EndsAt.Unix(), nullableUnix(showing.EndedAt), showing.Source); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// NextPhoto returns the next photo in the existing newest-first ordering, wrapping at the end.
+func (r *SQLiteRepository) NextPhoto(ctx context.Context, last uuid.UUID) (Photo, bool, error) {
+	var row photoRow
+	err := r.db.GetContext(ctx, &row, `
+		SELECT id, asset_id, version, file, width, height, taken_at, latitude, longitude, place, focus, imported_at
+		FROM photos WHERE (taken_at, id) < (SELECT taken_at, id FROM photos WHERE id = ?)
+		ORDER BY taken_at DESC, id DESC LIMIT 1`, last[:])
+	if err == sql.ErrNoRows {
+		err = r.db.GetContext(ctx, &row, `SELECT id, asset_id, version, file, width, height, taken_at, latitude, longitude, place, focus, imported_at FROM photos ORDER BY taken_at DESC, id DESC LIMIT 1`)
+	}
+	if err == sql.ErrNoRows {
+		return Photo{}, false, nil
+	}
+	if err != nil {
+		return Photo{}, false, err
+	}
+	photo, err := row.photo()
+	return photo, err == nil, err
+}
+
+// PruneShowings removes history older than before.
+func (r *SQLiteRepository) PruneShowings(ctx context.Context, before time.Time) error {
+	_, err := r.db.ExecContext(ctx, `DELETE FROM photo_showings WHERE started_at < ?`, before.Unix())
+	return err
+}
+
+func nullableUnix(value *time.Time) any {
+	if value == nil {
+		return nil
+	}
+	return value.Unix()
 }
 
 func (row photoRow) photo() (Photo, error) {

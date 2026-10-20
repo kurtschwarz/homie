@@ -25,22 +25,21 @@ const PANEL_WIDTH: Record<Shape, string> = {
 const shapeOf = (aspectRatio: number): Shape => (aspectRatio < 0.9 ? "portrait" : aspectRatio > 1.15 ? "landscape" : "square")
 
 /**
- * The family photo slideshow. Crossfades every `intervalMs` (12 s); a tap advances and restarts the timer.
+ * The family photo slideshow. The display API controls the current frame and schedule; a tap requests an advance.
  * Full height, with the width following the photo's shape (720 / 900 / 1040px).
  * Kiosk-only: the home screen it belongs to never renders on another surface.
  * Evening and Night dim the photos through --hm-photo-filter.
  */
 export function PhotoPanel({
   photos,
-  intervalMs = 12_000,
+  currentSrc,
+  onAdvance,
   className,
   ...props
-}: React.ComponentProps<"section"> & { photos: Photo[]; intervalMs?: number }) {
-  const [index, setIndex] = React.useState(0)
+}: React.ComponentProps<"section"> & { photos: Photo[]; currentSrc?: string; onAdvance?: () => void }) {
   const [aspectRatios, setAspectRatios] = React.useState<Record<string, number>>({})
   const [panelHeight, setPanelHeight] = React.useState(0)
   const [frameWidths, setFrameWidths] = React.useState<Record<Shape, number>>()
-  const [tick, setTick] = React.useState(0)
   const panelRef = React.useRef<HTMLElement>(null)
 
   React.useEffect(() => {
@@ -67,17 +66,8 @@ export function PhotoPanel({
     return () => observer.disconnect()
   }, [])
 
-  React.useEffect(() => {
-    if (photos.length < 2) return
-    const id = setInterval(() => setIndex((i) => (i + 1) % photos.length), intervalMs)
-    return () => clearInterval(id)
-  }, [photos.length, intervalMs, tick])
-
-  React.useEffect(() => {
-    setIndex((currentIndex) => Math.min(currentIndex, Math.max(0, photos.length - 1)))
-  }, [photos.length])
-
-  const current = photos[index]
+  const current = photos.find((photo) => photo.src === currentSrc) ?? photos[0]
+  const activeSrc = currentSrc ?? current?.src
   // Landscape until the image loads and reports its real aspect, matching the
   // widest panel so the first frame doesn't visibly grow into place.
   const currentAspectRatio = current ? aspectRatios[current.src] : undefined
@@ -120,7 +110,7 @@ export function PhotoPanel({
               // width back onto the animating panel. Cover the panel the old way
               // until the natural size is known.
               geometry ? "max-w-none" : "inset-0 size-full object-cover",
-              i === index ? "opacity-100" : "opacity-0",
+            p.src === activeSrc ? "opacity-100" : "opacity-0",
             )}
           />
         )
@@ -129,8 +119,7 @@ export function PhotoPanel({
         type="button"
         aria-label="Next photo"
         onClick={() => {
-          setIndex((i) => (i + 1) % Math.max(1, photos.length))
-          setTick((t) => t + 1)
+          onAdvance?.()
         }}
         className="absolute inset-0 size-full cursor-pointer border-0 bg-transparent p-0"
       />

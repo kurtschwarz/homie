@@ -21,6 +21,7 @@ import (
 	eventsjobs "github.com/kurtschwarz/homie/services/api/internal/events/jobs"
 	"github.com/kurtschwarz/homie/services/api/internal/graph"
 	"github.com/kurtschwarz/homie/services/api/internal/photos"
+	photosjobs "github.com/kurtschwarz/homie/services/api/internal/photos/jobs"
 	"github.com/kurtschwarz/homie/services/api/internal/queue"
 	"github.com/kurtschwarz/homie/services/api/internal/sdnotify"
 	"github.com/kurtschwarz/homie/services/api/internal/server"
@@ -53,13 +54,17 @@ func main() {
 	}
 
 	var photosService *photos.Service
+	var photoRotation *photos.RotationService
+	var photoRepository photos.Repository
 	var photosFS fs.FS
 	if db != nil {
 		library, err := photos.NewLibrary(envOr("HOMIE_PHOTOS_PATH", "/var/lib/homie/photos"))
 		if err != nil {
 			logger.Error("open photo library; photos will be unavailable", "error", err)
 		} else {
-			photosService = photos.New(photos.NewSQLiteRepository(db), library)
+			photoRepository = photos.NewSQLiteRepository(db)
+			photosService = photos.New(photoRepository, library)
+			photoRotation = photos.NewRotationService(photoRepository, nil)
 			photosFS = library.FS()
 		}
 	}
@@ -86,6 +91,7 @@ func main() {
 	workers := river.NewWorkers()
 	river.AddWorker(workers, weatherjobs.NewRefreshWorker(refresher, logger))
 	river.AddWorker(workers, eventsjobs.NewRefreshWorker(eventsRefresher, logger))
+	river.AddWorker(workers, photosjobs.NewPruneWorker(photoRotation, logger))
 
 	display, err := fs.Sub(assets.DisplayFS, "web/display")
 	if err != nil {
@@ -100,11 +106,12 @@ func main() {
 
 	handler := server.New(server.Config{
 		Resolver: &graph.Resolver{
-			Version:   version,
-			StartedAt: time.Now(),
-			Weather:   weatherService,
-			Photos:    photosService,
-			Events:    eventsService,
+			Version:       version,
+			StartedAt:     time.Now(),
+			Weather:       weatherService,
+			Photos:        photosService,
+			PhotoRotation: photoRotation,
+			Events:        eventsService,
 		},
 		Display:    display,
 		Manager:    manager,
@@ -124,7 +131,7 @@ func main() {
 		DBPath:       envOr("HOMIE_RIVER_DB_PATH", "/var/lib/homie/river.db"),
 		Logger:       logger,
 		Workers:      workers,
-		PeriodicJobs: []*river.PeriodicJob{weatherjobs.PeriodicJob(), eventsjobs.PeriodicJob()},
+		PeriodicJobs: []*river.PeriodicJob{weatherjobs.PeriodicJob(), eventsjobs.PeriodicJob(), photosjobs.PeriodicJob()},
 	})
 	if err != nil {
 		logger.Error("configure background queue", "error", err)

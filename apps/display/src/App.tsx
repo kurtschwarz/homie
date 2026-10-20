@@ -11,6 +11,7 @@ import { formatShortDate } from "@homie/ui/lib/time";
 import { useNow } from "@homie/ui/hooks/use-now";
 import { useWeather } from "./useWeather";
 import { usePhotos } from "./usePhotos";
+import { usePhotoShowing } from "./usePhotoShowing";
 import { useEvents } from "./useEvents";
 import { splitEvents, toRows } from "./events";
 import { useTimer } from "./useTimer";
@@ -23,6 +24,7 @@ export function App() {
   const now = useNow();
   const weather = useWeather();
   const photos = usePhotos();
+  const photoShowing = usePhotoShowing();
   const events = useEvents();
   const [sheetOpen, setSheetOpen] = React.useState(false);
   const eventsColumnRef = React.useRef<HTMLDivElement>(null);
@@ -35,7 +37,24 @@ export function App() {
 
   return (
     <HomeLayout>
-      {photos.kind === "ready" && photos.photos.length > 0 && <PhotoPanel photos={photos.photos} />}
+      {photos.kind === "ready" && photos.photos.length > 0 && photoShowing.showing?.current && (
+        <PhotoPanel
+          photos={[
+            ...photos.photos,
+            ...[photoShowing.showing.current, photoShowing.showing.next]
+              .filter((showing): showing is NonNullable<typeof showing> => showing !== null)
+              .map(({ photo }) => ({
+                src: photo.url,
+                alt: photo.place ?? "",
+                ...(photo.place ? { place: photo.place } : {}),
+                takenAt: new Date(photo.takenAt * 1000),
+                ...(photo.focus ? { focus: photo.focus } : {}),
+              })),
+          ].filter((photo, index, all) => all.findIndex((candidate) => candidate.src === photo.src) === index)}
+          currentSrc={photoShowing.showing.current.photo.url}
+          onAdvance={() => void photoShowing.advance("TAP")}
+        />
+      )}
       <HomeEvents ref={eventsColumnRef}>
         <div className="flex flex-col gap-hm-8">
           <Clock date={now} />

@@ -50,9 +50,20 @@ struct HomeView: View {
             .scrollBounceBehavior(.always)
             .homieRefreshable(enabled: apiErrorMessage == nil) { await loadAll() }
             .background(Color(red: 244.0 / 255, green: 246.0 / 255, blue: 248.0 / 255))
-            .navigationTitle("Uh-oh")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                if apiErrorMessage != nil {
+                    ToolbarItem(placement: .principal) {
+                        HStack(spacing: 8) {
+                            Circle()
+                                .fill(Color.gray)
+                                .frame(width: 8, height: 8)
+                            Text("Offline mode")
+                                .font(.headline)
+                        }
+                    }
+                }
+
                 ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink {
                         SettingsView()

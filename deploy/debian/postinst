@@ -1,0 +1,40 @@
+#!/bin/sh
+set -e
+
+# visudo validates the installed file's path against its own name, so
+# check it staged under /etc/sudoers.d rather than in the unpacked tree.
+SUDOERS=/etc/sudoers.d/homie-deploy
+
+case "$1" in
+    configure)
+        if ! visudo -cf "$SUDOERS" >/dev/null 2>&1; then
+            echo "homie: $SUDOERS failed validation, removing it" >&2
+            rm -f "$SUDOERS"
+        fi
+
+        if ! getent passwd homie >/dev/null; then
+            echo "homie: user 'homie' does not exist; the service will not start" >&2
+        fi
+
+        mkdir -p /etc/homie
+        if [ -f /opt/homie/api.env ] && [ ! -f /etc/homie/api.env ]; then
+            mv /opt/homie/api.env /etc/homie/api.env
+        fi
+        if [ ! -f /etc/homie/kiosk.env ]; then
+            echo "HOMIE_KIOSK_URL=http://localhost:3001" > /etc/homie/kiosk.env
+        fi
+        chgrp homie /etc/homie/*.env 2>/dev/null || true
+        chmod 0664 /etc/homie/*.env 2>/dev/null || true
+
+        mkdir -p /var/cache/homie
+        chown root:homie /var/cache/homie
+        chmod 0770 /var/cache/homie
+
+        systemctl daemon-reload
+        systemctl enable homie-api.service homie-kiosk.service
+        systemctl restart homie-api.service
+        systemctl restart homie-kiosk.service
+        ;;
+esac
+
+exit 0

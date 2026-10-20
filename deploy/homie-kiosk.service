@@ -15,12 +15,12 @@ StandardOutput=journal
 StandardError=journal
 
 # Core environment configuration
-EnvironmentFile=-/opt/homie/kiosk.env
+EnvironmentFile=-/etc/homie/kiosk.env
 Environment=HOMIE_KIOSK_URL=http://localhost:3001
 Environment=HOMIE_KIOSK_EXTRA_FLAGS=
 
 # Cursor Configuration (Your custom transparent theme assets)
-Environment=XCURSOR_PATH=/opt/homie/cursors
+Environment=XCURSOR_PATH=/usr/share/homie/cursors
 Environment=XCURSOR_THEME=homie-blank
 
 # FIX: Explicitly pass runtime directory context variables so Cage can read assets

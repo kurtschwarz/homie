@@ -59,7 +59,7 @@ photos in, so the API never calls Apple itself.
 | `apps/mobile/ios` | SwiftUI companion app |
 | `apps/photo-sync` | macOS app and LaunchAgent that pushes photos from a Photos album to the API |
 | `packages/ui` | Shared React components and design tokens used by both web apps |
-| `deploy` | systemd units for the API and the kiosk browser |
+| `deploy` | systemd units, the blank-cursor theme generator, and Debian packaging sources |
 
 ## Getting started
 
@@ -89,7 +89,7 @@ regenerate the GraphQL layer with `just codegen` after editing anything in
 ## Configuration
 
 The API is configured by environment variables. On the Pi they live in
-`/opt/homie/api.env`; for local development, in `services/api/.env`.
+`/etc/homie/api.env`; for local development, in `services/api/.env`.
 
 | Variable | Default | Notes |
 |---|---|---|
@@ -123,10 +123,24 @@ rather than something on the Pi. Build it with `just photo-sync`; see
 
 ## The Pi
 
-`just deploy` cross-compiles for `linux/arm64` in Docker, copies the binary
-over, and restarts both services. The kiosk unit runs Chromium under
-[cage](https://github.com/cage-kiosk/cage) on tty1 pointed at the local API; it
-restarts on deploy because the web apps are baked into the binary.
+`just deploy` cross-compiles for `linux/arm64` in Docker, packages the binary,
+the systemd units, and the blank-cursor theme into `dist/homie.deb`
+(`just package`), ships it to the Pi, and installs it with `apt-get`. The
+package's `postinst` restarts both services, which matters because the web
+apps are baked into the binary — Chromium needs a restart for frontend
+changes to show. The kiosk unit runs Chromium under
+[cage](https://github.com/cage-kiosk/cage) on tty1 pointed at the local API.
+
+On a fresh Pi, the first install has to run by hand, since the sudoers rule
+that makes later deploys non-interactive ships inside the package:
+
+```sh
+just package
+scp dist/homie.deb homie:/tmp/
+ssh -t homie "sudo apt-get install -y /tmp/homie.deb && rm /tmp/homie.deb"
+```
+
+After that, `just deploy` installs without a password prompt.
 
 While working on the frontend, `just kiosk-dev` points the Pi's browser at the
 Vite dev server on your Mac, and `just kiosk-prod` points it back.

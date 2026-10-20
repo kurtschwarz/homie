@@ -5,16 +5,16 @@ Wants=network-online.target
 
 [Service]
 Type=notify
-ExecStart=/opt/homie/homie-api
+ExecStart=/usr/bin/homie-api
 Environment=HOMIE_ADDR=:3000
 Environment=HOMIE_LOCAL_ADDR=127.0.0.1:3001
-EnvironmentFile=-/opt/homie/api.env
+EnvironmentFile=-/etc/homie/api.env
 WatchdogSec=30s
 Restart=always
 RestartSec=2
 
 StateDirectory=homie
-WorkingDirectory=/opt/homie
+WorkingDirectory=/var/lib/homie
 User=homie
 Group=homie
 

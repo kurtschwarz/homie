@@ -1,0 +1,11 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    remove)
+        systemctl stop homie-kiosk.service homie-api.service 2>/dev/null || true
+        systemctl disable homie-kiosk.service homie-api.service 2>/dev/null || true
+        ;;
+esac
+
+exit 0

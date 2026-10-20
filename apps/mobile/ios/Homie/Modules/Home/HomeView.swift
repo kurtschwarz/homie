@@ -37,6 +37,8 @@ struct HomeView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
             }
+            .scrollBounceBehavior(.always)
+            .homieRefreshable { await loadAll() }
             .background(Color(red: 244.0 / 255, green: 246.0 / 255, blue: 248.0 / 255))
             .navigationTitle("Homie")
             .navigationBarTitleDisplayMode(.inline)
@@ -51,13 +53,12 @@ struct HomeView: View {
                 }
             }
             .task {
-                await homeManager.load()
+                await loadAll()
+            }
+            .task(id: displayManager.loadGeneration) {
+                try? await Task.sleep(for: displayManager.refreshDelay)
+                guard !Task.isCancelled else { return }
                 await displayManager.load()
-                while !Task.isCancelled {
-                    try? await Task.sleep(for: displayManager.refreshDelay)
-                    guard !Task.isCancelled else { break }
-                    await displayManager.load()
-                }
             }
             .sheet(isPresented: $isAdding, onDismiss: { addDetent = .medium }) {
                 AddToHomieSheet(detent: $addDetent, onEventSaved: { Task { await homeManager.load() } })
@@ -67,12 +68,15 @@ struct HomeView: View {
             }
             .onChange(of: scenePhase) { _, phase in
                 guard phase == .active else { return }
-                Task {
-                    await homeManager.load()
-                    await displayManager.load()
-                }
+                Task { await loadAll() }
             }
         }
+    }
+
+    private func loadAll() async {
+        async let home: Void = homeManager.load()
+        async let display: Void = displayManager.load()
+        _ = await (home, display)
     }
 }
 

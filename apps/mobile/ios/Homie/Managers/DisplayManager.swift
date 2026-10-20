@@ -22,6 +22,7 @@ final class DisplayManager {
     private(set) var currentPhoto: Photo?
     private(set) var currentPhotoURL: URL?
     private(set) var endsAt: Date?
+    private(set) var loadGeneration = 0
 
     private struct Payload: Decodable {
         struct Showing: Decodable {
@@ -35,6 +36,7 @@ final class DisplayManager {
     }
 
     func load() async {
+        defer { loadGeneration += 1 }
         do {
             let payload: Payload = try await HomieAPI.perform(
                 "{ photoShowing { current { endsAt photo { url width height place focus { x y width height } } } } }"

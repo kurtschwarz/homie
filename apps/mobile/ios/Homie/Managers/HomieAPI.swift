@@ -22,6 +22,21 @@ private struct GraphQLResponse<Payload: Decodable>: Decodable {
 
 /// Posts GraphQL queries to the Homie API and decodes the `data` payload.
 enum HomieAPI {
+    private struct HealthPayload: Decodable {
+        struct Health: Decodable {
+            let status: String
+        }
+
+        let health: Health
+    }
+
+    static func checkHealth() async throws {
+        let payload: HealthPayload = try await perform("{ health { status } }")
+        guard payload.health.status.lowercased() == "ok" else {
+            throw HomieAPIError.server("The Homie API reported an unhealthy status.")
+        }
+    }
+
     static func perform<Payload: Decodable>(
         _ query: String,
         variables: [String: Any] = [:]

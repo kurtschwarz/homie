@@ -423,7 +423,12 @@ enum HomieRefreshAnchor: Hashable {
 }
 
 extension View {
-    func homieRefreshable(action: @escaping () async -> Void) -> some View {
-        modifier(HomieRefreshableModifier(action: action))
+    @ViewBuilder
+    func homieRefreshable(enabled: Bool = true, action: @escaping () async -> Void) -> some View {
+        if enabled {
+            modifier(HomieRefreshableModifier(action: action))
+        } else {
+            self
+        }
     }
 }

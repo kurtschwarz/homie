@@ -5,6 +5,8 @@ struct HomeView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var homeManager = HomeManager()
     @State private var displayManager = DisplayManager()
+    @State private var apiErrorMessage: String?
+    @State private var hasCheckedAPI = false
     @State private var isAdding = false
     @State private var addDetent: PresentationDetent = .medium
 
@@ -12,11 +14,23 @@ struct HomeView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    AgentChatCard(weather: homeManager.weather, remainingToday: homeManager.remainingToday, isLoading: !homeManager.hasLoaded)
+                    if let apiErrorMessage {
+                        HomieNoSignalCard {
+                            await loadAll()
+                        }
+                    }
 
-                    KitchenScreenSection(photoURL: displayManager.currentPhotoURL, photo: displayManager.currentPhoto, headline: homeManager.headline, isLoading: !homeManager.hasLoaded || !displayManager.hasLoaded)
+                    if apiErrorMessage == nil {
+                        AgentChatCard(weather: homeManager.weather, remainingToday: homeManager.remainingToday, isLoading: !homeManager.hasLoaded || !hasCheckedAPI)
+                    }
 
-                    QuickActions()
+                    if apiErrorMessage == nil {
+                        KitchenScreenSection(photoURL: displayManager.currentPhotoURL, photo: displayManager.currentPhoto, headline: homeManager.headline, isLoading: !homeManager.hasLoaded || !displayManager.hasLoaded || !hasCheckedAPI)
+                    }
+
+                    if apiErrorMessage == nil {
+                        QuickActions()
+                    }
 
                     Button {
                         // Dismissing from the form can leave the selection on
@@ -41,9 +55,9 @@ struct HomeView: View {
                 .padding(.top, 8)
             }
             .scrollBounceBehavior(.always)
-            .homieRefreshable { await loadAll() }
+            .homieRefreshable(enabled: apiErrorMessage == nil) { await loadAll() }
             .background(Color(red: 244.0 / 255, green: 246.0 / 255, blue: 248.0 / 255))
-            .navigationTitle("Homie")
+            .navigationTitle("Uh-oh")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -79,6 +93,15 @@ struct HomeView: View {
     private func loadAll() async {
         async let home: Void = homeManager.load()
         async let display: Void = displayManager.load()
+
+        do {
+            try await HomieAPI.checkHealth()
+            apiErrorMessage = nil
+        } catch {
+            apiErrorMessage = error.localizedDescription
+        }
+        hasCheckedAPI = true
+
         _ = await (home, display)
     }
 

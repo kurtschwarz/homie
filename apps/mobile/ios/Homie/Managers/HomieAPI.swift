@@ -29,6 +29,10 @@ enum HomieAPI {
         var request = URLRequest(url: HomieEndpoint.graphQLURL)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        // These are small queries against a machine on the same network. The
+        // 60 second default leaves pull to refresh spinning for a minute when
+        // the API is unreachable, which reads as a hang.
+        request.timeoutInterval = 10
         request.httpBody = try JSONSerialization.data(withJSONObject: ["query": query, "variables": variables])
 
         let (data, response) = try await URLSession.shared.data(for: request)

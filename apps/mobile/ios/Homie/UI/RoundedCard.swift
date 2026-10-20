@@ -3,7 +3,7 @@ import SwiftUI
 /// The corner radius cards share with anything that has to line up with them,
 /// like the add button and the add sheet.
 enum CardStyle {
-    static let cornerRadius: CGFloat = 8
+    static let cornerRadius: CGFloat = 20
 }
 
 struct RoundedCard<Content: View>: View {

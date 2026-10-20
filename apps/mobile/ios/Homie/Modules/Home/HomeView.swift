@@ -28,11 +28,14 @@ struct HomeView: View {
                             .font(.headline)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 10)
+                            .background {
+                                RoundedRectangle(cornerRadius: CardStyle.cornerRadius)
+                                    .fill(Color.accentColor)
+                            }
                     }
-                    .buttonStyle(.borderedProminent)
-                    // Matches RoundedCard, so the button squares up with the
-                    // cards it sits above.
-                    .buttonBorderShape(.roundedRectangle(radius: CardStyle.cornerRadius))
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: CardStyle.cornerRadius))
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
@@ -235,7 +238,7 @@ private struct KitchenScreenSection: View {
             .padding(.vertical, 12)
         }
         .background(Color(uiColor: .secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .clipShape(RoundedRectangle(cornerRadius: CardStyle.cornerRadius))
         .onReceive(clockTimer) { now = $0 }
     }
 
@@ -301,7 +304,8 @@ private struct FocalPhotoCrop: View {
 }
 
 private struct QuickActions: View {
-    private let columns = [GridItem(.flexible()), GridItem(.flexible())]
+    // The gap between the columns matches the stack spacing on the home screen.
+    private let columns = [GridItem(.flexible(), spacing: 20), GridItem(.flexible(), spacing: 20)]
     @State private var isStartingTimer = false
 
     var body: some View {
@@ -425,6 +429,7 @@ private struct QuickAction: View {
             }
         }
         .buttonStyle(.plain)
+        .clipShape(RoundedRectangle(cornerRadius: CardStyle.cornerRadius))
     }
 }
 

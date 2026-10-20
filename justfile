@@ -25,6 +25,10 @@ ios-sim:
     xcrun simctl terminate "{{ios_simulator_id}}" com.schw.ar.Homie 2>/dev/null || true
     xcrun simctl launch "{{ios_simulator_id}}" com.schw.ar.Homie
 
+# Remove local build artifacts (dist output and the iOS derived data).
+clean:
+    rm -rf dist apps/display/dist apps/manager/dist "{{ios_derived_data}}"
+
 # Regenerate gqlgen code after editing services/api/graph/*.graphqls.
 codegen:
     docker compose run --rm --no-deps api go run github.com/99designs/gqlgen generate

@@ -71,7 +71,15 @@ dev:
     trap cleanup EXIT INT TERM
     (
         until curl -fsS http://localhost:5173/ >/dev/null 2>&1; do sleep 1; done
-        exec "{{firefox_bin}}" --profile "$profile" --new-instance --marionette --remote-debugging-port 9222
+        # A second `just dev` in another tab would otherwise launch a doomed
+        # second instance against the same, already-locked profile. Port 9222
+        # is only bound once our own Firefox is up, so its presence means
+        # there's already a window to reuse.
+        if nc -z localhost 9222 2>/dev/null; then
+            echo "Firefox already running on port 9222; reusing existing window."
+        else
+            exec "{{firefox_bin}}" --profile "$profile" --new-instance --marionette --remote-debugging-port 9222
+        fi
     ) >"$profile/firefox.log" 2>&1 &
     firefox_pid=$!
     docker compose up --build

@@ -131,13 +131,20 @@ apps are baked into the binary — Chromium needs a restart for frontend
 changes to show. The kiosk unit runs Chromium under
 [cage](https://github.com/cage-kiosk/cage) on tty1 pointed at the local API.
 
+That first install also names the device. The package depends on
+`avahi-daemon`, and `postinst` sets the hostname to `homie`, which together
+put the Pi on the network as `homie.local` — the address the justfile and
+the rest of this README assume. It happens on a first install only, so
+renaming the box later survives upgrades.
+
 On a fresh Pi, the first install has to run by hand, since the sudoers rule
-that makes later deploys non-interactive ships inside the package:
+that makes later deploys non-interactive ships inside the package. Reach it
+at whatever name it has now, not `homie.local`:
 
 ```sh
 just package
-scp dist/homie.deb homie:/tmp/
-ssh -t homie "sudo apt-get install -y /tmp/homie.deb && rm /tmp/homie.deb"
+scp dist/homie.deb raspberrypi.local:/tmp/
+ssh -t raspberrypi.local "sudo apt-get install -y /tmp/homie.deb && rm /tmp/homie.deb"
 ```
 
 After that, `just deploy` installs without a password prompt.
@@ -145,7 +152,7 @@ After that, `just deploy` installs without a password prompt.
 While working on the frontend, `just kiosk-dev` points the Pi's browser at the
 Vite dev server on your Mac, and `just kiosk-prod` points it back.
 When the API is running on the Pi with LAN auth enabled, start the Vite server
-with `HOMIE_API_URL=http://homie:3000 HOMIE_AUTH_TOKEN=<token>`. The proxy adds
+with `HOMIE_API_URL=http://homie.local:3000 HOMIE_AUTH_TOKEN=<token>`. The proxy adds
 the token server-side; it is not included in browser code.
 
 ## iOS app

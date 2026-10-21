@@ -16,6 +16,22 @@ case "$1" in
             echo "homie: user 'homie' does not exist; the service will not start" >&2
         fi
 
+        # Avahi publishes the system hostname, so naming the device is what
+        # makes it reachable at homie.local. Only on a first install ($2 is
+        # the previously configured version): re-running it on every upgrade
+        # would quietly undo a deliberate rename.
+        if [ -z "$2" ]; then
+            hostnamectl set-hostname homie 2>/dev/null || echo homie > /etc/hostname
+            # hostnamectl leaves /etc/hosts alone, and a 127.0.1.1 line still
+            # naming the old host makes sudo warn on every call.
+            if grep -q '^127\.0\.1\.1' /etc/hosts; then
+                sed -i 's/^127\.0\.1\.1.*/127.0.1.1\thomie/' /etc/hosts
+            else
+                printf '127.0.1.1\thomie\n' >> /etc/hosts
+            fi
+            systemctl try-restart avahi-daemon.service || true
+        fi
+
         mkdir -p /etc/homie
         if [ -f /opt/homie/api.env ] && [ ! -f /etc/homie/api.env ]; then
             mv /opt/homie/api.env /etc/homie/api.env

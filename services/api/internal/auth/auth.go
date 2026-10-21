@@ -6,9 +6,7 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"fmt"
-	"net/http"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -41,23 +39,6 @@ func (s *Signer) Verify(file string, expiry int64, signature string, now time.Ti
 	}
 	expected, _ := hex.DecodeString(s.Sign(file, expiry))
 	return subtle.ConstantTimeCompare(provided, expected) == 1
-}
-
-func RequireBearer(token string, next http.Handler) http.Handler {
-	expected := []byte(token)
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		const prefix = "Bearer "
-		header := r.Header.Get("Authorization")
-		provided := []byte("")
-		if strings.HasPrefix(header, prefix) {
-			provided = []byte(strings.TrimSpace(strings.TrimPrefix(header, prefix)))
-		}
-		if len(provided) != len(expected) || subtle.ConstantTimeCompare(provided, expected) != 1 {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
 }
 
 func ParseExpiry(value string) (int64, error) { return strconv.ParseInt(value, 10, 64) }

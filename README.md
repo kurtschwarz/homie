@@ -94,9 +94,11 @@ The API is configured by environment variables. On the Pi they live in
 | Variable | Default | Notes |
 |---|---|---|
 | `HOMIE_ADDR` | `:3000` | Listen address |
-| `HOMIE_LOCAL_ADDR` | *(unset)* | Optional loopback-only listener for the display and manager UI. When enabled, the LAN listener requires `HOMIE_AUTH_TOKEN` (or a generated token at `/var/lib/homie/token`). |
-| `HOMIE_AUTH_TOKEN` | *(generated once)* | API bearer token; stored at `/var/lib/homie/token` if unset. The token is logged at startup for client setup. |
+| `HOMIE_LOCAL_ADDR` | *(unset)* | Optional loopback-only listener for the display (kiosk) UI. When enabled, the LAN listener requires a bearer token or a logged-in user session, and the manager is only served there, not on the loopback listener. |
+| `HOMIE_AUTH_TOKEN` | *(generated once)* | API bearer token for the iOS app and Photo Sync; stored at `/var/lib/homie/token` if unset. The token is logged at startup. It no longer unlocks the manager - see "Manager access" below. |
 | `HOMIE_AUTH_TOKEN_PATH` | `/var/lib/homie/token` | Path used for the persisted bearer token. |
+| `HOMIE_SIGNING_SECRET` | *(generated once)* | HMAC key for signed photo URLs, independent of the bearer token so rotating one doesn't invalidate the other's URLs; stored at `/var/lib/homie/signing-secret` if unset. |
+| `HOMIE_SIGNING_SECRET_PATH` | `/var/lib/homie/signing-secret` | Path used for the persisted signing secret. |
 | `HOMIE_PLAYGROUND` | off | Set to `1` to mount `/playground` |
 | `HOMIE_DB_PATH` | `/var/lib/homie/homie.db` | Main database |
 | `HOMIE_RIVER_DB_PATH` | `/var/lib/homie/river.db` | Job queue database |
@@ -108,8 +110,26 @@ Install the WeatherKit key on the Pi with `just deploy-weatherkit`, which keeps
 the private key out of the deploy tree.
 
 On the Pi, get the API token with `sudo journalctl -u homie-api.service -b`; paste
-it into the iOS app's Settings and the manager's API token field. Configure Photo
-Sync with `defaults write ar.schw.homie.photo-sync HomieAPIToken '<token>'`.
+it into the iOS app's Settings. Configure Photo Sync with
+`defaults write ar.schw.homie.photo-sync HomieAPIToken '<token>'`.
+
+### Manager access
+
+Opening `/manage/` for the first time shows a setup screen asking for a code,
+logged once as its own line by `sudo journalctl -u homie-api.service -b`
+(it rotates on every restart until a user account exists). After typing
+the code and choosing a username and password, the manager is reached by
+logging in from then on - the bearer token above is no longer involved.
+
+If the password is forgotten, drop the user row and reconfigure:
+
+```sh
+ssh homie.local "sudo sqlite3 /var/lib/homie/homie.db 'DELETE FROM users'"
+ssh homie.local "sudo systemctl restart homie-api.service"
+```
+
+The setup code comes back on the next boot. This grants nothing a `root` SSH
+session didn't already have.
 
 ## Photos
 

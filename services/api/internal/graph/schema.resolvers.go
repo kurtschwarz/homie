@@ -70,8 +70,12 @@ func (r *mutationResolver) CancelTimer(ctx context.Context) (bool, error) {
 
 // Health is the resolver for the health field.
 func (r *queryResolver) Health(ctx context.Context) (*model.Health, error) {
+	status := model.HealthStatusOk
+	if r.Resolver.Accounts != nil && r.Resolver.Accounts.SetupCode() != "" {
+		status = model.HealthStatusSetupRequired
+	}
 	return &model.Health{
-		Status:        "ok",
+		Status:        status,
 		Version:       r.Version,
 		UptimeSeconds: int(time.Since(r.StartedAt).Seconds()),
 	}, nil

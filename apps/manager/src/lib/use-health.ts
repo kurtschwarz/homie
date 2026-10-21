@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { graphql } from "./graphql";
 
+export type HealthStatus = "OK" | "SETUP_REQUIRED";
+
 type Health = {
-  status: string;
+  status: HealthStatus;
   version: string;
   uptimeSeconds: number;
 };

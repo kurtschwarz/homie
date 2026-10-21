@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kurtschwarz/homie/services/api/internal/accounts"
 	"github.com/kurtschwarz/homie/services/api/internal/auth"
 	"github.com/kurtschwarz/homie/services/api/internal/events"
 	"github.com/kurtschwarz/homie/services/api/internal/photos"
@@ -25,4 +26,5 @@ type Resolver struct {
 	PhotoRotation *photos.RotationService
 	Events        *events.Service
 	PhotoSigner   *auth.Signer
+	Accounts      *accounts.Service
 }

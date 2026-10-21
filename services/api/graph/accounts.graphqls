@@ -1,0 +1,34 @@
+enum Role {
+  ADMIN
+}
+
+type User {
+  id: ID!
+  username: String!
+  role: Role!
+}
+
+"""One browser session belonging to the signed-in user."""
+type ActiveSession {
+  id: ID!
+  userAgent: String
+  createdAt: Int!
+  lastSeenAt: Int!
+  current: Boolean!
+}
+
+type SessionInfo {
+  user: User
+}
+
+extend type Query {
+  session: SessionInfo
+  sessions: [ActiveSession!]!
+}
+
+extend type Mutation {
+  setup(code: String!, username: String!, password: String!): User!
+  login(username: String!, password: String!): User!
+  logout: Boolean!
+  revokeSession(id: ID!): Boolean!
+}

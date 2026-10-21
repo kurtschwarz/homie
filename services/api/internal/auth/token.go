@@ -11,14 +11,30 @@ import (
 
 const DefaultTokenPath = "/var/lib/homie/token"
 
+// DefaultSigningSecretPath holds the HMAC key for signed photo URLs,
+// independent of the bearer token so rotating one doesn't rotate the other.
+const DefaultSigningSecretPath = "/var/lib/homie/signing-secret"
+
 // Load returns the configured token, creating a persistent random token when
 // none has been configured or saved yet.
 func Load(path string) (string, error) {
-	if token := strings.TrimSpace(os.Getenv("HOMIE_AUTH_TOKEN")); token != "" {
+	return loadOrCreateSecret("HOMIE_AUTH_TOKEN", path, DefaultTokenPath)
+}
+
+// LoadSigningSecret returns the configured photo-URL signing secret,
+// creating a persistent random one when none has been configured or saved
+// yet. It is independent of the bearer token: rotating the token must not
+// silently invalidate every signed photo URL already handed out.
+func LoadSigningSecret(path string) (string, error) {
+	return loadOrCreateSecret("HOMIE_SIGNING_SECRET", path, DefaultSigningSecretPath)
+}
+
+func loadOrCreateSecret(envVar, path, defaultPath string) (string, error) {
+	if token := strings.TrimSpace(os.Getenv(envVar)); token != "" {
 		return token, nil
 	}
 	if path == "" {
-		path = DefaultTokenPath
+		path = defaultPath
 	}
 	data, err := os.ReadFile(path)
 	if err == nil {

@@ -13,6 +13,7 @@ require (
 	github.com/riverqueue/river/riverdriver/riversqlite v0.49.0
 	github.com/riverqueue/river/rivertype v0.49.0
 	github.com/vektah/gqlparser/v2 v2.5.37
+	golang.org/x/crypto v0.58.0
 	modernc.org/sqlite v1.60.1
 )
 

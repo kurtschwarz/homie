@@ -9,6 +9,15 @@ import (
 	"strconv"
 )
 
+// One browser session belonging to the signed-in user.
+type ActiveSession struct {
+	ID         string  `json:"id"`
+	UserAgent  *string `json:"userAgent,omitempty"`
+	CreatedAt  int     `json:"createdAt"`
+	LastSeenAt int     `json:"lastSeenAt"`
+	Current    bool    `json:"current"`
+}
+
 type Coordinate struct {
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
@@ -50,9 +59,9 @@ type FocalRegionInput struct {
 }
 
 type Health struct {
-	Status        string `json:"status"`
-	Version       string `json:"version"`
-	UptimeSeconds int    `json:"uptimeSeconds"`
+	Status        HealthStatus `json:"status"`
+	Version       string       `json:"version"`
+	UptimeSeconds int          `json:"uptimeSeconds"`
 }
 
 type Mutation struct {
@@ -115,6 +124,10 @@ type PhotoUploadInput struct {
 type Query struct {
 }
 
+type SessionInfo struct {
+	User *User `json:"user,omitempty"`
+}
+
 type TagMapping struct {
 	Tag    string  `json:"tag"`
 	Label  string  `json:"label"`
@@ -137,12 +150,73 @@ type Timer struct {
 	Paused           bool   `json:"paused"`
 }
 
+type User struct {
+	ID       string `json:"id"`
+	Username string `json:"username"`
+	Role     Role   `json:"role"`
+}
+
 type Weather struct {
 	Condition     WeatherCondition `json:"condition"`
 	ConditionCode string           `json:"conditionCode"`
 	Temperature   int              `json:"temperature"`
 	FetchedAt     int              `json:"fetchedAt"`
 	Stale         bool             `json:"stale"`
+}
+
+type HealthStatus string
+
+const (
+	HealthStatusOk            HealthStatus = "OK"
+	HealthStatusSetupRequired HealthStatus = "SETUP_REQUIRED"
+)
+
+var AllHealthStatus = []HealthStatus{
+	HealthStatusOk,
+	HealthStatusSetupRequired,
+}
+
+func (e HealthStatus) IsValid() bool {
+	switch e {
+	case HealthStatusOk, HealthStatusSetupRequired:
+		return true
+	}
+	return false
+}
+
+func (e HealthStatus) String() string {
+	return string(e)
+}
+
+func (e *HealthStatus) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = HealthStatus(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid HealthStatus", str)
+	}
+	return nil
+}
+
+func (e HealthStatus) MarshalGQL(w io.Writer) {
+	_, _ = fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *HealthStatus) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e HealthStatus) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
 }
 
 type PhotoShowingSource string
@@ -195,6 +269,59 @@ func (e *PhotoShowingSource) UnmarshalJSON(b []byte) error {
 }
 
 func (e PhotoShowingSource) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type Role string
+
+const (
+	RoleAdmin Role = "ADMIN"
+)
+
+var AllRole = []Role{
+	RoleAdmin,
+}
+
+func (e Role) IsValid() bool {
+	switch e {
+	case RoleAdmin:
+		return true
+	}
+	return false
+}
+
+func (e Role) String() string {
+	return string(e)
+}
+
+func (e *Role) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = Role(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid Role", str)
+	}
+	return nil
+}
+
+func (e Role) MarshalGQL(w io.Writer) {
+	_, _ = fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *Role) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e Role) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

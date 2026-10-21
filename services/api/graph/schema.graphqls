@@ -1,5 +1,10 @@
+enum HealthStatus {
+  OK
+  SETUP_REQUIRED
+}
+
 type Health {
-  status: String!
+  status: HealthStatus!
   version: String!
   uptimeSeconds: Int!
 }

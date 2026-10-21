@@ -2,6 +2,7 @@ package server_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,11 +12,13 @@ import (
 	"net/http/httptest"
 	"net/textproto"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"testing/fstest"
 	"time"
 
+	"github.com/kurtschwarz/homie/services/api/internal/accounts"
 	"github.com/kurtschwarz/homie/services/api/internal/auth"
 	"github.com/kurtschwarz/homie/services/api/internal/graph"
 	"github.com/kurtschwarz/homie/services/api/internal/photos"
@@ -73,9 +76,10 @@ func TestGraphQLMultipartUploadTransport(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	handler := server.New(server.Config{Resolver: &graph.Resolver{Photos: photosService}})
+	handler := server.New(server.Config{Resolver: &graph.Resolver{Photos: photosService}, Token: "upload-test-token"})
 	request := httptest.NewRequest(http.MethodPost, "/graphql", &body)
 	request.Header.Set("Content-Type", writer.FormDataContentType())
+	request.Header.Set("Authorization", "Bearer upload-test-token")
 	response := httptest.NewRecorder()
 	handler.ServeHTTP(response, request)
 
@@ -127,7 +131,8 @@ func TestManagerAssetsAreServedNotFallenBackTo(t *testing.T) {
 		"index.html":             {Data: []byte("<html>manager</html>")},
 		"assets/index-abc123.js": {Data: []byte("console.log('manager')")},
 	}
-	handler := server.New(server.Config{Manager: manager})
+	// Manager is only mounted on the authenticated listener.
+	handler := server.NewLAN(server.Config{Resolver: &graph.Resolver{}, Manager: manager})
 
 	request := httptest.NewRequest(http.MethodGet, "/manage/assets/index-abc123.js", nil)
 	response := httptest.NewRecorder()
@@ -163,6 +168,33 @@ func TestPhotosEndpointWithoutLibrary(t *testing.T) {
 	}
 }
 
+func TestSingleListenerRequiresAuthentication(t *testing.T) {
+	const token = "dev-token"
+	handler := server.New(server.Config{Resolver: &graph.Resolver{}, Token: token})
+	for _, tc := range []struct {
+		name          string
+		authority     string
+		wantAuthError bool
+	}{
+		{name: "missing token", wantAuthError: true},
+		{name: "valid token", authority: "Bearer " + token},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			request := httptest.NewRequest(http.MethodPost, "/graphql", strings.NewReader(`{"query":"{ timer { title } }"}`))
+			request.Header.Set("Content-Type", "application/json")
+			if tc.authority != "" {
+				request.Header.Set("Authorization", tc.authority)
+			}
+			response := httptest.NewRecorder()
+			handler.ServeHTTP(response, request)
+			gotAuthError := strings.Contains(response.Body.String(), "unauthorized")
+			if gotAuthError != tc.wantAuthError {
+				t.Fatalf("body=%s, wantAuthError=%v", response.Body.String(), tc.wantAuthError)
+			}
+		})
+	}
+}
+
 func TestLANListenerProtectsGraphQLAndServesManagerAndSignedPhotos(t *testing.T) {
 	const token = "test-token"
 	library, err := photos.NewLibrary(t.TempDir())
@@ -177,21 +209,28 @@ func TestLANListenerProtectsGraphQLAndServesManagerAndSignedPhotos(t *testing.T)
 		Resolver: &graph.Resolver{}, Token: token, Signer: signer,
 		Photos: library.FS(), Manager: fstest.MapFS{"index.html": {Data: []byte("manager")}},
 	})
+	// The gate is a GraphQL-level concern, not a transport-level one: a
+	// rejected operation comes back as a normal GraphQL error, the same
+	// convention as every other resolver failure.
 	for _, tc := range []struct {
-		name   string
-		header string
-		want   int
-	}{{"missing", "", http.StatusUnauthorized}, {"wrong", "Bearer wrong", http.StatusUnauthorized}, {"correct", "Bearer " + token, http.StatusOK}} {
+		name          string
+		header        string
+		wantAuthError bool
+	}{{"missing", "", true}, {"wrong", "Bearer wrong", true}, {"correct", "Bearer " + token, false}} {
 		t.Run(tc.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodPost, "/graphql", strings.NewReader(`{"query":"{ health { status } }"}`))
+			req := httptest.NewRequest(http.MethodPost, "/graphql", strings.NewReader(`{"query":"{ timer { title } }"}`))
 			req.Header.Set("Content-Type", "application/json")
 			if tc.header != "" {
 				req.Header.Set("Authorization", tc.header)
 			}
 			res := httptest.NewRecorder()
 			handler.ServeHTTP(res, req)
-			if res.Code != tc.want {
-				t.Fatalf("status=%d, want %d body=%s", res.Code, tc.want, res.Body.String())
+			if res.Code != http.StatusOK {
+				t.Fatalf("status=%d, want 200", res.Code)
+			}
+			gotAuthError := strings.Contains(res.Body.String(), "unauthorized")
+			if gotAuthError != tc.wantAuthError {
+				t.Fatalf("body=%s, wantAuthError=%v", res.Body.String(), tc.wantAuthError)
 			}
 		})
 	}
@@ -220,6 +259,75 @@ func TestLANListenerProtectsGraphQLAndServesManagerAndSignedPhotos(t *testing.T)
 		if res.Code != http.StatusNotFound {
 			t.Fatalf("invalid signed photo status=%d", res.Code)
 		}
+	}
+}
+
+func TestSetupLoginSessionCookieAndLogout(t *testing.T) {
+	db, err := store.Open(filepath.Join(t.TempDir(), "accounts.db"), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	accountsService, err := accounts.New(context.Background(), accounts.NewSQLiteRepository(db), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := server.NewLAN(server.Config{Resolver: &graph.Resolver{Accounts: accountsService}})
+
+	post := func(query string, cookies []*http.Cookie) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodPost, "/graphql", strings.NewReader(`{"query":`+strconv.Quote(query)+`}`))
+		req.Header.Set("Content-Type", "application/json")
+		for _, cookie := range cookies {
+			req.AddCookie(cookie)
+		}
+		res := httptest.NewRecorder()
+		handler.ServeHTTP(res, req)
+		return res
+	}
+
+	// An unauthenticated people query is rejected...
+	if res := post(`{ people { id } }`, nil); !strings.Contains(res.Body.String(), "unauthorized") {
+		t.Fatalf("unauthenticated people query: body=%s", res.Body.String())
+	}
+	// ...while session and health are public before login. Health reports
+	// first-run setup status.
+	statusRes := post(`{ session { user { username } } health { status } }`, nil)
+	if !strings.Contains(statusRes.Body.String(), `"session":null`) || !strings.Contains(statusRes.Body.String(), `"status":"SETUP_REQUIRED"`) {
+		t.Fatalf("health before setup: body=%s", statusRes.Body.String())
+	}
+
+	if res := post(`mutation { setup(code: "wrong-code", username: "kurt", password: "password123") { id } }`, nil); !strings.Contains(res.Body.String(), "invalid setup code") {
+		t.Fatalf("wrong setup code: body=%s", res.Body.String())
+	}
+
+	code := accountsService.SetupCode()
+	setupRes := post(`mutation { setup(code: "`+code+`", username: "kurt", password: "password123") { username role } }`, nil)
+	cookies := setupRes.Result().Cookies()
+	if len(cookies) != 1 || cookies[0].Name != auth.SessionCookieName || !cookies[0].HttpOnly {
+		t.Fatalf("setup should set an HttpOnly session cookie: cookies=%+v", cookies)
+	}
+	if !strings.Contains(setupRes.Body.String(), `"username":"kurt"`) {
+		t.Fatalf("setup response: body=%s", setupRes.Body.String())
+	}
+
+	// The cookie now authenticates a protected query.
+	if res := post(`{ people { id } }`, cookies); strings.Contains(res.Body.String(), "unauthorized") {
+		t.Fatalf("session-authenticated people query: body=%s", res.Body.String())
+	}
+
+	// session is itself public, so the gate never resolves a current user
+	// into its context - it has to check the cookie on its own.
+	if res := post(`{ session { user { username role } } health { status } }`, cookies); !strings.Contains(res.Body.String(), `"username":"kurt"`) || !strings.Contains(res.Body.String(), `"role":"ADMIN"`) || !strings.Contains(res.Body.String(), `"status":"OK"`) {
+		t.Fatalf("session query should resolve the logged-in user: body=%s", res.Body.String())
+	}
+
+	logoutRes := post(`mutation { logout }`, cookies)
+	cleared := logoutRes.Result().Cookies()
+	if len(cleared) != 1 || cleared[0].MaxAge >= 0 {
+		t.Fatalf("logout should clear the session cookie: cookies=%+v", cleared)
+	}
+	if res := post(`{ people { id } }`, cookies); !strings.Contains(res.Body.String(), "unauthorized") {
+		t.Fatalf("people query after logout: body=%s", res.Body.String())
 	}
 }
 

@@ -1,8 +1,6 @@
 package auth
 
 import (
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -41,26 +39,8 @@ func TestLoadHonorsEnvironment(t *testing.T) {
 	}
 }
 
-func TestMiddlewareAndPhotoSignature(t *testing.T) {
+func TestPhotoSignature(t *testing.T) {
 	const token = "test-token"
-	called := false
-	handler := RequireBearer(token, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		called = true
-		w.WriteHeader(http.StatusNoContent)
-	}))
-	for _, tc := range []struct {
-		header string
-		status int
-	}{{"", http.StatusUnauthorized}, {"Bearer bad", http.StatusUnauthorized}, {"Bearer " + token, http.StatusNoContent}} {
-		called = false
-		req := httptest.NewRequest(http.MethodGet, "/", nil)
-		req.Header.Set("Authorization", tc.header)
-		res := httptest.NewRecorder()
-		handler.ServeHTTP(res, req)
-		if res.Code != tc.status || called != (tc.status == http.StatusNoContent) {
-			t.Fatalf("header=%q status=%d called=%v", tc.header, res.Code, called)
-		}
-	}
 	signer := NewSigner(token)
 	exp := time.Now().Add(time.Hour).Unix()
 	sig := signer.Sign("family.jpg", exp)

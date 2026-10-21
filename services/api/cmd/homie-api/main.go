@@ -16,6 +16,7 @@ import (
 	_ "time/tzdata" // a minimal Raspberry Pi image may have no system zoneinfo
 
 	assets "github.com/kurtschwarz/homie/services/api"
+	"github.com/kurtschwarz/homie/services/api/internal/accounts"
 	"github.com/kurtschwarz/homie/services/api/internal/auth"
 	"github.com/kurtschwarz/homie/services/api/internal/events"
 	"github.com/kurtschwarz/homie/services/api/internal/events/caldav"
@@ -107,14 +108,28 @@ func main() {
 	localAddr := os.Getenv("HOMIE_LOCAL_ADDR")
 	var token string
 	var signer *auth.Signer
-	if localAddr != "" {
-		token, err = auth.Load(envOr("HOMIE_AUTH_TOKEN_PATH", auth.DefaultTokenPath))
+	var accountsService *accounts.Service
+	token, err = auth.Load(envOr("HOMIE_AUTH_TOKEN_PATH", auth.DefaultTokenPath))
+	if err != nil {
+		logger.Error("load API auth token", "error", err)
+		os.Exit(1)
+	}
+	logger.Info("API bearer token", "token", token)
+	signingSecret, err := auth.LoadSigningSecret(envOr("HOMIE_SIGNING_SECRET_PATH", auth.DefaultSigningSecretPath))
+	if err != nil {
+		logger.Error("load photo URL signing secret", "error", err)
+		os.Exit(1)
+	}
+	signer = auth.NewSigner(signingSecret)
+	if db != nil {
+		accountsService, err = accounts.New(context.Background(), accounts.NewSQLiteRepository(db), logger)
 		if err != nil {
-			logger.Error("load API auth token", "error", err)
+			logger.Error("configure user accounts", "error", err)
 			os.Exit(1)
 		}
-		signer = auth.NewSigner(token)
-		logger.Info("API bearer token", "token", token)
+		if code := accountsService.SetupCode(); code != "" {
+			logger.Info("user setup code", "code", code)
+		}
 	}
 
 	serverConfig := server.Config{
@@ -126,6 +141,7 @@ func main() {
 			PhotoRotation: photoRotation,
 			Events:        eventsService,
 			PhotoSigner:   signer,
+			Accounts:      accountsService,
 		},
 		Display:    display,
 		Manager:    manager,

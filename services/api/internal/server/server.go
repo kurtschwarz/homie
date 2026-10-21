@@ -3,11 +3,15 @@
 package server
 
 import (
+	"context"
+	"crypto/subtle"
 	"io/fs"
+	"net"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/transport"
 	"github.com/99designs/gqlgen/graphql/playground"
@@ -26,15 +30,18 @@ type Config struct {
 	Signer     *auth.Signer
 }
 
+// New serves everything on one listener and always protects GraphQL.
 func New(cfg Config) http.Handler {
-	return newHandler(cfg, false, true)
+	return newHandler(cfg, true, true)
 }
 
 // NewLAN serves only network-facing routes. GraphQL requires a bearer token;
 // photos use expiring signed URLs so native image loaders need no headers.
 func NewLAN(cfg Config) http.Handler { return newHandler(cfg, true, false) }
 
-// NewLocal serves the kiosk and manager UI on a loopback-only listener.
+// NewLocal serves the kiosk on a loopback-only listener, with no
+// credential required: the manager is network-facing and lives on NewLAN
+// instead, so this never serves an unauthenticated admin UI.
 func NewLocal(cfg Config) http.Handler { return newHandler(cfg, false, true) }
 
 func newHandler(cfg Config, protectGraphQL, includeLocalRoutes bool) http.Handler {
@@ -42,13 +49,17 @@ func newHandler(cfg Config, protectGraphQL, includeLocalRoutes bool) http.Handle
 
 	gqlSrv := handler.New(graph.NewExecutableSchema(graph.Config{Resolvers: cfg.Resolver}))
 	gqlSrv.AddTransport(transport.Options{})
-	gqlSrv.AddTransport(transport.GET{})
 	gqlSrv.AddTransport(transport.POST{})
 	gqlSrv.AddTransport(transport.MultipartForm{MaxMemory: 10 << 20, MaxUploadSize: 20 << 20})
-	graphqlHandler := http.Handler(gqlSrv)
 	if protectGraphQL {
-		graphqlHandler = auth.RequireBearer(cfg.Token, graphqlHandler)
+		// The whole security boundary: every root field an operation
+		// selects must be public, or the caller must prove a credential.
+		// GET is deliberately not registered above - with one endpoint for
+		// everything, a SameSite=Lax cookie riding a cross-site top-level
+		// GET navigation would be the only CSRF shape left.
+		gqlSrv.AroundOperations(authGate(cfg.Resolver, cfg.Token))
 	}
+	graphqlHandler := withRequestContext(http.Handler(gqlSrv))
 	mux.Handle("/graphql", graphqlHandler)
 
 	if cfg.Playground && includeLocalRoutes {
@@ -65,8 +76,11 @@ func newHandler(cfg Config, protectGraphQL, includeLocalRoutes bool) http.Handle
 	}
 
 	// Strip "/manage" and not "/manage/": the handlers below expect a
-	// rooted path, and "/manage/" alone strips down to "".
-	if cfg.Manager != nil {
+	// rooted path, and "/manage/" alone strips down to "". The manager is
+	// reached from the network, never from the kiosk, so it is only
+	// registered on the LAN listener - serving it on loopback too would
+	// leave an unauthenticated admin UI on a port that needs no auth at all.
+	if cfg.Manager != nil && protectGraphQL {
 		mux.Handle("/manage/", http.StripPrefix("/manage", spaHandler(cfg.Manager)))
 	}
 	mux.Handle("/photos/", http.StripPrefix("/photos/", photoHandler(cfg.Photos, cfg.Signer)))
@@ -75,6 +89,62 @@ func newHandler(cfg Config, protectGraphQL, includeLocalRoutes bool) http.Handle
 	}
 
 	return mux
+}
+
+// withRequestContext makes the client's credentials and address available
+// to resolvers and the operation gate, and gives resolvers a narrow way to
+// set or clear the session cookie - gqlgen does not hand them the response.
+func withRequestContext(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var bearer string
+		if header := r.Header.Get("Authorization"); strings.HasPrefix(header, "Bearer ") {
+			bearer = strings.TrimSpace(strings.TrimPrefix(header, "Bearer "))
+		}
+		var sessionToken string
+		if cookie, err := r.Cookie(auth.SessionCookieName); err == nil {
+			sessionToken = cookie.Value
+		}
+		ctx := auth.WithRequestInfo(r.Context(), auth.RequestInfo{
+			BearerToken:  bearer,
+			SessionToken: sessionToken,
+			ClientIP:     clientIP(r),
+			UserAgent:    r.UserAgent(),
+		})
+		ctx = auth.WithSessionCookies(ctx, w, r.TLS != nil)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func clientIP(r *http.Request) string {
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		return host
+	}
+	return r.RemoteAddr
+}
+
+// authGate is gqlgen's one security boundary: public operations pass
+// through untouched, and everything else needs either the shared bearer
+// token (the manager, the iOS app and photo-sync all still carry it) or a
+// valid session cookie, which it resolves into the current user.
+func authGate(resolver *graph.Resolver, token string) graphql.OperationMiddleware {
+	return func(ctx context.Context, next graphql.OperationHandler) graphql.ResponseHandler {
+		oc := graphql.GetOperationContext(ctx)
+		if graph.IsPublicOperation(oc.Operation) {
+			return next(ctx)
+		}
+		if bearer := auth.BearerTokenFromContext(ctx); token != "" && len(bearer) == len(token) &&
+			subtle.ConstantTimeCompare([]byte(bearer), []byte(token)) == 1 {
+			return next(ctx)
+		}
+		if resolver != nil && resolver.Accounts != nil {
+			if user, session, err := resolver.Accounts.CurrentUser(ctx, auth.SessionTokenFromContext(ctx)); err == nil {
+				return next(auth.WithCurrentUser(ctx, auth.CurrentUser{UserID: user.ID, SessionID: session.ID}))
+			}
+		}
+		return func(ctx context.Context) *graphql.Response {
+			return graphql.ErrorResponse(ctx, "unauthorized")
+		}
+	}
 }
 
 // photoHandler serves stored photo files, rejecting anything that isn't a

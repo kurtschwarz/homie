@@ -6,6 +6,10 @@
       "env": {
         "MOBILEMCP_DISABLE_TELEMETRY": "1"
       }
+    },
+    "firefox-devtools": {
+      "command": "npx",
+      "args": ["-y", "@mozilla/firefox-devtools-mcp@latest", "--connect-existing", "--marionette-port", "2828", "--tool-preset", "developer"]
     }
   }
 }

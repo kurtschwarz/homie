@@ -4,9 +4,8 @@ ios_simulator_id := env_var_or_default("IOS_SIMULATOR_ID", "6106C956-E47A-4099-8
 ios_derived_data := "/tmp/homie-ios-derived-data"
 ios_app := ios_derived_data + "/Build/Products/Debug-iphonesimulator/Homie.app"
 
-# Run the API (with hot reload) and both Vite dev servers in Docker.
-dev:
-    docker compose up --build
+# Run the API and both Vite dev servers, with a Firefox window for the local UIs.
+mod dev 'scripts/dev/justfile'
 
 # Build the Photo Sync macOS test app.
 photo-sync:

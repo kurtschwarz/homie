@@ -1,0 +1,77 @@
+# Recipes in a module run in the module's own directory, but every path here is
+# written against the repo root, so point the working directory back at it.
+set working-directory := "../.."
+
+firefox_bin := env_var_or_default("FIREFOX_BIN", "/Applications/Firefox Developer Edition.app/Contents/MacOS/firefox")
+firefox_profile := ".scratch/firefox-dev-profile"
+
+# The window in CSS pixels: the 1920x1080 kiosk panel the display is laid out
+# for (apps/display/src/index.css), plus the tab and nav bars on top of it.
+firefox_css_width := "1920"
+firefox_css_height := "1165"
+
+# How many device pixels Firefox spends per CSS pixel. Below the screen's own
+# scale (2 on a Retina Mac) the whole panel fits on a smaller screen.
+# 1.875 suits a 1800x1169 point display; lower it for a smaller screen.
+firefox_dppx := env_var_or_default("FIREFOX_DPPX", "1.875")
+
+# Rewritten on every start, because user.js is re-read then.
+firefox_prefs := '''
+user_pref("browser.startup.page", 1);
+user_pref("browser.startup.homepage", "http://localhost:5173|http://localhost:5174/manage/");
+user_pref("browser.shell.checkDefaultBrowser", false);
+user_pref("browser.aboutwelcome.enabled", false);
+user_pref("toolkit.telemetry.enabled", false);
+user_pref("layout.css.devPixelsPerPx", "''' + firefox_dppx + '''");
+'''
+
+# Firefox has no window-size flag, so the geometry is seeded into its store.
+# Seeded once only: Firefox owns this file afterwards and rewrites it as the
+# window is moved or resized.
+firefox_xulstore := '''
+{
+  "chrome://browser/content/browser.xhtml": {
+    "main-window": {
+      "screenX": "0",
+      "screenY": "0",
+      "width": "''' + firefox_css_width + '''",
+      "height": "''' + firefox_css_height + '''",
+      "sizemode": "normal"
+    }
+  }
+}
+'''
+
+# Run the API and both Vite dev servers, with a Firefox window for the local UIs.
+dev:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    profile="{{firefox_profile}}"
+    mkdir -p "$profile"
+    printf '%s' '{{firefox_prefs}}' > "$profile/user.js"
+    if [ ! -f "$profile/xulstore.json" ]; then
+        printf '%s' '{{firefox_xulstore}}' > "$profile/xulstore.json"
+    fi
+    test -x "{{firefox_bin}}" || { echo "Firefox Developer Edition not found at {{firefox_bin}}" >&2; exit 1; }
+    # Job control gives the browser its own process group, so the Ctrl+C that
+    # stops compose is not also delivered to Firefox. Without it the parent dies
+    # instantly and its orphaned content processes print "Exiting due to channel
+    # error" over the returned prompt. Cleanup signals the whole group instead of
+    # just the parent, and waits, so nothing outlives the recipe. The log keeps
+    # browser chatter off the terminal compose is using.
+    set -m
+    firefox_pid=""
+    cleanup() {
+        trap - EXIT INT TERM
+        if [ -n "$firefox_pid" ]; then
+            kill -TERM "-$firefox_pid" 2>/dev/null || true
+            wait "$firefox_pid" 2>/dev/null || true
+        fi
+    }
+    trap cleanup EXIT INT TERM
+    (
+        until curl -fsS http://localhost:5173/ >/dev/null 2>&1; do sleep 1; done
+        exec "{{firefox_bin}}" --profile "$profile" --new-instance --marionette --remote-debugging-port 9222
+    ) >"$profile/firefox.log" 2>&1 &
+    firefox_pid=$!
+    docker compose up --build

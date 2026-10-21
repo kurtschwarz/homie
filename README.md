@@ -70,12 +70,15 @@ apps — Xcode.
 just dev
 ```
 
-That brings up the API and both Vite dev servers:
+That brings up the API and both Vite dev servers, then opens Firefox Developer
+Edition with the display and manager in separate tabs. The Firefox DevTools MCP
+connects to that browser for local UI verification. Its dedicated profile and
+1920x1080 CSS viewport settings live under `.scratch/firefox-dev-profile`.
 
 | | URL |
 |---|---|
 | Display | http://localhost:5173 |
-| Manager | http://localhost:5174 |
+| Manager | http://localhost:5174/manage/ |
 | GraphQL | http://localhost:3030/graphql |
 | Playground | http://localhost:3030/playground |
 

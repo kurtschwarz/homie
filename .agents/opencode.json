@@ -1,12 +1,17 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "mcp": {
-    "mobile-mcp": {
-      "type": "local",
-      "command": ["npx", "-y", "@mobilenext/mobile-mcp@latest"],
-      "enabled": true,
-      "environment": {
-        "MOBILEMCP_DISABLE_TELEMETRY": "1"
+    "servers": {
+      "mobile-mcp": {
+        "type": "local",
+        "command": ["npx", "-y", "@mobilenext/mobile-mcp@latest"],
+        "environment": {
+          "MOBILEMCP_DISABLE_TELEMETRY": "1"
+        }
+      },
+      "firefox-devtools": {
+        "type": "local",
+        "command": ["npx", "-y", "@mozilla/firefox-devtools-mcp@latest", "--connect-existing", "--marionette-port", "2828", "--tool-preset", "developer"]
       }
     }
   }

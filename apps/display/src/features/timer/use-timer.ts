@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { graphql } from "../../lib/graphql";
 
 export type ActiveTimer = {
   title: string;
@@ -11,24 +12,12 @@ export type ActiveTimer = {
 
 const TIMER_QUERY = `query ActiveTimer { timer { title emoji durationSeconds remainingSeconds endsAt paused } }`;
 
-async function request<T>(query: string): Promise<T> {
-  const response = await fetch("/graphql", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query }),
-  });
-  if (!response.ok) throw new Error(`Timer request failed: ${response.status}`);
-  const body = (await response.json()) as { data?: T; errors?: unknown[] };
-  if (body.errors?.length || !body.data) throw new Error("Timer request failed");
-  return body.data;
-}
-
 export function useTimer() {
   const [timer, setTimer] = useState<ActiveTimer | null>(null);
 
   const refresh = useCallback(async () => {
     try {
-      const data = await request<{ timer: ActiveTimer | null }>(TIMER_QUERY);
+      const data = await graphql<{ timer: ActiveTimer | null }>(TIMER_QUERY);
       setTimer(data.timer);
     } catch {
       // Keep the last known timer during a temporary network failure.
@@ -42,7 +31,7 @@ export function useTimer() {
   }, [refresh]);
 
   const run = useCallback(async (mutation: string) => {
-    await request(mutation);
+    await graphql(mutation);
     await refresh();
   }, [refresh]);
 

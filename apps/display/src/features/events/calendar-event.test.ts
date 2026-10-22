@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { splitEvents, toRows, type CalendarEvent } from "./events";
+import { splitEvents, toRows, type CalendarEvent } from "./calendar-event";
 
 const NOW = new Date("2026-10-18T13:00:00");
 

@@ -6,18 +6,18 @@ import { HomeEvents, HomeLayout } from "@homie/ui/components/layout";
 import { NextUp } from "@homie/ui/components/next-up";
 import { PhotoPanel } from "@homie/ui/components/photo-panel";
 import { WeatherGlance } from "@homie/ui/components/weather-glance";
-import type { WeatherCondition } from "@homie/ui/components/weather-icon";
 import { formatShortDate } from "@homie/ui/lib/time";
 import { useNow } from "@homie/ui/hooks/use-now";
-import { useWeather } from "./useWeather";
-import { usePhotos } from "./usePhotos";
-import { usePhotoShowing } from "./usePhotoShowing";
-import { useEvents } from "./useEvents";
-import { splitEvents, toRows } from "./events";
-import { useTimer } from "./useTimer";
-import { TimerScreen } from "./TimerScreen";
-import { useSetup } from "./useSetup";
-import { SetupScreen } from "./SetupScreen";
+import { useWeather } from "./features/weather/use-weather";
+import { weatherAriaLabel, weatherIconCondition } from "./features/weather/weather-labels";
+import { usePhotos } from "./features/photos/use-photos";
+import { usePhotoShowing } from "./features/photos/use-photo-showing";
+import { useEvents } from "./features/events/use-events";
+import { splitEvents, toRows } from "./features/events/calendar-event";
+import { useTimer } from "./features/timer/use-timer";
+import { TimerPage } from "./features/timer/timer-page";
+import { useSetup } from "./features/setup/use-setup";
+import { SetupPage } from "./features/setup/setup-page";
 
 const SWIPE_AREA_ROWS = 4;
 
@@ -36,8 +36,8 @@ export function App() {
   const { headline, upcoming } = splitEvents(allEvents, now);
   const rows = toRows(upcoming, now);
 
-  if (setup.kind === "setup") return <SetupScreen code={setup.code} />;
-  if (timer.timer) return <TimerScreen timer={timer.timer} addMinute={timer.addMinute} togglePause={timer.togglePause} cancel={timer.cancel} />;
+  if (setup.kind === "setup") return <SetupPage code={setup.code} />;
+  if (timer.timer) return <TimerPage timer={timer.timer} addMinute={timer.addMinute} togglePause={timer.togglePause} cancel={timer.cancel} />;
 
   return (
     <HomeLayout>
@@ -94,29 +94,4 @@ export function App() {
       )}
     </HomeLayout>
   );
-}
-
-function weatherAriaLabel(conditionCode: string, temperature: number, fetchedAt: number, stale: boolean): string {
-  const ageSeconds = Math.max(0, Math.floor(Date.now() / 1000) - fetchedAt);
-  const age = ageSeconds < 60
-    ? "less than a minute ago"
-    : ageSeconds < 3600
-      ? `${Math.floor(ageSeconds / 60)} minutes ago`
-      : `${Math.floor(ageSeconds / 3600)} hours ago`;
-  return `${conditionCode}, ${temperature} degrees, updated ${age}${stale ? ", stale weather data" : ""}`;
-}
-
-function weatherIconCondition(condition: "SUN" | "CLOUD_SUN" | "CLOUD" | "RAIN" | "MOON"): WeatherCondition {
-  switch (condition) {
-    case "SUN":
-      return "sun";
-    case "CLOUD_SUN":
-      return "cloud-sun";
-    case "CLOUD":
-      return "cloud";
-    case "RAIN":
-      return "rain";
-    case "MOON":
-      return "moon";
-  }
 }

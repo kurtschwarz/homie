@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { graphql } from "../../lib/graphql";
 
 type Weather = {
   condition: "SUN" | "CLOUD_SUN" | "CLOUD" | "RAIN" | "MOON";
@@ -36,18 +37,9 @@ export function useWeather(): WeatherState {
     async function fetchWeather() {
       let retryDelay = 10 * 60_000;
       try {
-        const response = await fetch("/graphql", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query: QUERY }),
-        });
-        if (!response.ok) throw new Error(`Weather request failed: ${response.status}`);
-        const body = (await response.json()) as {
-          data?: { weather?: Weather };
-          errors?: unknown[];
-        };
-        if (body.errors?.length || !body.data?.weather) throw new Error("Weather query failed");
-        if (!cancelled) setState({ kind: "ready", weather: body.data.weather });
+        const data = await graphql<{ weather?: Weather }>(QUERY);
+        if (!data.weather) throw new Error("Weather query failed");
+        if (!cancelled) setState({ kind: "ready", weather: data.weather });
       } catch {
         retryDelay = 30_000;
         if (!cancelled) setState({ kind: "error" });

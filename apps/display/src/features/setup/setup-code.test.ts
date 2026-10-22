@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatSetupCode, setupCodeCharacters } from "./setup";
+import { formatSetupCode, setupCodeCharacters } from "./setup-code";
 
 describe("setup code presentation", () => {
   it("splits and displays the code in two groups", () => {

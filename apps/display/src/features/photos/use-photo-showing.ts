@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { graphql } from "../../lib/graphql";
 
 export type Photo = {
   id: string;
@@ -24,20 +25,6 @@ export type PhotoShowingState = { current: PhotoShowing | null; next: PhotoShowi
 const ROTATION_QUERY = `query PhotoShowing { photoShowing { current { id photo { id url width height takenAt place focus { x y width height } } startedAt endsAt source } next { id photo { id url width height takenAt place focus { x y width height } } startedAt endsAt source } } }`;
 const ROTATION_MUTATION = (source: "SCHEDULE" | "TAP") => `mutation TrackPhotoShowing { trackPhotoShowing(source: ${source}) { current { id photo { id url width height takenAt place focus { x y width height } } startedAt endsAt source } next { id photo { id url width height takenAt place focus { x y width height } } startedAt endsAt source } } }`;
 
-type Response<T> = { data?: T; errors?: unknown[] };
-
-async function request<T>(query: string): Promise<T> {
-  const response = await fetch("/graphql", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query }),
-  });
-  if (!response.ok) throw new Error(`Photo rotation request failed: ${response.status}`);
-  const body = (await response.json()) as Response<T>;
-  if (body.errors?.length || !body.data) throw new Error("Photo rotation request failed");
-  return body.data;
-}
-
 /** Polls the API-owned slideshow timeline and advances expired slots. */
 export function usePhotoShowing() {
   const [showing, setShowing] = useState<PhotoShowingState | null>(null);
@@ -47,7 +34,7 @@ export function usePhotoShowing() {
     if (advancing.current) return;
     advancing.current = true;
     try {
-      const { trackPhotoShowing: result } = await request<{ trackPhotoShowing: PhotoShowingState }>(ROTATION_MUTATION(source));
+      const { trackPhotoShowing: result } = await graphql<{ trackPhotoShowing: PhotoShowingState }>(ROTATION_MUTATION(source));
       setShowing(result);
     } catch {
       // The next poll retries if this slot expired; taps remain responsive to API recovery.
@@ -60,7 +47,7 @@ export function usePhotoShowing() {
     if (refreshInFlight.current) return;
     refreshInFlight.current = true;
     try {
-      const { photoShowing: result } = await request<{ photoShowing: PhotoShowingState }>(ROTATION_QUERY);
+      const { photoShowing: result } = await graphql<{ photoShowing: PhotoShowingState }>(ROTATION_QUERY);
       setShowing(result);
       if (result.current && result.next && result.current.endsAt <= Math.floor(Date.now() / 1000)) {
         await advance("SCHEDULE");

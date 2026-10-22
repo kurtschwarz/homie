@@ -1,9 +1,9 @@
 import { Globe2 } from "lucide-react";
 import { HomieAnimation } from "@homie/ui/components/homie-animation";
 import homieAnimationUrl from "@homie/ui/assets/homie-confetti.lottie?url";
-import { setupCodeCharacters } from "./setup";
+import { setupCodeCharacters } from "./setup-code";
 
-export function SetupScreen({ code }: { code: string }) {
+export function SetupPage({ code }: { code: string }) {
   const characters = setupCodeCharacters(code);
 
   return (

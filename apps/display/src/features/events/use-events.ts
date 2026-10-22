@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Swatch } from "@homie/ui/lib/people";
-import type { CalendarEvent } from "./events";
+import { graphql } from "../../lib/graphql";
+import type { CalendarEvent } from "./calendar-event";
 
 type EventRecord = {
   id: string;
@@ -59,18 +60,9 @@ export function useEvents(): EventsState {
     async function fetchEvents() {
       let retryDelay = 5 * 60_000;
       try {
-        const response = await fetch("/graphql", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query: QUERY }),
-        });
-        if (!response.ok) throw new Error(`Events request failed: ${response.status}`);
-        const body = (await response.json()) as {
-          data?: { events?: EventRecord[] };
-          errors?: unknown[];
-        };
-        if (body.errors?.length || !body.data?.events) throw new Error("Events query failed");
-        const events = body.data.events.map(toCalendarEvent);
+        const data = await graphql<{ events?: EventRecord[] }>(QUERY);
+        if (!data.events) throw new Error("Events query failed");
+        const events = data.events.map(toCalendarEvent);
         if (!cancelled) setState({ kind: "ready", events });
       } catch {
         retryDelay = 30_000;

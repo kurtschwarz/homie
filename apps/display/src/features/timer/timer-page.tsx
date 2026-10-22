@@ -1,4 +1,4 @@
-import type { ActiveTimer } from "./useTimer";
+import type { ActiveTimer } from "./use-timer";
 
 type Props = {
   timer: ActiveTimer;
@@ -7,7 +7,7 @@ type Props = {
   cancel: () => Promise<void>;
 };
 
-export function TimerScreen({ timer, addMinute, togglePause, cancel }: Props) {
+export function TimerPage({ timer, addMinute, togglePause, cancel }: Props) {
   const remaining = timer.paused
     ? timer.remainingSeconds
     : Math.max(0, timer.endsAt - Math.floor(Date.now() / 1000));

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { formatSetupCode } from "./setup";
+import { graphql } from "../../lib/graphql";
+import { formatSetupCode } from "./setup-code";
 
 type SetupState =
   | { kind: "loading" }
@@ -27,19 +28,13 @@ export function useSetup(): SetupState {
     async function poll() {
       let delay = REFRESH_MS;
       try {
-        const response = await fetch("/graphql", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query: QUERY }),
-        });
-        if (!response.ok) throw new Error(`Setup status request failed: ${response.status}`);
-        const body = (await response.json()) as { data?: SetupResponse; errors?: unknown[] };
-        if (body.errors?.length || !body.data?.health) throw new Error("Setup status query failed");
+        const data = await graphql<SetupResponse>(QUERY);
+        if (!data.health) throw new Error("Setup status query failed");
 
         if (!cancelled) {
-          if (body.data.health.status === "SETUP_REQUIRED" && body.data.setupCode) {
-            setState({ kind: "setup", code: formatSetupCode(body.data.setupCode) });
-          } else if (body.data.health.status === "OK") {
+          if (data.health.status === "SETUP_REQUIRED" && data.setupCode) {
+            setState({ kind: "setup", code: formatSetupCode(data.setupCode) });
+          } else if (data.health.status === "OK") {
             setState({ kind: "ready" });
           }
         }

@@ -1,5 +1,12 @@
 set dotenv-load := true
 
+# Format and lint the TypeScript, CSS, and JSON workspace.
+format *paths:
+    pnpm exec biome check --write --linter-enabled=false {{paths}}
+
+lint *paths:
+    pnpm exec biome lint {{paths}}
+
 pi_host := env_var_or_default("PI_HOST","homie.local")
 pi_conf := "/etc/homie"
 

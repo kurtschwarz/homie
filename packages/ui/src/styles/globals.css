@@ -12,7 +12,18 @@
 @source "../**/*.{ts,tsx}";
 
 /* dark: covers Evening and Night; night: is Night only. */
-@custom-variant dark (&:where(.dark, .dark *, .night, .night *, [data-theme="dark"], [data-theme="dark"] *, [data-theme="night"], [data-theme="night"] *));
+@custom-variant dark (
+  &:where(
+    .dark,
+    .dark *,
+    .night,
+    .night *,
+    [data-theme="dark"],
+    [data-theme="dark"] *,
+    [data-theme="night"],
+    [data-theme="night"] *
+  )
+);
 @custom-variant night (&:where(.night, .night *, [data-theme="night"], [data-theme="night"] *));
 
 /* shadcn semantic colours, mapped onto Homie in tokens.css. */

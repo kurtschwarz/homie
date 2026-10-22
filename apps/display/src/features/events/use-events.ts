@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
 import type { Swatch } from "@homie/ui/lib/people";
+import { useEffect, useState } from "react";
 import { graphql } from "../../lib/graphql";
 import type { CalendarEvent } from "./calendar-event";
 
@@ -40,7 +40,12 @@ function toCalendarEvent(record: EventRecord): CalendarEvent {
     start: new Date(record.start * 1000),
     end: new Date(record.end * 1000),
     allDay: record.allDay,
-    people: record.people.map((p) => ({ id: p.id, name: p.name, emoji: p.emoji, swatch: p.swatch as Swatch })),
+    people: record.people.map((p) => ({
+      id: p.id,
+      name: p.name,
+      emoji: p.emoji,
+      swatch: p.swatch as Swatch,
+    })),
   };
 }
 
@@ -67,7 +72,9 @@ export function useEvents(): EventsState {
       } catch {
         retryDelay = 30_000;
         if (!cancelled) {
-          setState((prev) => (prev.kind === "ready" && prev.events.length > 0 ? prev : { kind: "error" }));
+          setState((prev) =>
+            prev.kind === "ready" && prev.events.length > 0 ? prev : { kind: "error" },
+          );
         }
       } finally {
         if (!cancelled) timeout = setTimeout(fetchEvents, retryDelay);

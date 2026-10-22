@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
 import type { Swatch } from "@homie/ui/lib/people";
+import { useCallback, useEffect, useState } from "react";
 import { graphql } from "./graphql";
 
 export type ManagerPerson = {
@@ -38,7 +38,13 @@ const SETTINGS_QUERY = `
   }
 `;
 
-export type PersonInput = { id?: string; name: string; emoji: string; swatch: string; isFamily: boolean };
+export type PersonInput = {
+  id?: string;
+  name: string;
+  emoji: string;
+  swatch: string;
+  isFamily: boolean;
+};
 export type TagMappingInput = { tag: string; kind: TagKind; personId?: string };
 
 /**
@@ -66,14 +72,20 @@ export function useSettings() {
 
   const mutate = useCallback(
     async <T>(query: string, variables: Record<string, unknown>): Promise<T | undefined> => {
-      setState((prev) => (prev.kind === "ready" ? { ...prev, saving: true, error: undefined } : prev));
+      setState((prev) =>
+        prev.kind === "ready" ? { ...prev, saving: true, error: undefined } : prev,
+      );
       try {
         const data = await graphql<T>(query, variables);
         await load();
         return data;
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        setState((prev) => (prev.kind === "ready" ? { ...prev, saving: false, error: message } : { kind: "error", message }));
+        setState((prev) =>
+          prev.kind === "ready"
+            ? { ...prev, saving: false, error: message }
+            : { kind: "error", message },
+        );
         return undefined;
       }
     },
@@ -82,10 +94,9 @@ export function useSettings() {
 
   const savePerson = useCallback(
     (input: PersonInput) =>
-      mutate(
-        `mutation SavePerson($input: PersonInput!) { savePerson(input: $input) { id } }`,
-        { input },
-      ),
+      mutate(`mutation SavePerson($input: PersonInput!) { savePerson(input: $input) { id } }`, {
+        input,
+      }),
     [mutate],
   );
 
@@ -104,7 +115,8 @@ export function useSettings() {
   );
 
   const deleteTagMapping = useCallback(
-    (tag: string) => mutate(`mutation DeleteTagMapping($tag: String!) { deleteTagMapping(tag: $tag) }`, { tag }),
+    (tag: string) =>
+      mutate(`mutation DeleteTagMapping($tag: String!) { deleteTagMapping(tag: $tag) }`, { tag }),
     [mutate],
   );
 

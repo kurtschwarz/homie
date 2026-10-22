@@ -30,15 +30,21 @@ export function useTimer() {
     return () => window.clearInterval(interval);
   }, [refresh]);
 
-  const run = useCallback(async (mutation: string) => {
-    await graphql(mutation);
-    await refresh();
-  }, [refresh]);
+  const run = useCallback(
+    async (mutation: string) => {
+      await graphql(mutation);
+      await refresh();
+    },
+    [refresh],
+  );
 
   return {
     timer,
     addMinute: () => run("mutation { addTimerMinute { title } }"),
-    togglePause: () => run(timer?.paused ? "mutation { resumeTimer { title } }" : "mutation { pauseTimer { title } }"),
-    cancel: () => run("mutation { cancelTimer }")
+    togglePause: () =>
+      run(
+        timer?.paused ? "mutation { resumeTimer { title } }" : "mutation { pauseTimer { title } }",
+      ),
+    cancel: () => run("mutation { cancelTimer }"),
   };
 }

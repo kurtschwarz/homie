@@ -40,7 +40,8 @@ export function useSetup(): SetupState {
         }
       } catch {
         delay = RETRY_MS;
-        if (!cancelled) setState((previous) => previous.kind === "setup" ? previous : { kind: "error" });
+        if (!cancelled)
+          setState((previous) => (previous.kind === "setup" ? previous : { kind: "error" }));
       } finally {
         if (!cancelled) timeout = setTimeout(poll, delay);
       }

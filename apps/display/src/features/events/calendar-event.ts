@@ -1,5 +1,5 @@
-import { dayLabel, formatRange, formatTime, until } from "@homie/ui/lib/time";
 import type { Person } from "@homie/ui/lib/people";
+import { dayLabel, formatRange, formatTime, until } from "@homie/ui/lib/time";
 
 export type CalendarEvent = {
   id: string;
@@ -22,7 +22,10 @@ export type Headline = {
  * Only timed events are headline candidates: an all-day event as the 112px
  * hero would be wrong, per the prototype.
  */
-export function splitEvents(events: CalendarEvent[], now: Date): { headline?: Headline; upcoming: CalendarEvent[] } {
+export function splitEvents(
+  events: CalendarEvent[],
+  now: Date,
+): { headline?: Headline; upcoming: CalendarEvent[] } {
   const candidates = events.filter((e) => !e.allDay && e.end > now);
   const live = candidates.find((e) => e.start <= now);
   const headlineEvent = live ?? candidates.find((e) => e.start > now);
@@ -35,7 +38,9 @@ export function splitEvents(events: CalendarEvent[], now: Date): { headline?: He
     ? `Now · until ${formatTime(headlineEvent.end)}`
     : `Next · ${isToday(headlineEvent.start, now) ? until(headlineEvent.start.getTime() - now.getTime()) : dayLabel(headlineEvent.start, now)}`;
 
-  const detail = [formatRange(headlineEvent.start, headlineEvent.end), headlineEvent.location].filter(Boolean).join(" · ");
+  const detail = [formatRange(headlineEvent.start, headlineEvent.end), headlineEvent.location]
+    .filter(Boolean)
+    .join(" · ");
 
   return {
     headline: { event: headlineEvent, label, detail },
@@ -63,5 +68,9 @@ export function toRows(events: CalendarEvent[], now: Date): EventRowData[] {
 }
 
 function isToday(d: Date, now: Date) {
-  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  );
 }

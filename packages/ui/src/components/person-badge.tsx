@@ -1,15 +1,16 @@
-import * as React from "react"
+import type * as React from "react";
 
-import { badgeFor, varsFor, type Person, type Swatch } from "../lib/people"
-import { cn } from "../lib/utils"
+import { badgeFor, type Person, type Swatch, varsFor } from "../lib/people";
+import { cn } from "../lib/utils";
 
 const SIZES = {
   lg: "size-hm-badge-lg text-[length:calc(var(--hm-badge-lg)*0.58)]",
   md: "size-hm-badge text-[length:calc(var(--hm-badge)*0.56)]",
   sm: "size-hm-badge-sm text-[length:calc(var(--hm-badge-sm)*0.55)] shadow-[inset_0_0_0_max(1px,calc(0.125rem*var(--hm-density)))_var(--p)]",
   chip: "size-hm-36 text-[length:calc(1.25rem*var(--hm-density))]",
-  legend: "size-hm-40 text-[length:calc(1.375rem*var(--hm-density))] shadow-[inset_0_0_0_calc(0.1875rem*var(--hm-density))_var(--p)]",
-}
+  legend:
+    "size-hm-40 text-[length:calc(1.375rem*var(--hm-density))] shadow-[inset_0_0_0_calc(0.1875rem*var(--hm-density))_var(--p)]",
+};
 
 /**
  * Round emoji badge in a person's colour. Colour always travels with the emoji and the name (the title),
@@ -39,22 +40,36 @@ export function PersonBadge({
     >
       {badgeFor(person)}
     </span>
-  )
+  );
 }
 
 /** A row of badges for an event that is for several people. */
-export function PersonBadges({ people, size = "md", ring, className }: { people: Person[]; size?: keyof typeof SIZES; ring?: boolean; className?: string }) {
+export function PersonBadges({
+  people,
+  size = "md",
+  ring,
+  className,
+}: {
+  people: Person[];
+  size?: keyof typeof SIZES;
+  ring?: boolean;
+  className?: string;
+}) {
   return (
     <span className={cn("flex flex-none", size === "sm" ? "gap-hm-4" : "gap-hm-6", className)}>
       {people.map((p) => (
         <PersonBadge key={p.id} person={p} size={size} ring={ring} />
       ))}
     </span>
-  )
+  );
 }
 
 /** Who's-who pill for the Week screen: badge plus name on the person's tint. */
-export function PersonLegend({ person, className, ...props }: React.ComponentProps<"span"> & { person: Person }) {
+export function PersonLegend({
+  person,
+  className,
+  ...props
+}: React.ComponentProps<"span"> & { person: Person }) {
   return (
     <span
       data-slot="person-legend"
@@ -68,7 +83,7 @@ export function PersonLegend({ person, className, ...props }: React.ComponentPro
       <PersonBadge person={person} size="legend" title={undefined} aria-hidden />
       {person.name}
     </span>
-  )
+  );
 }
 
-export type { Person, Swatch }
+export type { Person, Swatch };

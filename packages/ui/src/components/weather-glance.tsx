@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import { Button as BaseButton } from "@base-ui/react/button"
+import { Button as BaseButton } from "@base-ui/react/button";
 
-import { cn } from "../lib/utils"
-import { CONDITION_LABEL, WeatherIcon, type WeatherCondition } from "./weather-icon"
+import { cn } from "../lib/utils";
+import { CONDITION_LABEL, type WeatherCondition, WeatherIcon } from "./weather-icon";
 
 /**
  * Tappable icon and temperature in the home header that opens the Weather screen.
@@ -31,5 +31,5 @@ export function WeatherGlance({
       <WeatherIcon condition={condition} className="size-[5.5rem] shrink-0 text-hm-ink-2" />
       <span className="text-hm-clock">{temperature}°</span>
     </BaseButton>
-  )
+  );
 }

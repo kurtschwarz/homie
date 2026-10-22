@@ -11,11 +11,14 @@ import { ErrorMessage } from "./error-message";
 export function SettingsGate({ children }: { children: (settings: Settings) => ReactNode }) {
   const { state } = useAppData();
 
-  if (state.kind === "loading") return <p className="text-hm-body text-hm-ink-2">Loading settings…</p>;
+  if (state.kind === "loading")
+    return <p className="text-hm-body text-hm-ink-2">Loading settings…</p>;
   if (state.kind === "error") return <ErrorMessage message={state.message} />;
 
-  return <>
-    {state.error && <ErrorMessage message={state.error} />}
-    {children(state.settings)}
-  </>;
+  return (
+    <>
+      {state.error && <ErrorMessage message={state.error} />}
+      {children(state.settings)}
+    </>
+  );
 }

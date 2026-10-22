@@ -34,10 +34,16 @@
     },
     "./theme.css": "./src/styles/theme.css"
   },
-  "files": ["dist", "src/assets", "src/styles", "tokens.json"],
+  "files": [
+    "dist",
+    "src/assets",
+    "src/styles",
+    "tokens.json"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "biome lint .",
     "tokens": "node scripts/build-tokens.mjs"
   },
   "dependencies": {

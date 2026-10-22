@@ -8,7 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "typecheck": "pnpm --filter @homie/ui build && tsc --noEmit",
     "test": "vitest run",
-    "lint": "eslint ."
+    "lint": "biome lint ."
   },
   "dependencies": {
     "@homie/ui": "workspace:*",

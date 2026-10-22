@@ -1,10 +1,14 @@
-import * as React from "react";
 import { Button } from "@homie/ui/components/button";
-import { AuthCard } from "./auth-card";
-import { Field } from "../components/field";
+import * as React from "react";
 import { ErrorMessage } from "../components/error-message";
+import { Field } from "../components/field";
+import { AuthCard } from "./auth-card";
 
-export function LoginPage({ onLogin }: { onLogin: (username: string, password: string) => Promise<void> }) {
+export function LoginPage({
+  onLogin,
+}: {
+  onLogin: (username: string, password: string) => Promise<void>;
+}) {
   const [username, setUsername] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState<string>();
@@ -22,12 +26,29 @@ export function LoginPage({ onLogin }: { onLogin: (username: string, password: s
     }
   };
 
-  return <AuthCard title="Log in" description="Sign in to manage Homie.">
-    <form className="flex flex-col gap-4" onSubmit={submit}>
-      {error && <ErrorMessage label="Login failed" message={error} />}
-      <Field id="login-username" label="Username" value={username} onChange={setUsername} autoComplete="username" />
-      <Field id="login-password" label="Password" type="password" value={password} onChange={setPassword} autoComplete="current-password" />
-      <Button type="submit" variant="solid" block disabled={submitting}>Log in</Button>
-    </form>
-  </AuthCard>;
+  return (
+    <AuthCard title="Log in" description="Sign in to manage Homie.">
+      <form className="flex flex-col gap-4" onSubmit={submit}>
+        {error && <ErrorMessage label="Login failed" message={error} />}
+        <Field
+          id="login-username"
+          label="Username"
+          value={username}
+          onChange={setUsername}
+          autoComplete="username"
+        />
+        <Field
+          id="login-password"
+          label="Password"
+          type="password"
+          value={password}
+          onChange={setPassword}
+          autoComplete="current-password"
+        />
+        <Button type="submit" variant="solid" block disabled={submitting}>
+          Log in
+        </Button>
+      </form>
+    </AuthCard>
+  );
 }

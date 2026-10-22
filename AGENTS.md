@@ -1,5 +1,6 @@
 # Local development
 
+- Run `just format` after editing TypeScript, CSS, or JSON. Pass file paths to format or lint only those files, e.g. `just format apps/display/src/app.tsx` or `just lint apps/display/src/app.tsx`. `just lint` runs Biome's recommended rules.
 - Run `just dev` before verifying changes to `apps/display` or `apps/manager`. It starts the API and Vite servers, then opens Firefox Developer Edition with the local pages in separate tabs.
 - Use the Firefox DevTools MCP (`firefox-devtools`) to inspect the running app, console, and network requests. It connects to the Firefox instance launched by `just dev`; it cannot launch its own browser in this mode.
 - The display is designed for a 1920x1080 CSS viewport (`apps/display/src/index.css`), which is larger than most laptop screens. `just dev` seeds the window size into the profile's `xulstore.json` and scales the browser with `layout.css.devPixelsPerPx`, so the whole viewport fits on a smaller screen. The values live near the top of `scripts/dev/justfile` and suit a 1800x1169 point display; lower `firefox_dppx` (or set `FIREFOX_DPPX`) for a smaller screen. The window ends up one CSS pixel taller than 1080, which the display hides.

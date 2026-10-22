@@ -23,8 +23,15 @@ export function useSession() {
 
   const load = useCallback(async () => {
     try {
-      const data = await graphql<{ session: { user: User } | null; health: { status: HealthStatus } }>(SESSION_QUERY);
-      setState({ kind: "ready", setupRequired: data.health.status === "SETUP_REQUIRED", user: data.session?.user ?? null });
+      const data = await graphql<{
+        session: { user: User } | null;
+        health: { status: HealthStatus };
+      }>(SESSION_QUERY);
+      setState({
+        kind: "ready",
+        setupRequired: data.health.status === "SETUP_REQUIRED",
+        user: data.session?.user ?? null,
+      });
     } catch (err) {
       setState({ kind: "error", message: err instanceof Error ? err.message : String(err) });
     }
@@ -47,10 +54,13 @@ export function useSession() {
 
   const login = useCallback(
     async (username: string, password: string) => {
-      await graphql(`mutation($username: String!, $password: String!) { login(username: $username, password: $password) { id } }`, {
-        username,
-        password,
-      });
+      await graphql(
+        `mutation($username: String!, $password: String!) { login(username: $username, password: $password) { id } }`,
+        {
+          username,
+          password,
+        },
+      );
       await load();
     },
     [load],

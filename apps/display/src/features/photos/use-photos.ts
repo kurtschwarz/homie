@@ -1,11 +1,8 @@
-import { useEffect, useState } from "react";
 import type { Photo } from "@homie/ui/components/photo-panel";
+import { useEffect, useState } from "react";
 import { graphql } from "../../lib/graphql";
 
-type PhotoState =
-  | { kind: "loading" }
-  | { kind: "ready"; photos: Photo[] }
-  | { kind: "error" };
+type PhotoState = { kind: "loading" } | { kind: "ready"; photos: Photo[] } | { kind: "error" };
 
 const QUERY = `
   query Photos {
@@ -32,7 +29,14 @@ export function usePhotos(): PhotoState {
     async function fetchPhotos() {
       let retryDelay = 5 * 60_000;
       try {
-        const data = await graphql<{ photos?: Array<{ url: string; takenAt: number; place?: string | null; focus?: Photo["focus"] | null }> }>(QUERY);
+        const data = await graphql<{
+          photos?: Array<{
+            url: string;
+            takenAt: number;
+            place?: string | null;
+            focus?: Photo["focus"] | null;
+          }>;
+        }>(QUERY);
         if (!data.photos) throw new Error("Photos query failed");
         const photos: Photo[] = data.photos.map((photo) => ({
           src: photo.url,

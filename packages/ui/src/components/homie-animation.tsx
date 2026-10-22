@@ -1,7 +1,7 @@
 "use client";
 
-import * as React from "react";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
+import type * as React from "react";
 import { cn } from "../lib/utils";
 
 /**
@@ -13,14 +13,26 @@ import { cn } from "../lib/utils";
  * every width above the `sm` breakpoint — leaving callers unable to resize it.
  * Callers that want a breakpoint-aware size pass their own prefixed class.
  */
-export function HomieAnimation({ src, className, ...props }: React.ComponentProps<"div"> & { src: string }) {
+export function HomieAnimation({
+  src,
+  className,
+  ...props
+}: React.ComponentProps<"div"> & { src: string }) {
   return (
-    <div data-slot="homie-animation" className={cn("size-56", className)} role="img" aria-label="Homie" {...props}>
+    <div
+      data-slot="homie-animation"
+      className={cn("size-56", className)}
+      role="img"
+      aria-label="Homie"
+      {...props}
+    >
       <DotLottieReact
         src={src}
         autoplay
         loop
-        renderConfig={{ devicePixelRatio: typeof window === "undefined" ? 1 : window.devicePixelRatio }}
+        renderConfig={{
+          devicePixelRatio: typeof window === "undefined" ? 1 : window.devicePixelRatio,
+        }}
       />
     </div>
   );

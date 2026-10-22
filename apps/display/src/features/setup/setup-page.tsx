@@ -1,7 +1,7 @@
+import homieAnimationUrl from "@homie/ui/assets/homie-confetti.lottie?url";
+import { HomieAnimation } from "@homie/ui/components/homie-animation";
 import { ScanQrCode, Smartphone, Wifi } from "lucide-react";
 import QRCode from "react-qr-code";
-import { HomieAnimation } from "@homie/ui/components/homie-animation";
-import homieAnimationUrl from "@homie/ui/assets/homie-confetti.lottie?url";
 import { setupCodeCharacters } from "./setup-code";
 
 const MANAGE_URL = "homie.local/manage";
@@ -17,8 +17,12 @@ export function SetupPage({ code }: { code: string }) {
           <HomieAnimation src={homieAnimationUrl} className="size-hm-64" />
         </div>
         <div className="flex flex-col gap-hm-4">
-          <h1 className="m-0 text-hm-title-lg font-semibold leading-tight tracking-[-0.035em]">Hi, I’m Homie!</h1>
-          <p className="m-0 text-hm-lead text-hm-ink-2">Pair your phone to get me set up. Pick whichever’s easier.</p>
+          <h1 className="m-0 text-hm-title-lg font-semibold leading-tight tracking-[-0.035em]">
+            Hi, I’m Homie!
+          </h1>
+          <p className="m-0 text-hm-lead text-hm-ink-2">
+            Pair your phone to get me set up. Pick whichever’s easier.
+          </p>
         </div>
       </header>
 
@@ -26,10 +30,18 @@ export function SetupPage({ code }: { code: string }) {
         <section className="flex w-[32rem] flex-col items-center gap-hm-22 rounded-hm-28 border border-hm-line bg-hm-surface px-hm-36 py-hm-32 shadow-hm-float">
           <div className="flex w-full items-center gap-hm-12">
             <ScanQrCode aria-hidden="true" className="size-hm-26 shrink-0 text-hm-accent" />
-            <h2 className="m-0 text-hm-lead font-semibold whitespace-nowrap">Scan with your camera</h2>
+            <h2 className="m-0 text-hm-lead font-semibold whitespace-nowrap">
+              Scan with your camera
+            </h2>
           </div>
-          <QRCode aria-label={`QR code to ${MANAGE_URL}`} value={qrValue} className="size-[14rem]" />
-          <p className="m-0 text-center text-hm-caption text-hm-ink-3">Opens setup with the code filled in</p>
+          <QRCode
+            aria-label={`QR code to ${MANAGE_URL}`}
+            value={qrValue}
+            className="size-[14rem]"
+          />
+          <p className="m-0 text-center text-hm-caption text-hm-ink-3">
+            Opens setup with the code filled in
+          </p>
         </section>
 
         <div aria-hidden="true" className="flex flex-col items-center gap-hm-12 py-hm-24">
@@ -46,18 +58,43 @@ export function SetupPage({ code }: { code: string }) {
 
           <div className="flex flex-col gap-hm-8">
             <p className="m-0 text-hm-lead text-hm-ink-2">1. In any browser, go to</p>
-            <strong className="whitespace-nowrap text-hm-title font-semibold leading-tight tracking-[-0.03em]">{MANAGE_URL}</strong>
+            <strong className="whitespace-nowrap text-hm-title font-semibold leading-tight tracking-[-0.03em]">
+              {MANAGE_URL}
+            </strong>
           </div>
 
           <div className="flex flex-col gap-hm-12">
             <p className="m-0 text-hm-lead text-hm-ink-2">2. Enter this code</p>
-            <div className="flex items-center gap-hm-10" aria-label={`Setup code ${code}`}>
-              {characters.map((character, index) => (
-                <div className="flex size-hm-52 min-w-0 flex-1 items-center justify-center rounded-hm-16 bg-hm-shell text-hm-title font-semibold" key={`${index}-${character}`}>
-                  {character}
-                </div>
-              )).flatMap((cell, index) => index === 3 ? [cell, <span aria-hidden="true" className="text-hm-title-sm text-hm-ink-3" key="separator">–</span>] : [cell])}
-            </div>
+            <fieldset className="m-0 flex items-center gap-hm-10 border-0 p-0">
+              <legend className="sr-only">Setup code {code}</legend>
+              {characters
+                .map((character, index) => ({
+                  character,
+                  key: `${character}-${characters.slice(0, index).filter((previous) => previous === character).length}`,
+                }))
+                .map((slot) => (
+                  <div
+                    className="flex size-hm-52 min-w-0 flex-1 items-center justify-center rounded-hm-16 bg-hm-shell text-hm-title font-semibold"
+                    key={slot.key}
+                  >
+                    {slot.character}
+                  </div>
+                ))
+                .flatMap((cell, index) =>
+                  index === 3
+                    ? [
+                        cell,
+                        <span
+                          aria-hidden="true"
+                          className="text-hm-title-sm text-hm-ink-3"
+                          key="separator"
+                        >
+                          –
+                        </span>,
+                      ]
+                    : [cell],
+                )}
+            </fieldset>
           </div>
         </section>
       </div>

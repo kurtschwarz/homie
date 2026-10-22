@@ -1,8 +1,8 @@
-import * as React from "react"
+import type * as React from "react";
 
-import type { Person } from "../lib/people"
-import { cn } from "../lib/utils"
-import { PersonBadge } from "./person-badge"
+import type { Person } from "../lib/people";
+import { cn } from "../lib/utils";
+import { PersonBadge } from "./person-badge";
 
 /**
  * One-line nudge under the clock (bins out tonight, a birthday this week). Show one at a time and rotate every 10 s
@@ -16,11 +16,18 @@ export function ReminderChip({
   children,
   className,
   ...props
-}: React.ComponentProps<"div"> & { icon?: React.ReactNode; person?: Person; lead: React.ReactNode }) {
+}: React.ComponentProps<"div"> & {
+  icon?: React.ReactNode;
+  person?: Person;
+  lead: React.ReactNode;
+}) {
   return (
     <div
       data-slot="reminder-chip"
-      className={cn("flex min-h-hm-40 min-w-0 items-center gap-hm-12 text-hm-body-sm text-hm-ink-2 [&>svg]:size-hm-30 [&>svg]:shrink-0 [&>svg]:text-hm-accent", className)}
+      className={cn(
+        "flex min-h-hm-40 min-w-0 items-center gap-hm-12 text-hm-body-sm text-hm-ink-2 [&>svg]:size-hm-30 [&>svg]:shrink-0 [&>svg]:text-hm-accent",
+        className,
+      )}
       {...props}
     >
       {person ? <PersonBadge person={person} size="chip" /> : icon}
@@ -28,5 +35,5 @@ export function ReminderChip({
         <span className="font-medium text-hm-ink">{lead}</span> {children}
       </span>
     </div>
-  )
+  );
 }

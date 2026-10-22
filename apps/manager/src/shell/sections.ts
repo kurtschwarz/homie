@@ -1,4 +1,12 @@
-import { CalendarDays, CloudSun, Monitor, Settings, Smartphone, Users, type LucideIcon } from "lucide-react";
+import {
+  CalendarDays,
+  CloudSun,
+  type LucideIcon,
+  Monitor,
+  Settings,
+  Smartphone,
+  Users,
+} from "lucide-react";
 
 /** The admin sections, in sidebar order. Paths are relative to the /manage basename. */
 export const sections: { to: string; label: string; icon: LucideIcon }[] = [

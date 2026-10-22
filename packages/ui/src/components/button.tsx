@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import { Button as BaseButton } from "@base-ui/react/button"
-import { cva, type VariantProps } from "class-variance-authority"
+import { Button as BaseButton } from "@base-ui/react/button";
+import { cva, type VariantProps } from "class-variance-authority";
 
-import { cn } from "../lib/utils"
+import { cn } from "../lib/utils";
 
 const buttonVariants = cva(
   [
@@ -28,9 +28,9 @@ const buttonVariants = cva(
     },
     defaultVariants: { variant: "outline", block: false },
   },
-)
+);
 
-type ButtonProps = BaseButton.Props & VariantProps<typeof buttonVariants>
+type ButtonProps = BaseButton.Props & VariantProps<typeof buttonVariants>;
 
 /**
  * Quiet button built on Base UI's Button. Put a lucide chevron inside: left and before the label for back, right
@@ -38,8 +38,14 @@ type ButtonProps = BaseButton.Props & VariantProps<typeof buttonVariants>
  * Use `render` to compose it with a link (set `nativeButton={false}`).
  */
 function Button({ className, variant, block, ...props }: ButtonProps) {
-  return <BaseButton data-slot="button" className={cn(buttonVariants({ variant, block }), className)} {...props} />
+  return (
+    <BaseButton
+      data-slot="button"
+      className={cn(buttonVariants({ variant, block }), className)}
+      {...props}
+    />
+  );
 }
 
-export { Button, buttonVariants }
-export type { ButtonProps }
+export type { ButtonProps };
+export { Button, buttonVariants };

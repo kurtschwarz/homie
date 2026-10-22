@@ -40,7 +40,9 @@ export function useSessions() {
         await load();
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        setState((prev) => (prev.kind === "ready" ? { ...prev, error: message } : { kind: "error", message }));
+        setState((prev) =>
+          prev.kind === "ready" ? { ...prev, error: message } : { kind: "error", message },
+        );
       }
     },
     [load],

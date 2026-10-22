@@ -9,10 +9,7 @@ type Weather = {
   stale: boolean;
 };
 
-type WeatherState =
-  | { kind: "loading" }
-  | { kind: "ready"; weather: Weather }
-  | { kind: "error" };
+type WeatherState = { kind: "loading" } | { kind: "ready"; weather: Weather } | { kind: "error" };
 
 const QUERY = `
   query Weather {

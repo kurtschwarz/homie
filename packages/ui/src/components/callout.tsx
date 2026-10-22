@@ -1,6 +1,6 @@
-import * as React from "react"
+import type * as React from "react";
 
-import { cn } from "../lib/utils"
+import { cn } from "../lib/utils";
 
 /** A soft accent-soft note with one practical tip ("Light jacket for school pickup · 13° at 3:30 pm"). */
 export function Callout({
@@ -25,5 +25,5 @@ export function Callout({
         {children ? <> · {children}</> : null}
       </span>
     </div>
-  )
+  );
 }

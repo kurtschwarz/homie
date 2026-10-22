@@ -1,13 +1,10 @@
-import { defineConfig } from "vite";
 import { readFileSync } from "node:fs";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
+import { defineConfig } from "vite";
 
 export default defineConfig({
-  plugins: [
-    react(),
-    tailwindcss(),
-  ],
+  plugins: [react(), tailwindcss()],
   server: {
     host: true,
     port: 5173,
@@ -20,7 +17,10 @@ export default defineConfig({
           proxy.on("proxyReq", (proxyReq) => {
             if (!bearerToken) {
               try {
-                bearerToken = readFileSync(process.env.HOMIE_AUTH_TOKEN_PATH ?? "/run/homie-token/token", "utf8").trim();
+                bearerToken = readFileSync(
+                  process.env.HOMIE_AUTH_TOKEN_PATH ?? "/run/homie-token/token",
+                  "utf8",
+                ).trim();
               } catch {
                 // The API creates the shared token file during its own startup.
                 // Retry on the next proxied request if the display starts first.

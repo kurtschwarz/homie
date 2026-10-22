@@ -1,6 +1,6 @@
 import * as React from "react";
+import { type HealthState, useHealth } from "./lib/use-health";
 import type { User } from "./lib/use-session";
-import { useHealth, type HealthState } from "./lib/use-health";
 import { useSettings } from "./lib/use-settings";
 
 type AppData = ReturnType<typeof useSettings> & {
@@ -18,7 +18,15 @@ const AppDataContext = React.createContext<AppData | null>(null);
  * AuthGate, which resolved them before this ever mounted. user is null
  * when the API isn't gating at all.
  */
-export function AppDataProvider({ user, logout, children }: { user: User | null; logout: () => Promise<void>; children: React.ReactNode }) {
+export function AppDataProvider({
+  user,
+  logout,
+  children,
+}: {
+  user: User | null;
+  logout: () => Promise<void>;
+  children: React.ReactNode;
+}) {
   const settings = useSettings();
   const health = useHealth();
 

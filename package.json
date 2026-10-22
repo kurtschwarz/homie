@@ -6,9 +6,12 @@
   "scripts": {
     "build": "turbo run build",
     "lint": "turbo run lint",
-    "typecheck": "turbo run typecheck"
+    "typecheck": "turbo run typecheck",
+    "format": "biome check --write --linter-enabled=false .",
+    "format:check": "biome check --linter-enabled=false ."
   },
   "devDependencies": {
+    "@biomejs/biome": "2.6.2",
     "turbo": "^2.11.8"
   }
 }

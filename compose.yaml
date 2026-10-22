@@ -11,12 +11,14 @@ services:
       HOMIE_DB_PATH: "/var/lib/homie/homie.db"
       HOMIE_RIVER_DB_PATH: "/var/lib/homie/river.db"
       HOMIE_PHOTOS_PATH: "/var/lib/homie/photos"
+      HOMIE_AUTH_TOKEN_PATH: "/run/homie-token/token"
     env_file:
       - path: ./services/api/.env
         required: false
     volumes:
       - ./services/api:/src
       - api-data:/var/lib/homie
+      - api-token:/run/homie-token
       - ./.scratch/weatherkit.p8:/run/secrets/weatherkit.p8:ro
       - ./.scratch/photos:/var/lib/homie/photos
       - api-gomod-cache:/go/pkg/mod
@@ -29,9 +31,11 @@ services:
       - "5173:5173"
     environment:
       HOMIE_API_URL: "http://api:3000"
+      HOMIE_AUTH_TOKEN_PATH: "/run/homie-token/token"
     volumes:
       - .:/app
       - display-node-modules:/app/node_modules
+      - api-token:/run/homie-token:ro
     depends_on:
       - api
 
@@ -51,6 +55,7 @@ services:
 
 volumes:
   api-data:
+  api-token:
   api-gomod-cache:
   display-node-modules:
   manager-node-modules:

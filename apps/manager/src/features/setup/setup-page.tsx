@@ -1,12 +1,13 @@
 import * as React from "react";
 import { Lock } from "lucide-react";
+import { HomieAnimation } from "@homie/ui/components/homie-animation";
 import { Button } from "@homie/ui/components/button";
 import { Callout } from "@homie/ui/components/callout";
 import { CodeInput } from "../../components/code-input";
 import { ErrorMessage } from "../../components/error-message";
 import { Field } from "../../components/field";
-import { HomieAnimation } from "../../components/homie-animation";
 import { SetupStep } from "./setup-step";
+import homieAnimationUrl from "@homie/ui/assets/homie-confetti.lottie?url";
 
 export function SetupPage({ onSetup }: { onSetup: (code: string, username: string, password: string) => Promise<void> }) {
   const [step, setStep] = React.useState<1 | 2>(1);
@@ -44,7 +45,7 @@ export function SetupPage({ onSetup }: { onSetup: (code: string, username: strin
 
   return <main className="flex min-h-dvh flex-col items-center justify-center gap-8 bg-hm-shell px-5 py-10 sm:gap-9 sm:px-8">
     <header className="flex flex-col items-center text-center">
-      <HomieAnimation />
+      <HomieAnimation src={homieAnimationUrl} />
       <div className="-mt-14 flex flex-col gap-2 sm:-mt-[72px]">
         <h1 className="m-0 text-hm-display font-semibold text-hm-ink">Hi, I'm Homie!</h1>
         <p className="m-0 text-hm-body text-hm-ink-2">Let's get me set up. Two quick steps and you're in.</p>

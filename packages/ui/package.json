@@ -13,6 +13,7 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
+    "./assets/*": "./src/assets/*",
     "./globals.css": "./src/styles/globals.css",
     "./tokens.css": "./src/styles/tokens.css",
     "./tokens.json": "./tokens.json",
@@ -33,7 +34,7 @@
     },
     "./theme.css": "./src/styles/theme.css"
   },
-  "files": ["dist", "src/styles", "tokens.json"],
+  "files": ["dist", "src/assets", "src/styles", "tokens.json"],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -41,6 +42,7 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
+    "@lottiefiles/dotlottie-react": "^0.20.0",
     "@fontsource-variable/lexend": "^5.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

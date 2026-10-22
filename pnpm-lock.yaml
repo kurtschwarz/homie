@@ -175,6 +175,9 @@ importers:
       '@homie/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      lucide-react:
+        specifier: ^1.57.0
+        version: 1.57.0(@types/react@19.3.0)(react@19.3.1)
       react:
         specifier: ^19.3.1
         version: 19.3.1
@@ -215,9 +218,6 @@ importers:
       '@homie/ui':
         specifier: workspace:*
         version: link:../../packages/ui
-      '@lottiefiles/dotlottie-react':
-        specifier: ^0.20.0
-        version: 0.20.0(react@19.3.1)
       lucide-react:
         specifier: ^1.57.0
         version: 1.57.0(@types/react@19.3.0)(react@19.3.1)
@@ -266,6 +266,9 @@ importers:
       '@fontsource-variable/lexend':
         specifier: ^5.2.0
         version: 5.3.0
+      '@lottiefiles/dotlottie-react':
+        specifier: ^0.20.0
+        version: 0.20.0(react@19.3.1)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1

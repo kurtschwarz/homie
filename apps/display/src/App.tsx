@@ -16,10 +16,13 @@ import { useEvents } from "./useEvents";
 import { splitEvents, toRows } from "./events";
 import { useTimer } from "./useTimer";
 import { TimerScreen } from "./TimerScreen";
+import { useSetup } from "./useSetup";
+import { SetupScreen } from "./SetupScreen";
 
 const SWIPE_AREA_ROWS = 4;
 
 export function App() {
+  const setup = useSetup();
   const timer = useTimer();
   const now = useNow();
   const weather = useWeather();
@@ -33,6 +36,7 @@ export function App() {
   const { headline, upcoming } = splitEvents(allEvents, now);
   const rows = toRows(upcoming, now);
 
+  if (setup.kind === "setup") return <SetupScreen code={setup.code} />;
   if (timer.timer) return <TimerScreen timer={timer.timer} addMinute={timer.addMinute} togglePause={timer.togglePause} cancel={timer.cancel} />;
 
   return (

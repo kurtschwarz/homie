@@ -14,19 +14,6 @@ import (
 	"github.com/kurtschwarz/homie/services/api/internal/graph/model"
 )
 
-// Setup is the resolver for the setup field.
-func (r *mutationResolver) Setup(ctx context.Context, code string, username string, password string) (*model.User, error) {
-	if r.Resolver.Accounts == nil {
-		return nil, errAccountsNotConfigured
-	}
-	session, user, err := r.Resolver.Accounts.Setup(ctx, auth.ClientIPFromContext(ctx), code, username, password, auth.UserAgentFromContext(ctx))
-	if err != nil {
-		return nil, err
-	}
-	setSessionCookie(ctx, session)
-	return userModel(user), nil
-}
-
 // Login is the resolver for the login field.
 func (r *mutationResolver) Login(ctx context.Context, username string, password string) (*model.User, error) {
 	if r.Resolver.Accounts == nil {

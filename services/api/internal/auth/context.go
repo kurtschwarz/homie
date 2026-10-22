@@ -108,6 +108,7 @@ func CookiesFromContext(ctx context.Context) *SessionCookies {
 type CurrentUser struct {
 	UserID    uuid.UUID
 	SessionID uuid.UUID
+	Role      string
 }
 
 func WithCurrentUser(ctx context.Context, user CurrentUser) context.Context {

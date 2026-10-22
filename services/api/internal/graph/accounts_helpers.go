@@ -16,7 +16,7 @@ import (
 var errAccountsNotConfigured = errors.New("accounts are not configured")
 
 func userModel(user accounts.User) *model.User {
-	return &model.User{ID: user.ID.String(), Username: user.Username, Role: model.Role(user.Role)}
+	return &model.User{ID: user.ID.String(), Username: user.Username, Role: model.AuthRole(user.Role)}
 }
 
 func setSessionCookie(ctx context.Context, session accounts.Session) {

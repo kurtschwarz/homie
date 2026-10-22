@@ -1,11 +1,7 @@
-enum Role {
-  ADMIN
-}
-
 type User {
   id: ID!
   username: String!
-  role: Role!
+  role: AuthRole!
 }
 
 """One browser session belonging to the signed-in user."""
@@ -22,13 +18,12 @@ type SessionInfo {
 }
 
 extend type Query {
-  session: SessionInfo
-  sessions: [ActiveSession!]!
+  session: SessionInfo @public
+  sessions: [ActiveSession!]! @protected
 }
 
 extend type Mutation {
-  setup(code: String!, username: String!, password: String!): User!
-  login(username: String!, password: String!): User!
-  logout: Boolean!
-  revokeSession(id: ID!): Boolean!
+  login(username: String!, password: String!): User! @public
+  logout: Boolean! @protected
+  revokeSession(id: ID!): Boolean! @protected
 }

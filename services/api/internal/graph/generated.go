@@ -135,6 +135,7 @@ type ComplexityRoot struct {
 		Photos              func(childComplexity int, limit *int) int
 		Session             func(childComplexity int) int
 		Sessions            func(childComplexity int) int
+		SetupCode           func(childComplexity int) int
 		TagMappings         func(childComplexity int) int
 		Timer               func(childComplexity int) int
 		Weather             func(childComplexity int) int
@@ -182,7 +183,6 @@ type ComplexityRoot struct {
 type MutationResolver interface {
 	UploadPhoto(ctx context.Context, input model.PhotoUploadInput, file graphql.Upload) (*model.Photo, error)
 	TrackPhotoShowing(ctx context.Context, source model.PhotoShowingSource) (*model.PhotoShowingState, error)
-	Setup(ctx context.Context, code string, username string, password string) (*model.User, error)
 	Login(ctx context.Context, username string, password string) (*model.User, error)
 	Logout(ctx context.Context) (bool, error)
 	RevokeSession(ctx context.Context, id string) (bool, error)
@@ -197,6 +197,7 @@ type MutationResolver interface {
 	PauseTimer(ctx context.Context) (*model.Timer, error)
 	ResumeTimer(ctx context.Context) (*model.Timer, error)
 	CancelTimer(ctx context.Context) (bool, error)
+	Setup(ctx context.Context, code string, username string, password string) (*model.User, error)
 }
 type QueryResolver interface {
 	Health(ctx context.Context) (*model.Health, error)
@@ -210,6 +211,7 @@ type QueryResolver interface {
 	Photos(ctx context.Context, limit *int) ([]model.Photo, error)
 	PhotoShowing(ctx context.Context) (*model.PhotoShowingState, error)
 	PhotoShowingHistory(ctx context.Context, limit *int) ([]model.PhotoShowing, error)
+	SetupCode(ctx context.Context) (*string, error)
 	Weather(ctx context.Context) (*model.Weather, error)
 }
 
@@ -720,6 +722,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.Sessions(childComplexity), true
+	case "Query.setupCode":
+		if e.ComplexityRoot.Query.SetupCode == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Query.SetupCode(childComplexity), true
 	case "Query.tagMappings":
 		if e.ComplexityRoot.Query.TagMappings == nil {
 			break
@@ -946,14 +954,10 @@ func newExecutionContext(
 }
 
 var sources = []*ast.Source{
-	{Name: "../../graph/accounts.graphqls", Input: `enum Role {
-  ADMIN
-}
-
-type User {
+	{Name: "../../graph/accounts.graphqls", Input: `type User {
   id: ID!
   username: String!
-  role: Role!
+  role: AuthRole!
 }
 
 """One browser session belonging to the signed-in user."""
@@ -970,16 +974,54 @@ type SessionInfo {
 }
 
 extend type Query {
-  session: SessionInfo
-  sessions: [ActiveSession!]!
+  session: SessionInfo @public
+  sessions: [ActiveSession!]! @protected
 }
 
 extend type Mutation {
-  setup(code: String!, username: String!, password: String!): User!
-  login(username: String!, password: String!): User!
-  logout: Boolean!
-  revokeSession(id: ID!): Boolean!
+  login(username: String!, password: String!): User! @public
+  logout: Boolean! @protected
+  revokeSession(id: ID!): Boolean! @protected
 }
+`, BuiltIn: false},
+	{Name: "../../graph/directives.graphqls", Input: `"""
+Marks a root field as reachable with no credential at all. A browser has to
+be able to ask whether it's logged in, whether setup is required, and log in
+before it can prove itself.
+"""
+directive @public on FIELD_DEFINITION
+
+"""Which credential a @protected root field accepts."""
+enum AuthKind {
+  """
+  A session cookie that resolves to a signed-in user holding @protected's
+  ` + "`" + `role` + "`" + `.
+  """
+  USER
+
+  """
+  The display: proven by the shared bearer token, or simply by arriving on
+  the loopback-only listener the kiosk is served from. ` + "`" + `role` + "`" + ` is not
+  consulted for this kind - there is no user behind it.
+  """
+  DISPLAY
+}
+
+"""Which role a USER caller must hold to pass a @protected root field."""
+enum AuthRole {
+  ADMIN
+}
+
+"""
+Marks a root field as requiring a credential, and says which.
+
+A caller passes if its kind appears in ` + "`" + `kinds` + "`" + `; a USER caller must also hold
+` + "`" + `role` + "`" + `. Both arguments default to the strongest requirement - USER-only,
+ADMIN - so that a field added to the schema without a decision fails the
+build rather than silently becoming reachable by everyone. See
+TestRootFieldsAreClassified.
+"""
+directive @protected(kinds: [AuthKind!]! = [USER], role: AuthRole = ADMIN) on FIELD_DEFINITION
 `, BuiltIn: false},
 	{Name: "../../graph/events.graphqls", Input: `type Person {
   id: ID!
@@ -1035,24 +1077,24 @@ input EventInput {
 }
 
 extend type Query {
-  events(days: Int = 21): [Event!]!
-  people: [Person!]!
-  tagMappings: [TagMapping!]!
-  calendarTags: [String!]!
+  events(days: Int = 21): [Event!]! @protected(kinds: [USER, DISPLAY])
+  people: [Person!]! @protected
+  tagMappings: [TagMapping!]! @protected
+  calendarTags: [String!]! @protected
 }
 
 extend type Mutation {
-  createEvent(input: EventInput!): Event!
-  savePerson(input: PersonInput!): Person!
-  deletePerson(id: ID!): Boolean!
-  saveTagMapping(input: TagMappingInput!): TagMapping!
-  deleteTagMapping(tag: String!): Boolean!
+  createEvent(input: EventInput!): Event! @protected
+  savePerson(input: PersonInput!): Person! @protected
+  deletePerson(id: ID!): Boolean! @protected
+  saveTagMapping(input: TagMappingInput!): TagMapping! @protected
+  deleteTagMapping(tag: String!): Boolean! @protected
   """
   Syncs the calendar window from CalDAV and waits for it to finish. This runs
   the refresh inline rather than enqueuing the periodic job, whose uniqueness
   window would swallow a manual request made soon after a scheduled one.
   """
-  refreshEvents: Boolean!
+  refreshEvents: Boolean! @protected
 }
 `, BuiltIn: false},
 	{Name: "../../graph/photos.graphqls", Input: `type Coordinate {
@@ -1122,14 +1164,14 @@ input PhotoUploadInput {
 scalar Upload
 
 extend type Query {
-  photos(limit: Int = 60): [Photo!]!
-  photoShowing: PhotoShowingState!
-  photoShowingHistory(limit: Int = 50): [PhotoShowing!]!
+  photos(limit: Int = 60): [Photo!]! @protected(kinds: [USER, DISPLAY])
+  photoShowing: PhotoShowingState! @protected(kinds: [USER, DISPLAY])
+  photoShowingHistory(limit: Int = 50): [PhotoShowing!]! @protected
 }
 
 type Mutation {
-  uploadPhoto(input: PhotoUploadInput!, file: Upload!): Photo!
-  trackPhotoShowing(source: PhotoShowingSource! = SCHEDULE): PhotoShowingState!
+  uploadPhoto(input: PhotoUploadInput!, file: Upload!): Photo! @protected
+  trackPhotoShowing(source: PhotoShowingSource! = SCHEDULE): PhotoShowingState! @protected(kinds: [USER, DISPLAY])
 }
 `, BuiltIn: false},
 	{Name: "../../graph/schema.graphqls", Input: `enum HealthStatus {
@@ -1144,8 +1186,8 @@ type Health {
 }
 
 type Query {
-  health: Health!
-  timer: Timer
+  health: Health! @public
+  timer: Timer @protected(kinds: [USER, DISPLAY])
 }
 
 type Timer {
@@ -1158,11 +1200,19 @@ type Timer {
 }
 
 extend type Mutation {
-  startTimer(title: String!, emoji: String!, durationSeconds: Int!): Timer!
-  addTimerMinute: Timer!
-  pauseTimer: Timer!
-  resumeTimer: Timer!
-  cancelTimer: Boolean!
+  startTimer(title: String!, emoji: String!, durationSeconds: Int!): Timer! @protected
+  addTimerMinute: Timer! @protected(kinds: [USER, DISPLAY])
+  pauseTimer: Timer! @protected(kinds: [USER, DISPLAY])
+  resumeTimer: Timer! @protected(kinds: [USER, DISPLAY])
+  cancelTimer: Boolean! @protected(kinds: [USER, DISPLAY])
+}
+`, BuiltIn: false},
+	{Name: "../../graph/setup.graphqls", Input: `extend type Query {
+  setupCode: String @protected(kinds: [DISPLAY])
+}
+
+extend type Mutation {
+  setup(code: String!, username: String!, password: String!): User! @public
 }
 `, BuiltIn: false},
 	{Name: "../../graph/weather.graphqls", Input: `enum WeatherCondition {
@@ -1182,7 +1232,7 @@ type Weather {
 }
 
 extend type Query {
-  weather: Weather!
+  weather: Weather! @protected(kinds: [USER, DISPLAY])
 }
 `, BuiltIn: false},
 }
@@ -2412,50 +2462,6 @@ func (ec *executionContext) fieldContext_Mutation_trackPhotoShowing(ctx context.
 	return fc, nil
 }
 
-func (ec *executionContext) _Mutation_setup(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Mutation_setup(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Mutation().Setup(ctx, fc.Args["code"].(string), fc.Args["username"].(string), fc.Args["password"].(string))
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *model.User) graphql.Marshaler {
-			return ec.marshalNUser2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐUser(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_Mutation_setup(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_User(ctx, field)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_setup_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Mutation_login(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -2971,6 +2977,50 @@ func (ec *executionContext) _Mutation_cancelTimer(ctx context.Context, field gra
 }
 func (ec *executionContext) fieldContext_Mutation_cancelTimer(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("Mutation", field, true, true, errors.New("field of type Boolean does not have child fields"))
+}
+
+func (ec *executionContext) _Mutation_setup(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_setup(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().Setup(ctx, fc.Args["code"].(string), fc.Args["username"].(string), fc.Args["password"].(string))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.User) graphql.Marshaler {
+			return ec.marshalNUser2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐUser(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_setup(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_User(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_setup_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
 }
 
 func (ec *executionContext) _Person_id(ctx context.Context, field graphql.CollectedField, obj *model.Person) (ret graphql.Marshaler) {
@@ -3880,6 +3930,29 @@ func (ec *executionContext) fieldContext_Query_photoShowingHistory(ctx context.C
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_setupCode(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_setupCode(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Query().SetupCode(ctx)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Query_setupCode(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Query", field, true, true, errors.New("field of type String does not have child fields"))
+}
+
 func (ec *executionContext) _Query_weather(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -4317,15 +4390,15 @@ func (ec *executionContext) _User_role(ctx context.Context, field graphql.Collec
 			return obj.Role, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v model.Role) graphql.Marshaler {
-			return ec.marshalNRole2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐRole(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v model.AuthRole) graphql.Marshaler {
+			return ec.marshalNAuthRole2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐAuthRole(ctx, selections, v)
 		},
 		true,
 		true,
 	)
 }
 func (ec *executionContext) fieldContext_User_role(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("User", field, false, false, errors.New("field of type Role does not have child fields"))
+	return graphql.NewScalarFieldContext("User", field, false, false, errors.New("field of type AuthRole does not have child fields"))
 }
 
 func (ec *executionContext) _Weather_condition(ctx context.Context, field graphql.CollectedField, obj *model.Weather) (ret graphql.Marshaler) {
@@ -6125,13 +6198,6 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "setup":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_setup(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		case "login":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_login(ctx, field)
@@ -6226,6 +6292,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "cancelTimer":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_cancelTimer(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "setup":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_setup(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -6739,6 +6812,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 				}()
 				res = ec._Query_photoShowingHistory(ctx, field)
 				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "setupCode":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_setupCode(ctx, field)
+				if res == graphql.RequiredNull {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
 				return res
@@ -7479,6 +7574,56 @@ func (ec *executionContext) marshalNActiveSession2ᚕgithubᚗcomᚋkurtschwarz�
 	return ret
 }
 
+func (ec *executionContext) unmarshalNAuthKind2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐAuthKind(ctx context.Context, v any) (model.AuthKind, error) {
+	var res model.AuthKind
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNAuthKind2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐAuthKind(ctx context.Context, sel ast.SelectionSet, v model.AuthKind) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) unmarshalNAuthKind2ᚕgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐAuthKindᚄ(ctx context.Context, v any) ([]model.AuthKind, error) {
+	vSlice := graphql.CoerceList(v)
+	var err error
+	res := make([]model.AuthKind, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNAuthKind2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐAuthKind(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNAuthKind2ᚕgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐAuthKindᚄ(ctx context.Context, sel ast.SelectionSet, v []model.AuthKind) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNAuthKind2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐAuthKind(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) unmarshalNAuthRole2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐAuthRole(ctx context.Context, v any) (model.AuthRole, error) {
+	var res model.AuthRole
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNAuthRole2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐAuthRole(ctx context.Context, sel ast.SelectionSet, v model.AuthRole) graphql.Marshaler {
+	return v
+}
+
 func (ec *executionContext) unmarshalNBoolean2bool(ctx context.Context, v any) (bool, error) {
 	res, err := graphql.UnmarshalBoolean(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -7735,16 +7880,6 @@ func (ec *executionContext) marshalNPhotoShowingState2ᚖgithubᚗcomᚋkurtschw
 func (ec *executionContext) unmarshalNPhotoUploadInput2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPhotoUploadInput(ctx context.Context, v any) (model.PhotoUploadInput, error) {
 	res, err := ec.unmarshalInputPhotoUploadInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalNRole2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐRole(ctx context.Context, v any) (model.Role, error) {
-	var res model.Role
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNRole2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐRole(ctx context.Context, sel ast.SelectionSet, v model.Role) graphql.Marshaler {
-	return v
 }
 
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v any) (string, error) {
@@ -8031,6 +8166,22 @@ func (ec *executionContext) marshalN__TypeKind2string(ctx context.Context, sel a
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) unmarshalOAuthRole2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐAuthRole(ctx context.Context, v any) (*model.AuthRole, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(model.AuthRole)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOAuthRole2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐAuthRole(ctx context.Context, sel ast.SelectionSet, v *model.AuthRole) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
 }
 
 func (ec *executionContext) unmarshalOBoolean2bool(ctx context.Context, v any) (bool, error) {

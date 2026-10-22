@@ -1,0 +1,7 @@
+extend type Query {
+  setupCode: String @protected(kinds: [DISPLAY])
+}
+
+extend type Mutation {
+  setup(code: String!, username: String!, password: String!): User! @public
+}

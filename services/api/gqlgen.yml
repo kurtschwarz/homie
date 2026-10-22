@@ -17,5 +17,14 @@ resolver:
 
 autobind: []
 
+# @public and @protected are read off the schema by the operation gate
+# (internal/graph/gate.go) before any resolver runs, so gqlgen must not
+# generate per-field directive hooks for them.
+directives:
+  public:
+    skip_runtime: true
+  protected:
+    skip_runtime: true
+
 omit_slice_element_pointers: true
 omit_getters: true

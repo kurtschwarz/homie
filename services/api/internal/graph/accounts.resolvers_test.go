@@ -38,6 +38,11 @@ func TestHealthStatusReportsSetupRequiredUntilFirstUserExists(t *testing.T) {
 	}
 	resolver := &queryResolver{Resolver: &Resolver{Accounts: service}}
 
+	setupCode, err := resolver.SetupCode(context.Background())
+	if err != nil || setupCode == nil || *setupCode != service.SetupCode() {
+		t.Fatalf("setup code before setup: code=%v err=%v", setupCode, err)
+	}
+
 	health, err := resolver.Health(context.Background())
 	if err != nil || health.Status != model.HealthStatusSetupRequired {
 		t.Fatalf("health before setup: status=%s err=%v", health.Status, err)
@@ -49,5 +54,9 @@ func TestHealthStatusReportsSetupRequiredUntilFirstUserExists(t *testing.T) {
 	health, err = resolver.Health(context.Background())
 	if err != nil || health.Status != model.HealthStatusOk {
 		t.Fatalf("health after setup: status=%s err=%v", health.Status, err)
+	}
+	setupCode, err = resolver.SetupCode(context.Background())
+	if err != nil || setupCode != nil {
+		t.Fatalf("setup code after setup: code=%v err=%v, want nil", setupCode, err)
 	}
 }

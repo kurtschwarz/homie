@@ -98,7 +98,7 @@ The API is configured by environment variables. On the Pi they live in
 |---|---|---|
 | `HOMIE_ADDR` | `:3000` | Listen address |
 | `HOMIE_LOCAL_ADDR` | *(unset)* | Optional loopback-only listener for the display (kiosk) UI. When enabled, the LAN listener requires a bearer token or a logged-in user session, and the manager is only served there, not on the loopback listener. |
-| `HOMIE_AUTH_TOKEN` | *(generated once)* | API bearer token for the iOS app and Photo Sync; stored at `/var/lib/homie/token` if unset. The token is logged at startup. It no longer unlocks the manager - see "Manager access" below. |
+| `HOMIE_AUTH_TOKEN` | *(generated once)* | API bearer token for the display; stored at `/var/lib/homie/token` if unset. The token is logged at startup. It does not unlock the manager - see "Manager access" below. |
 | `HOMIE_AUTH_TOKEN_PATH` | `/var/lib/homie/token` | Path used for the persisted bearer token. |
 | `HOMIE_SIGNING_SECRET` | *(generated once)* | HMAC key for signed photo URLs, independent of the bearer token so rotating one doesn't invalidate the other's URLs; stored at `/var/lib/homie/signing-secret` if unset. |
 | `HOMIE_SIGNING_SECRET_PATH` | `/var/lib/homie/signing-secret` | Path used for the persisted signing secret. |

@@ -15,5 +15,5 @@ type Weather {
 }
 
 extend type Query {
-  weather: Weather!
+  weather: Weather! @protected(kinds: [USER, DISPLAY])
 }

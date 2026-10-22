@@ -38,6 +38,22 @@ func TestGraphQLMultipartUploadTransport(t *testing.T) {
 	}
 	photosService := photos.New(photos.NewSQLiteRepository(db), library)
 
+	accountsDB, err := store.Open(filepath.Join(t.TempDir(), "accounts.db"), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer accountsDB.Close()
+	accountsService, err := accounts.New(context.Background(), accounts.NewSQLiteRepository(accountsDB), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// uploadPhoto is USER-only: Photo Sync's own bearer token does not
+	// satisfy it yet, so the test proves the upload with a session instead.
+	session, _, err := accountsService.Setup(context.Background(), "test", accountsService.SetupCode(), "kurt", "password123", "test-agent")
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
 
@@ -76,10 +92,10 @@ func TestGraphQLMultipartUploadTransport(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	handler := server.New(server.Config{Resolver: &graph.Resolver{Photos: photosService}, Token: "upload-test-token"})
+	handler := server.New(server.Config{Resolver: &graph.Resolver{Photos: photosService, Accounts: accountsService}})
 	request := httptest.NewRequest(http.MethodPost, "/graphql", &body)
 	request.Header.Set("Content-Type", writer.FormDataContentType())
-	request.Header.Set("Authorization", "Bearer upload-test-token")
+	request.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: session.Token})
 	response := httptest.NewRecorder()
 	handler.ServeHTTP(response, request)
 
@@ -328,6 +344,80 @@ func TestSetupLoginSessionCookieAndLogout(t *testing.T) {
 	}
 	if res := post(`{ people { id } }`, cookies); !strings.Contains(res.Body.String(), "unauthorized") {
 		t.Fatalf("people query after logout: body=%s", res.Body.String())
+	}
+}
+
+// TestSetupCodeReachesTheKioskAndNobodyElse pins the property the display's
+// pairing screen rests on. Whoever reads the one-time code can claim the
+// admin account, so it is served on the loopback listener the kiosk uses and
+// nowhere else without a credential.
+func TestSetupCodeReachesTheKioskAndNobodyElse(t *testing.T) {
+	const token = "test-token"
+	db, err := store.Open(filepath.Join(t.TempDir(), "accounts.db"), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	accountsService, err := accounts.New(context.Background(), accounts.NewSQLiteRepository(db), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	code := accountsService.SetupCode()
+	if code == "" {
+		t.Fatal("expected a setup code before any user exists")
+	}
+	cfg := server.Config{Resolver: &graph.Resolver{Accounts: accountsService}, Token: token}
+
+	post := func(handler http.Handler, authorization string) string {
+		req := httptest.NewRequest(http.MethodPost, "/graphql", strings.NewReader(`{"query":"{ setupCode }"}`))
+		req.Header.Set("Content-Type", "application/json")
+		if authorization != "" {
+			req.Header.Set("Authorization", authorization)
+		}
+		res := httptest.NewRecorder()
+		handler.ServeHTTP(res, req)
+		return res.Body.String()
+	}
+
+	// The LAN listener refuses it whatever the caller presents. The bearer
+	// token is the case that matters: it proves the display, and the
+	// display itself has no business learning the code over the network -
+	// only by being read off the loopback listener's screen.
+	lan := server.NewLAN(cfg)
+	for _, authorization := range []string{"", "Bearer wrong", "Bearer " + token} {
+		if body := post(lan, authorization); strings.Contains(body, code) || !strings.Contains(body, "unauthorized") {
+			t.Fatalf("setup code readable from the LAN with authorization %q: body=%s", authorization, body)
+		}
+	}
+	// The kiosk's loopback-only listener has no gate at all: this is how the
+	// code reaches the screen someone is standing in front of.
+	if body := post(server.NewLocal(cfg), ""); !strings.Contains(body, code) {
+		t.Fatalf("the loopback listener should serve the setup code to the kiosk: body=%s", body)
+	}
+	// A single listener serving both the display and the network still needs
+	// the credential, but does serve the field: that is the dev topology,
+	// where one listener stands in for both.
+	single := server.New(cfg)
+	if body := post(single, ""); strings.Contains(body, code) {
+		t.Fatalf("single listener served the setup code with no credential: body=%s", body)
+	}
+	if body := post(single, "Bearer "+token); !strings.Contains(body, code) {
+		t.Fatalf("single listener should serve the setup code to a credentialed display: body=%s", body)
+	}
+
+	// A signed-in admin is not the display, and must not learn the code
+	// either, even though they share the single dev listener with it.
+	session, _, err := accountsService.Setup(context.Background(), "test", code, "kurt", "password123", "test-agent")
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/graphql", strings.NewReader(`{"query":"{ setupCode }"}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: session.Token})
+	res := httptest.NewRecorder()
+	single.ServeHTTP(res, req)
+	if body := res.Body.String(); strings.Contains(body, code) || !strings.Contains(body, "unauthorized") {
+		t.Fatalf("setup code readable by a signed-in admin: body=%s", body)
 	}
 }
 

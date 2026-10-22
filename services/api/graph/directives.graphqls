@@ -1,0 +1,38 @@
+"""
+Marks a root field as reachable with no credential at all. A browser has to
+be able to ask whether it's logged in, whether setup is required, and log in
+before it can prove itself.
+"""
+directive @public on FIELD_DEFINITION
+
+"""Which credential a @protected root field accepts."""
+enum AuthKind {
+  """
+  A session cookie that resolves to a signed-in user holding @protected's
+  `role`.
+  """
+  USER
+
+  """
+  The display: proven by the shared bearer token, or simply by arriving on
+  the loopback-only listener the kiosk is served from. `role` is not
+  consulted for this kind - there is no user behind it.
+  """
+  DISPLAY
+}
+
+"""Which role a USER caller must hold to pass a @protected root field."""
+enum AuthRole {
+  ADMIN
+}
+
+"""
+Marks a root field as requiring a credential, and says which.
+
+A caller passes if its kind appears in `kinds`; a USER caller must also hold
+`role`. Both arguments default to the strongest requirement - USER-only,
+ADMIN - so that a field added to the schema without a decision fails the
+build rather than silently becoming reachable by everyone. See
+TestRootFieldsAreClassified.
+"""
+directive @protected(kinds: [AuthKind!]! = [USER], role: AuthRole = ADMIN) on FIELD_DEFINITION

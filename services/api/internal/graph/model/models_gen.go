@@ -151,9 +151,9 @@ type Timer struct {
 }
 
 type User struct {
-	ID       string `json:"id"`
-	Username string `json:"username"`
-	Role     Role   `json:"role"`
+	ID       string   `json:"id"`
+	Username string   `json:"username"`
+	Role     AuthRole `json:"role"`
 }
 
 type Weather struct {
@@ -162,6 +162,121 @@ type Weather struct {
 	Temperature   int              `json:"temperature"`
 	FetchedAt     int              `json:"fetchedAt"`
 	Stale         bool             `json:"stale"`
+}
+
+// Which credential a @protected root field accepts.
+type AuthKind string
+
+const (
+	// A session cookie that resolves to a signed-in user holding @protected's
+	// `role`.
+	AuthKindUser AuthKind = "USER"
+	// The display: proven by the shared bearer token, or simply by arriving on
+	// the loopback-only listener the kiosk is served from. `role` is not
+	// consulted for this kind - there is no user behind it.
+	AuthKindDisplay AuthKind = "DISPLAY"
+)
+
+var AllAuthKind = []AuthKind{
+	AuthKindUser,
+	AuthKindDisplay,
+}
+
+func (e AuthKind) IsValid() bool {
+	switch e {
+	case AuthKindUser, AuthKindDisplay:
+		return true
+	}
+	return false
+}
+
+func (e AuthKind) String() string {
+	return string(e)
+}
+
+func (e *AuthKind) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = AuthKind(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid AuthKind", str)
+	}
+	return nil
+}
+
+func (e AuthKind) MarshalGQL(w io.Writer) {
+	_, _ = fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *AuthKind) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e AuthKind) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+// Which role a USER caller must hold to pass a @protected root field.
+type AuthRole string
+
+const (
+	AuthRoleAdmin AuthRole = "ADMIN"
+)
+
+var AllAuthRole = []AuthRole{
+	AuthRoleAdmin,
+}
+
+func (e AuthRole) IsValid() bool {
+	switch e {
+	case AuthRoleAdmin:
+		return true
+	}
+	return false
+}
+
+func (e AuthRole) String() string {
+	return string(e)
+}
+
+func (e *AuthRole) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = AuthRole(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid AuthRole", str)
+	}
+	return nil
+}
+
+func (e AuthRole) MarshalGQL(w io.Writer) {
+	_, _ = fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *AuthRole) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e AuthRole) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
 }
 
 type HealthStatus string
@@ -269,59 +384,6 @@ func (e *PhotoShowingSource) UnmarshalJSON(b []byte) error {
 }
 
 func (e PhotoShowingSource) MarshalJSON() ([]byte, error) {
-	var buf bytes.Buffer
-	e.MarshalGQL(&buf)
-	return buf.Bytes(), nil
-}
-
-type Role string
-
-const (
-	RoleAdmin Role = "ADMIN"
-)
-
-var AllRole = []Role{
-	RoleAdmin,
-}
-
-func (e Role) IsValid() bool {
-	switch e {
-	case RoleAdmin:
-		return true
-	}
-	return false
-}
-
-func (e Role) String() string {
-	return string(e)
-}
-
-func (e *Role) UnmarshalGQL(v any) error {
-	str, ok := v.(string)
-	if !ok {
-		return fmt.Errorf("enums must be strings")
-	}
-
-	*e = Role(str)
-	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid Role", str)
-	}
-	return nil
-}
-
-func (e Role) MarshalGQL(w io.Writer) {
-	_, _ = fmt.Fprint(w, strconv.Quote(e.String()))
-}
-
-func (e *Role) UnmarshalJSON(b []byte) error {
-	s, err := strconv.Unquote(string(b))
-	if err != nil {
-		return err
-	}
-	return e.UnmarshalGQL(s)
-}
-
-func (e Role) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

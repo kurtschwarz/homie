@@ -52,22 +52,22 @@ input EventInput {
 }
 
 extend type Query {
-  events(days: Int = 21): [Event!]!
-  people: [Person!]!
-  tagMappings: [TagMapping!]!
-  calendarTags: [String!]!
+  events(days: Int = 21): [Event!]! @protected(kinds: [USER, DISPLAY])
+  people: [Person!]! @protected
+  tagMappings: [TagMapping!]! @protected
+  calendarTags: [String!]! @protected
 }
 
 extend type Mutation {
-  createEvent(input: EventInput!): Event!
-  savePerson(input: PersonInput!): Person!
-  deletePerson(id: ID!): Boolean!
-  saveTagMapping(input: TagMappingInput!): TagMapping!
-  deleteTagMapping(tag: String!): Boolean!
+  createEvent(input: EventInput!): Event! @protected
+  savePerson(input: PersonInput!): Person! @protected
+  deletePerson(id: ID!): Boolean! @protected
+  saveTagMapping(input: TagMappingInput!): TagMapping! @protected
+  deleteTagMapping(tag: String!): Boolean! @protected
   """
   Syncs the calendar window from CalDAV and waits for it to finish. This runs
   the refresh inline rather than enqueuing the periodic job, whose uniqueness
   window would swallow a manual request made soon after a scheduled one.
   """
-  refreshEvents: Boolean!
+  refreshEvents: Boolean! @protected
 }

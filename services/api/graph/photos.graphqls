@@ -65,12 +65,12 @@ input PhotoUploadInput {
 scalar Upload
 
 extend type Query {
-  photos(limit: Int = 60): [Photo!]!
-  photoShowing: PhotoShowingState!
-  photoShowingHistory(limit: Int = 50): [PhotoShowing!]!
+  photos(limit: Int = 60): [Photo!]! @protected(kinds: [USER, DISPLAY])
+  photoShowing: PhotoShowingState! @protected(kinds: [USER, DISPLAY])
+  photoShowingHistory(limit: Int = 50): [PhotoShowing!]! @protected
 }
 
 type Mutation {
-  uploadPhoto(input: PhotoUploadInput!, file: Upload!): Photo!
-  trackPhotoShowing(source: PhotoShowingSource! = SCHEDULE): PhotoShowingState!
+  uploadPhoto(input: PhotoUploadInput!, file: Upload!): Photo! @protected
+  trackPhotoShowing(source: PhotoShowingSource! = SCHEDULE): PhotoShowingState! @protected(kinds: [USER, DISPLAY])
 }

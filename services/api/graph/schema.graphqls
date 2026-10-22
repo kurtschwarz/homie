@@ -10,8 +10,8 @@ type Health {
 }
 
 type Query {
-  health: Health!
-  timer: Timer
+  health: Health! @public
+  timer: Timer @protected(kinds: [USER, DISPLAY])
 }
 
 type Timer {
@@ -24,9 +24,9 @@ type Timer {
 }
 
 extend type Mutation {
-  startTimer(title: String!, emoji: String!, durationSeconds: Int!): Timer!
-  addTimerMinute: Timer!
-  pauseTimer: Timer!
-  resumeTimer: Timer!
-  cancelTimer: Boolean!
+  startTimer(title: String!, emoji: String!, durationSeconds: Int!): Timer! @protected
+  addTimerMinute: Timer! @protected(kinds: [USER, DISPLAY])
+  pauseTimer: Timer! @protected(kinds: [USER, DISPLAY])
+  resumeTimer: Timer! @protected(kinds: [USER, DISPLAY])
+  cancelTimer: Boolean! @protected(kinds: [USER, DISPLAY])
 }

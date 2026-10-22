@@ -18,6 +18,7 @@ import (
 
 	"github.com/kurtschwarz/homie/services/api/internal/auth"
 	"github.com/kurtschwarz/homie/services/api/internal/graph"
+	"github.com/kurtschwarz/homie/services/api/internal/graph/model"
 )
 
 type Config struct {
@@ -57,7 +58,10 @@ func newHandler(cfg Config, protectGraphQL, includeLocalRoutes bool) http.Handle
 		// GET is deliberately not registered above - with one endpoint for
 		// everything, a SameSite=Lax cookie riding a cross-site top-level
 		// GET navigation would be the only CSRF shape left.
-		gqlSrv.AroundOperations(authGate(cfg.Resolver, cfg.Token))
+		//
+		// includeLocalRoutes doubles as "this listener serves the display",
+		// which is what DISPLAY-kind fields are narrowed to.
+		gqlSrv.AroundOperations(authGate(cfg.Resolver, cfg.Token, includeLocalRoutes))
 	}
 	graphqlHandler := withRequestContext(http.Handler(gqlSrv))
 	mux.Handle("/graphql", graphqlHandler)
@@ -122,28 +126,52 @@ func clientIP(r *http.Request) string {
 	return r.RemoteAddr
 }
 
-// authGate is gqlgen's one security boundary: public operations pass
-// through untouched, and everything else needs either the shared bearer
-// token (the manager, the iOS app and photo-sync all still carry it) or a
-// valid session cookie, which it resolves into the current user.
-func authGate(resolver *graph.Resolver, token string) graphql.OperationMiddleware {
+// authGate is gqlgen's one security boundary. Three things can satisfy it:
+// a public operation needs nothing; the shared bearer token proves the
+// caller is the display; and a valid session cookie resolves into the
+// current user, who must hold whatever role the operation's fields demand.
+//
+// servesDisplay reports whether this listener is one the display is served
+// on. A field whose kinds exclude USER is refused everywhere else before
+// any credential is considered, so holding the bearer token does not widen
+// the surface.
+func authGate(resolver *graph.Resolver, token string, servesDisplay bool) graphql.OperationMiddleware {
+	deny := func(message string) graphql.ResponseHandler {
+		return func(ctx context.Context) *graphql.Response {
+			return graphql.ErrorResponse(ctx, "%s", message)
+		}
+	}
 	return func(ctx context.Context, next graphql.OperationHandler) graphql.ResponseHandler {
 		oc := graphql.GetOperationContext(ctx)
+		if !servesDisplay && graph.SelectsDisplayOnlyField(oc.Operation) {
+			return deny("unauthorized: only served to the display")
+		}
 		if graph.IsPublicOperation(oc.Operation) {
 			return next(ctx)
 		}
+		// TODO(photo-sync-auth): Photo Sync and the iOS app still carry this
+		// token rather than a session; once they move to user-based auth,
+		// delete this branch and Config.Token along with it.
 		if bearer := auth.BearerTokenFromContext(ctx); token != "" && len(bearer) == len(token) &&
 			subtle.ConstantTimeCompare([]byte(bearer), []byte(token)) == 1 {
+			if !graph.OperationAllowsKind(oc.Operation, string(model.AuthKindDisplay)) {
+				return deny("unauthorized")
+			}
 			return next(ctx)
 		}
 		if resolver != nil && resolver.Accounts != nil {
 			if user, session, err := resolver.Accounts.CurrentUser(ctx, auth.SessionTokenFromContext(ctx)); err == nil {
-				return next(auth.WithCurrentUser(ctx, auth.CurrentUser{UserID: user.ID, SessionID: session.ID}))
+				if !graph.OperationAllowsKind(oc.Operation, string(model.AuthKindUser)) {
+					return deny("unauthorized")
+				}
+				role := string(user.Role)
+				if !graph.OperationAllowsRole(oc.Operation, role) {
+					return deny("forbidden")
+				}
+				return next(auth.WithCurrentUser(ctx, auth.CurrentUser{UserID: user.ID, SessionID: session.ID, Role: role}))
 			}
 		}
-		return func(ctx context.Context) *graphql.Response {
-			return graphql.ErrorResponse(ctx, "unauthorized")
-		}
+		return deny("unauthorized")
 	}
 }
 

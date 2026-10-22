@@ -108,31 +108,31 @@
   --spacing-hm-column: var(--hm-column-gap);
   --spacing-hm-section: var(--hm-section-gap);
 
-  /* Density-scaled spacing (kiosk px × density): gap-hm-12, p-hm-24, size-hm-28 ... */
-  --spacing-hm-2: calc(2px * var(--hm-density));
-  --spacing-hm-4: calc(4px * var(--hm-density));
-  --spacing-hm-6: calc(6px * var(--hm-density));
-  --spacing-hm-8: calc(8px * var(--hm-density));
-  --spacing-hm-10: calc(10px * var(--hm-density));
-  --spacing-hm-12: calc(12px * var(--hm-density));
-  --spacing-hm-14: calc(14px * var(--hm-density));
-  --spacing-hm-16: calc(16px * var(--hm-density));
-  --spacing-hm-18: calc(18px * var(--hm-density));
-  --spacing-hm-20: calc(20px * var(--hm-density));
-  --spacing-hm-22: calc(22px * var(--hm-density));
-  --spacing-hm-24: calc(24px * var(--hm-density));
-  --spacing-hm-26: calc(26px * var(--hm-density));
-  --spacing-hm-28: calc(28px * var(--hm-density));
-  --spacing-hm-30: calc(30px * var(--hm-density));
-  --spacing-hm-32: calc(32px * var(--hm-density));
-  --spacing-hm-36: calc(36px * var(--hm-density));
-  --spacing-hm-40: calc(40px * var(--hm-density));
-  --spacing-hm-44: calc(44px * var(--hm-density));
-  --spacing-hm-52: calc(52px * var(--hm-density));
-  --spacing-hm-56: calc(56px * var(--hm-density));
-  --spacing-hm-64: calc(64px * var(--hm-density));
-  --spacing-hm-76: calc(76px * var(--hm-density));
-  --spacing-hm-128: calc(128px * var(--hm-density));
+  /* Density-scaled spacing (kiosk rem × density): gap-hm-12, p-hm-24, size-hm-28 ... */
+  --spacing-hm-2: calc(0.125rem * var(--hm-density));
+  --spacing-hm-4: calc(0.25rem * var(--hm-density));
+  --spacing-hm-6: calc(0.375rem * var(--hm-density));
+  --spacing-hm-8: calc(0.5rem * var(--hm-density));
+  --spacing-hm-10: calc(0.625rem * var(--hm-density));
+  --spacing-hm-12: calc(0.75rem * var(--hm-density));
+  --spacing-hm-14: calc(0.875rem * var(--hm-density));
+  --spacing-hm-16: calc(1rem * var(--hm-density));
+  --spacing-hm-18: calc(1.125rem * var(--hm-density));
+  --spacing-hm-20: calc(1.25rem * var(--hm-density));
+  --spacing-hm-22: calc(1.375rem * var(--hm-density));
+  --spacing-hm-24: calc(1.5rem * var(--hm-density));
+  --spacing-hm-26: calc(1.625rem * var(--hm-density));
+  --spacing-hm-28: calc(1.75rem * var(--hm-density));
+  --spacing-hm-30: calc(1.875rem * var(--hm-density));
+  --spacing-hm-32: calc(2rem * var(--hm-density));
+  --spacing-hm-36: calc(2.25rem * var(--hm-density));
+  --spacing-hm-40: calc(2.5rem * var(--hm-density));
+  --spacing-hm-44: calc(2.75rem * var(--hm-density));
+  --spacing-hm-52: calc(3.25rem * var(--hm-density));
+  --spacing-hm-56: calc(3.5rem * var(--hm-density));
+  --spacing-hm-64: calc(4rem * var(--hm-density));
+  --spacing-hm-76: calc(4.75rem * var(--hm-density));
+  --spacing-hm-128: calc(8rem * var(--hm-density));
 
   /* Fixed kiosk sizes: w-hm-panel-landscape, w-hm-now-card ... */
   --spacing-hm-screen-w: var(--hm-size-screen-w);
@@ -149,15 +149,15 @@
   /* Radii: rounded-hm-panel and rounded-hm-control follow the surface; rounded-hm-18 etc. scale with density. */
   --radius-hm-panel: var(--hm-panel-radius);
   --radius-hm-control: var(--hm-control-radius);
-  --radius-hm-3: calc(3px * var(--hm-density));
-  --radius-hm-6: calc(6px * var(--hm-density));
-  --radius-hm-16: calc(16px * var(--hm-density));
-  --radius-hm-18: calc(18px * var(--hm-density));
-  --radius-hm-20: calc(20px * var(--hm-density));
-  --radius-hm-22: calc(22px * var(--hm-density));
-  --radius-hm-24: calc(24px * var(--hm-density));
-  --radius-hm-28: calc(28px * var(--hm-density));
-  --radius-hm-32: calc(32px * var(--hm-density));
+  --radius-hm-3: calc(0.1875rem * var(--hm-density));
+  --radius-hm-6: calc(0.375rem * var(--hm-density));
+  --radius-hm-16: calc(1rem * var(--hm-density));
+  --radius-hm-18: calc(1.125rem * var(--hm-density));
+  --radius-hm-20: calc(1.25rem * var(--hm-density));
+  --radius-hm-22: calc(1.375rem * var(--hm-density));
+  --radius-hm-24: calc(1.5rem * var(--hm-density));
+  --radius-hm-28: calc(1.75rem * var(--hm-density));
+  --radius-hm-32: calc(2rem * var(--hm-density));
 
   /* Shadows: shadow-hm-sheet ... */
   --shadow-hm-sheet: var(--hm-shadow-sheet);

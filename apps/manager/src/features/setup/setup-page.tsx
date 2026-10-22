@@ -45,7 +45,7 @@ export function SetupPage({ onSetup }: { onSetup: (code: string, username: strin
 
   return <main className="flex min-h-dvh flex-col items-center justify-center gap-8 bg-hm-shell px-5 py-10 sm:gap-9 sm:px-8">
     <header className="flex flex-col items-center text-center">
-      <HomieAnimation src={homieAnimationUrl} />
+      <HomieAnimation src={homieAnimationUrl} className="sm:size-64" />
       <div className="-mt-14 flex flex-col gap-2 sm:-mt-[72px]">
         <h1 className="m-0 text-hm-display font-semibold text-hm-ink">Hi, I'm Homie!</h1>
         <p className="m-0 text-hm-body text-hm-ink-2">Let's get me set up. Two quick steps and you're in.</p>

@@ -1,7 +1,4 @@
-/* The kiosk panel is exactly 1920x1080 and the display is laid out to that
-   size (see the fixed viewport in index.html). The UA default body margin
-   pushes the page past the panel, which shows up as a border around the UI
-   and makes Chromium draw scrollbars, so the page box is pinned flat here. */
+/* Keep the output-only kiosk page pinned to the viewport without scrollbars. */
 
 @import "@homie/ui/globals.css";
 @source "./**/*.{ts,tsx}";
@@ -32,27 +29,29 @@ html:not([data-dev]) * {
   cursor: none;
 }
 
+/* Lengths here are rem, so they ride the kiosk's viewport-derived root
+   font-size along with every token: 1rem is one pixel of the 1920x1080 design. */
 .timer-frame {
   box-sizing: border-box;
   position: fixed;
-  inset: 18px 28px 23px;
-  background: #f5f4f1;
-  color: #17171b;
+  inset: 1.125rem 1.75rem 1.4375rem;
+  background: var(--hm-bg);
+  color: var(--hm-ink);
   display: flex;
   flex-direction: column;
-  padding: 42px 50px 40px;
-  font-family: var(--hm-font-sans, system-ui, sans-serif);
+  padding: 2.625rem 3.125rem 2.5rem;
+  font-family: var(--font-sans, system-ui, sans-serif);
 }
-.timer-header { display: flex; align-items: center; justify-content: space-between; font-size: 28px; }
-.timer-title { display: flex; align-items: center; gap: 14px; }
-.timer-title strong { font-size: 38px; }
-.timer-header time { color: #73747c; }
-.timer-center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding-bottom: 14px; }
-.timer-countdown { font-size: clamp(150px, 22vw, 320px); line-height: .95; font-weight: 700; letter-spacing: -0.075em; font-variant-numeric: tabular-nums; }
-.timer-ready { margin-top: 24px; color: #575960; font-size: 28px; }
+.timer-header { display: flex; align-items: center; justify-content: space-between; font-size: 1.75rem; }
+.timer-title { display: flex; align-items: center; gap: 0.875rem; }
+.timer-title strong { font-size: 2.375rem; }
+.timer-header time { color: var(--hm-ink-3); }
+.timer-center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding-bottom: 0.875rem; }
+.timer-countdown { font-size: 20rem; line-height: .95; font-weight: 700; letter-spacing: -0.075em; font-variant-numeric: tabular-nums; }
+.timer-ready { margin-top: 1.5rem; color: var(--hm-ink-2); font-size: 1.75rem; }
 .timer-footer { padding-bottom: 0; }
-.timer-progress { height: 10px; overflow: hidden; border-radius: 999px; background: #e3e1dc; }
-.timer-progress span { display: block; height: 100%; border-radius: inherit; background: #3152c8; transition: width 1s linear; }
-.timer-actions { display: flex; justify-content: center; gap: 14px; margin-top: 28px; }
-.timer-actions button { min-width: 156px; border: 1px solid #e3e1dc; border-radius: 999px; background: white; color: #17171b; padding: 18px 30px; font: inherit; font-size: 24px; font-weight: 650; }
-.timer-actions button.primary { min-width: 182px; border-color: #3152c8; background: #3152c8; color: white; }
+.timer-progress { height: 0.625rem; overflow: hidden; border-radius: 999px; background: var(--hm-line); }
+.timer-progress span { display: block; height: 100%; border-radius: inherit; background: var(--hm-accent); transition: width 1s linear; }
+.timer-actions { display: flex; justify-content: center; gap: 0.875rem; margin-top: 1.75rem; }
+.timer-actions button { min-width: 9.75rem; border: 1px solid var(--hm-line); border-radius: 999px; background: var(--hm-surface); color: var(--hm-ink); padding: 1.125rem 1.875rem; font: inherit; font-size: 1.5rem; font-weight: 650; }
+.timer-actions button.primary { min-width: 11.375rem; border-color: var(--hm-accent); background: var(--hm-accent); color: var(--hm-on-accent); }

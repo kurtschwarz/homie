@@ -52,7 +52,7 @@ export function DailyForecast({ days, className, ...props }: React.ComponentProp
           key={d.name}
           className={cn(
             "grid h-hm-76 items-center gap-hm-20 border-t-2 border-hm-line text-hm-body",
-            "grid-cols-[84px_24px_44px_36px_minmax(0,1fr)_36px] kiosk:grid-cols-[150px_40px_80px_64px_minmax(0,1fr)_64px] mobile:grid-cols-[60px_22px_40px_32px_minmax(0,1fr)_32px]",
+            "grid-cols-[84px_24px_44px_36px_minmax(0,1fr)_36px] kiosk:grid-cols-[9.375rem_2.5rem_5rem_4rem_minmax(0,1fr)_4rem] mobile:grid-cols-[60px_22px_40px_32px_minmax(0,1fr)_32px]",
           )}
         >
           <span className="font-medium">{d.name}</span>

@@ -50,7 +50,7 @@ function ComingUpSwipeArea({ className, ...props }: Drawer.SwipeArea.Props) {
 }
 
 const handleClass =
-  "grid h-[max(32px,calc(44px*var(--hm-density)))] w-[max(120px,calc(200px*var(--hm-density)))] flex-none cursor-pointer place-items-center self-center border-0 bg-transparent p-0 before:block before:h-[max(4px,calc(6px*var(--hm-density)))] before:w-[max(36px,calc(72px*var(--hm-density)))] before:rounded-full before:bg-hm-line before:content-[''] focus-visible:outline-3 focus-visible:outline-hm-accent"
+  "grid h-[max(2rem,calc(2.75rem*var(--hm-density)))] w-[max(7.5rem,calc(12.5rem*var(--hm-density)))] flex-none cursor-pointer place-items-center self-center border-0 bg-transparent p-0 before:block before:h-[max(0.25rem,calc(0.375rem*var(--hm-density)))] before:w-[max(2.25rem,calc(4.5rem*var(--hm-density)))] before:rounded-full before:bg-hm-line before:content-[''] focus-visible:outline-3 focus-visible:outline-hm-accent"
 
 /** The grab bar. Outside the sheet it opens it; the sheet has its own that closes it. */
 function ComingUpHandle({ className, ...props }: Drawer.Trigger.Props) {
@@ -82,9 +82,9 @@ function ComingUpSheet({
         <Drawer.Popup
           data-slot="coming-up-sheet"
           className={cn(
-            "[--bleed:32px] relative -mb-(--bleed) flex max-h-[calc(100%-8px+var(--bleed))] w-full flex-col overflow-hidden rounded-t-hm-28 bg-hm-surface px-hm-32 pt-1 pb-[calc(24px*var(--hm-density)+var(--bleed))] text-hm-ink shadow-hm-sheet outline-none",
+            "[--bleed:2rem] relative -mb-(--bleed) flex max-h-[calc(100%-0.5rem+var(--bleed))] w-full flex-col overflow-hidden rounded-t-hm-28 bg-hm-surface px-hm-32 pt-1 pb-[calc(1.5rem*var(--hm-density)+var(--bleed))] text-hm-ink shadow-hm-sheet outline-none",
             "[transform:translateY(var(--drawer-swipe-movement-y))] transition-transform duration-340 ease-hm-sheet data-swiping:select-none data-swiping:duration-0",
-            "data-starting-style:[transform:translateY(calc(100%+80px))] data-ending-style:[transform:translateY(calc(100%+80px))]",
+            "data-starting-style:[transform:translateY(calc(100%+5rem))] data-ending-style:[transform:translateY(calc(100%+5rem))]",
             className,
           )}
         >

@@ -6,9 +6,9 @@ import { cn } from "../lib/utils"
 const SIZES = {
   lg: "size-hm-badge-lg text-[length:calc(var(--hm-badge-lg)*0.58)]",
   md: "size-hm-badge text-[length:calc(var(--hm-badge)*0.56)]",
-  sm: "size-hm-badge-sm text-[length:calc(var(--hm-badge-sm)*0.55)] shadow-[inset_0_0_0_max(1px,calc(2px*var(--hm-density)))_var(--p)]",
-  chip: "size-hm-36 text-[length:calc(20px*var(--hm-density))]",
-  legend: "size-hm-40 text-[length:calc(22px*var(--hm-density))] shadow-[inset_0_0_0_calc(3px*var(--hm-density))_var(--p)]",
+  sm: "size-hm-badge-sm text-[length:calc(var(--hm-badge-sm)*0.55)] shadow-[inset_0_0_0_max(1px,calc(0.125rem*var(--hm-density)))_var(--p)]",
+  chip: "size-hm-36 text-[length:calc(1.25rem*var(--hm-density))]",
+  legend: "size-hm-40 text-[length:calc(1.375rem*var(--hm-density))] shadow-[inset_0_0_0_calc(0.1875rem*var(--hm-density))_var(--p)]",
 }
 
 /**
@@ -32,7 +32,7 @@ export function PersonBadge({
         "grid flex-none place-items-center rounded-full bg-(--p) leading-none text-hm-on-person",
         "font-[Apple_Color_Emoji,Segoe_UI_Emoji,Noto_Color_Emoji,var(--font-sans)] [filter:var(--hm-emoji-filter)]",
         SIZES[size],
-        ring && "shadow-[inset_0_0_0_calc(3px*var(--hm-density))_var(--p)]",
+        ring && "shadow-[inset_0_0_0_calc(0.1875rem*var(--hm-density))_var(--p)]",
         className,
       )}
       {...props}

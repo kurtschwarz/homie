@@ -124,7 +124,7 @@ export function PhotoPanel({
         className="absolute inset-0 size-full cursor-pointer border-0 bg-transparent p-0"
       />
       {current && (current.place || current.takenAt) && (
-        <div className="pointer-events-none absolute bottom-hm-28 left-hm-28 flex max-w-[calc(100%-56px*var(--hm-density))] items-start gap-hm-14 rounded-hm-18 bg-hm-scrim py-hm-16 pr-hm-24 pl-hm-18 text-hm-on-scrim">
+        <div className="pointer-events-none absolute bottom-hm-28 left-hm-28 flex max-w-[calc(100%-3.5rem*var(--hm-density))] items-start gap-hm-14 rounded-hm-18 bg-hm-scrim py-hm-16 pr-hm-24 pl-hm-18 text-hm-on-scrim">
           <MapPin aria-hidden className="mt-0.5 size-hm-28 shrink-0" strokeWidth={2} />
           <div className="flex min-w-0 flex-col gap-0.5">
             <div className="truncate text-hm-label-lg">{current.place ?? "Unknown place"}</div>

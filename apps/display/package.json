@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@homie/ui": "workspace:*",
+    "@tanstack/react-query": "5.104.5",
     "lucide-react": "^1.57.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",

@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect } from 'react'
 import { graphql } from '../../lib/graphql'
 
 export type Photo = {
@@ -26,49 +27,52 @@ const ROTATION_QUERY = `query PhotoShowing { photoShowing { current { id photo {
 const ROTATION_MUTATION = (source: 'SCHEDULE' | 'TAP') =>
   `mutation TrackPhotoShowing { trackPhotoShowing(source: ${source}) { current { id photo { id url width height takenAt place focus { x y width height } } startedAt endsAt source } next { id photo { id url width height takenAt place focus { x y width height } } startedAt endsAt source } } }`
 
+const QUERY_KEY = ['photoShowing']
+
+async function fetchPhotoShowing() {
+  const { photoShowing } = await graphql<{ photoShowing: PhotoShowingState }>(ROTATION_QUERY)
+  return photoShowing
+}
+
 /** Polls the API-owned slideshow timeline and advances expired slots. */
 export function usePhotoShowing() {
-  const [showing, setShowing] = useState<PhotoShowingState | null>(null)
-  const advancing = useRef(false)
-  const refreshInFlight = useRef(false)
-  const advance = useCallback(async (source: 'SCHEDULE' | 'TAP') => {
-    if (advancing.current) return
-    advancing.current = true
-    try {
-      const { trackPhotoShowing: result } = await graphql<{ trackPhotoShowing: PhotoShowingState }>(
+  const queryClient = useQueryClient()
+
+  const query = useQuery({
+    queryKey: QUERY_KEY,
+    queryFn: fetchPhotoShowing,
+    refetchInterval: 1000,
+  })
+
+  const advance = useMutation({
+    mutationFn: async (source: 'SCHEDULE' | 'TAP') => {
+      const { trackPhotoShowing } = await graphql<{ trackPhotoShowing: PhotoShowingState }>(
         ROTATION_MUTATION(source),
       )
-      setShowing(result)
-    } catch {
-      // The next poll retries if this slot expired; taps remain responsive to API recovery.
-    } finally {
-      advancing.current = false
-    }
-  }, [])
+      return trackPhotoShowing
+    },
+    onSuccess: (result) => {
+      queryClient.setQueryData(QUERY_KEY, result)
+    },
+  })
 
-  const refresh = useCallback(async () => {
-    if (refreshInFlight.current) return
-    refreshInFlight.current = true
-    try {
-      const { photoShowing: result } = await graphql<{ photoShowing: PhotoShowingState }>(
-        ROTATION_QUERY,
-      )
-      setShowing(result)
-      if (result.current && result.next && result.current.endsAt <= Math.floor(Date.now() / 1000)) {
-        await advance('SCHEDULE')
-      }
-    } catch {
-      // Retain the last known frame while the API is temporarily unavailable.
-    } finally {
-      refreshInFlight.current = false
-    }
-  }, [advance])
+  const showing = query.data ?? null
+  const { mutate, isPending } = advance
 
+  // Keyed on dataUpdatedAt so a failed advance retries once per poll rather
+  // than on every mutation state change.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: showing and isPending are read at poll time only
   useEffect(() => {
-    void refresh()
-    const interval = window.setInterval(refresh, 1000)
-    return () => window.clearInterval(interval)
-  }, [refresh])
+    if (!showing?.current || !showing.next || isPending) return
+    if (showing.current.endsAt <= Math.floor(Date.now() / 1000)) {
+      mutate('SCHEDULE')
+    }
+  }, [query.dataUpdatedAt, mutate])
 
-  return { showing, advance }
+  return {
+    showing,
+    advance: (source: 'SCHEDULE' | 'TAP') => {
+      if (!isPending) mutate(source)
+    },
+  }
 }

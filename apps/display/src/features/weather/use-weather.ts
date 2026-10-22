@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { graphql } from '../../lib/graphql'
+import { pollEvery } from '../../lib/query-client'
 
 type Weather = {
   condition: 'SUN' | 'CLOUD_SUN' | 'CLOUD' | 'RAIN' | 'MOON'
@@ -8,8 +9,6 @@ type Weather = {
   fetchedAt: number
   stale: boolean
 }
-
-type WeatherState = { kind: 'loading' } | { kind: 'ready'; weather: Weather } | { kind: 'error' }
 
 const QUERY = `
   query Weather {
@@ -23,34 +22,17 @@ const QUERY = `
   }
 `
 
+async function fetchWeather() {
+  const data = await graphql<{ weather?: Weather }>(QUERY)
+  if (!data.weather) throw new Error('Weather query failed')
+  return data.weather
+}
+
 /** Fetches current conditions through GraphQL and refreshes on a ten-minute cadence. */
-export function useWeather(): WeatherState {
-  const [state, setState] = useState<WeatherState>({ kind: 'loading' })
-
-  useEffect(() => {
-    let cancelled = false
-    let timeout: ReturnType<typeof setTimeout> | undefined
-
-    async function fetchWeather() {
-      let retryDelay = 10 * 60_000
-      try {
-        const data = await graphql<{ weather?: Weather }>(QUERY)
-        if (!data.weather) throw new Error('Weather query failed')
-        if (!cancelled) setState({ kind: 'ready', weather: data.weather })
-      } catch {
-        retryDelay = 30_000
-        if (!cancelled) setState({ kind: 'error' })
-      } finally {
-        if (!cancelled) timeout = setTimeout(fetchWeather, retryDelay)
-      }
-    }
-
-    void fetchWeather()
-    return () => {
-      cancelled = true
-      if (timeout) clearTimeout(timeout)
-    }
-  }, [])
-
-  return state
+export function useWeather() {
+  return useQuery({
+    queryKey: ['weather'],
+    queryFn: fetchWeather,
+    refetchInterval: pollEvery(10 * 60_000),
+  })
 }

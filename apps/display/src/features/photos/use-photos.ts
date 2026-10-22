@@ -1,8 +1,14 @@
 import type { Photo } from '@homie/ui/components/photo-panel'
-import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { graphql } from '../../lib/graphql'
+import { pollEvery } from '../../lib/query-client'
 
-type PhotoState = { kind: 'loading' } | { kind: 'ready'; photos: Photo[] } | { kind: 'error' }
+type PhotoRecord = {
+  url: string
+  takenAt: number
+  place?: string | null
+  focus?: Photo['focus'] | null
+}
 
 const QUERY = `
   query Photos {
@@ -18,48 +24,27 @@ const QUERY = `
   }
 `
 
+function select(data: { photos?: PhotoRecord[] }): Photo[] {
+  if (!data.photos) throw new Error('Photos query failed')
+  return data.photos.map((photo) => ({
+    src: photo.url,
+    alt: photo.place ?? '',
+    takenAt: new Date(photo.takenAt * 1000),
+    ...(photo.place ? { place: photo.place } : {}),
+    ...(photo.focus ? { focus: photo.focus } : {}),
+  }))
+}
+
+async function fetchPhotos() {
+  return graphql<{ photos?: PhotoRecord[] }>(QUERY)
+}
+
 /** Fetches the current photo library and refreshes periodically. */
-export function usePhotos(): PhotoState {
-  const [state, setState] = useState<PhotoState>({ kind: 'loading' })
-
-  useEffect(() => {
-    let cancelled = false
-    let timeout: ReturnType<typeof setTimeout> | undefined
-
-    async function fetchPhotos() {
-      let retryDelay = 5 * 60_000
-      try {
-        const data = await graphql<{
-          photos?: Array<{
-            url: string
-            takenAt: number
-            place?: string | null
-            focus?: Photo['focus'] | null
-          }>
-        }>(QUERY)
-        if (!data.photos) throw new Error('Photos query failed')
-        const photos: Photo[] = data.photos.map((photo) => ({
-          src: photo.url,
-          alt: photo.place ?? '',
-          ...(photo.place ? { place: photo.place } : {}),
-          takenAt: new Date(photo.takenAt * 1000),
-          ...(photo.focus ? { focus: photo.focus } : {}),
-        }))
-        if (!cancelled) setState({ kind: 'ready', photos })
-      } catch {
-        retryDelay = 30_000
-        if (!cancelled) setState({ kind: 'error' })
-      } finally {
-        if (!cancelled) timeout = setTimeout(fetchPhotos, retryDelay)
-      }
-    }
-
-    void fetchPhotos()
-    return () => {
-      cancelled = true
-      if (timeout) clearTimeout(timeout)
-    }
-  }, [])
-
-  return state
+export function usePhotos() {
+  return useQuery({
+    queryKey: ['photos'],
+    queryFn: fetchPhotos,
+    select,
+    refetchInterval: pollEvery(5 * 60_000),
+  })
 }

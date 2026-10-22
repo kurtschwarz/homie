@@ -37,10 +37,14 @@ export function App() {
   const [sheetOpen, setSheetOpen] = React.useState(false)
   const eventsColumnRef = React.useRef<HTMLDivElement>(null)
 
-  const allEvents = events.kind === 'ready' ? events.events : []
+  const allEvents = events.data ?? []
   const { headline, upcoming } = splitEvents(allEvents, now)
   const rows = toRows(upcoming, now)
 
+  // Until health resolves we don't know whether this panel belongs on the
+  // setup page or the home screen; the themed background covers the gap
+  // rather than flashing the wrong one.
+  if (setup.kind === 'loading') return null
   if (setup.kind === 'setup') return <SetupPage code={setup.code} />
   if (timer.timer)
     return (
@@ -54,10 +58,10 @@ export function App() {
 
   return (
     <HomeLayout>
-      {photos.kind === 'ready' && photos.photos.length > 0 && photoShowing.showing?.current && (
+      {photos.data && photos.data.length > 0 && photoShowing.showing?.current && (
         <PhotoPanel
           photos={[
-            ...photos.photos,
+            ...photos.data,
             ...[photoShowing.showing.current, photoShowing.showing.next]
               .filter((showing): showing is NonNullable<typeof showing> => showing !== null)
               .map(({ photo }) => ({
@@ -117,17 +121,17 @@ export function App() {
           </ComingUpSheet>
         </ComingUp>
       </HomeEvents>
-      {weather.kind === 'ready' && (
+      {weather.data && (
         <WeatherGlance
           className="fixed right-hm-screen top-hm-screen z-10"
-          condition={weatherIconCondition(weather.weather.condition)}
-          temperature={weather.weather.temperature}
-          stale={weather.weather.stale}
+          condition={weatherIconCondition(weather.data.condition)}
+          temperature={weather.data.temperature}
+          stale={weather.data.stale}
           aria-label={weatherAriaLabel(
-            weather.weather.conditionCode,
-            weather.weather.temperature,
-            weather.weather.fetchedAt,
-            weather.weather.stale,
+            weather.data.conditionCode,
+            weather.data.temperature,
+            weather.data.fetchedAt,
+            weather.data.stale,
           )}
         />
       )}

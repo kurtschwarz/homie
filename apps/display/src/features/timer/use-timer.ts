@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { graphql } from '../../lib/graphql'
 
 export type ActiveTimer = {
@@ -10,41 +10,41 @@ export type ActiveTimer = {
   paused: boolean
 }
 
+const QUERY_KEY = ['timer']
 const TIMER_QUERY = `query ActiveTimer { timer { title emoji durationSeconds remainingSeconds endsAt paused } }`
 
+async function fetchTimer() {
+  const data = await graphql<{ timer: ActiveTimer | null }>(TIMER_QUERY)
+  return data.timer
+}
+
 export function useTimer() {
-  const [timer, setTimer] = useState<ActiveTimer | null>(null)
+  const queryClient = useQueryClient()
 
-  const refresh = useCallback(async () => {
-    try {
-      const data = await graphql<{ timer: ActiveTimer | null }>(TIMER_QUERY)
-      setTimer(data.timer)
-    } catch {
-      // Keep the last known timer during a temporary network failure.
-    }
-  }, [])
+  const query = useQuery({
+    queryKey: QUERY_KEY,
+    queryFn: fetchTimer,
+    refetchInterval: 1000,
+  })
 
-  useEffect(() => {
-    void refresh()
-    const interval = window.setInterval(refresh, 1000)
-    return () => window.clearInterval(interval)
-  }, [refresh])
+  const run = useMutation({
+    mutationFn: (mutation: string) => graphql(mutation),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEY }),
+  })
 
-  const run = useCallback(
-    async (mutation: string) => {
-      await graphql(mutation)
-      await refresh()
-    },
-    [refresh],
-  )
+  const timer = query.data ?? null
 
   return {
     timer,
-    addMinute: () => run('mutation { addTimerMinute { title } }'),
+    addMinute: () => run.mutateAsync('mutation { addTimerMinute { title } }').then(() => {}),
     togglePause: () =>
-      run(
-        timer?.paused ? 'mutation { resumeTimer { title } }' : 'mutation { pauseTimer { title } }',
-      ),
-    cancel: () => run('mutation { cancelTimer }'),
+      run
+        .mutateAsync(
+          timer?.paused
+            ? 'mutation { resumeTimer { title } }'
+            : 'mutation { pauseTimer { title } }',
+        )
+        .then(() => {}),
+    cancel: () => run.mutateAsync('mutation { cancelTimer }').then(() => {}),
   }
 }

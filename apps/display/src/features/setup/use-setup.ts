@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useEffect, useRef } from 'react'
 import { graphql } from '../../lib/graphql'
+import { pollEvery } from '../../lib/query-client'
 import { formatSetupCode } from './setup-code'
 
 type SetupState =
@@ -14,45 +16,37 @@ type SetupResponse = {
 }
 
 const QUERY = `{ health { status } setupCode }`
-const REFRESH_MS = 5000
-const RETRY_MS = 30_000
+
+async function fetchSetup() {
+  const data = await graphql<SetupResponse>(QUERY)
+  if (!data.health) throw new Error('Setup status query failed')
+  return data
+}
 
 /** Polls first-run status and retains a visible code through transient failures. */
 export function useSetup(): SetupState {
-  const [state, setState] = useState<SetupState>({ kind: 'loading' })
+  const query = useQuery({
+    queryKey: ['setup'],
+    queryFn: fetchSetup,
+    refetchInterval: pollEvery(5000),
+  })
+
+  // A successful response can report SETUP_REQUIRED without a code (the code
+  // hasn't been (re)generated yet); the setup page should stay on the last
+  // code it showed rather than unmount to a blank screen.
+  const lastCode = useRef<string | null>(null)
+  const freshCode =
+    query.data?.health.status === 'SETUP_REQUIRED' && query.data.setupCode
+      ? formatSetupCode(query.data.setupCode)
+      : null
 
   useEffect(() => {
-    let cancelled = false
-    let timeout: ReturnType<typeof setTimeout> | undefined
+    if (freshCode) lastCode.current = freshCode
+  }, [freshCode])
 
-    async function poll() {
-      let delay = REFRESH_MS
-      try {
-        const data = await graphql<SetupResponse>(QUERY)
-        if (!data.health) throw new Error('Setup status query failed')
-
-        if (!cancelled) {
-          if (data.health.status === 'SETUP_REQUIRED' && data.setupCode) {
-            setState({ kind: 'setup', code: formatSetupCode(data.setupCode) })
-          } else if (data.health.status === 'OK') {
-            setState({ kind: 'ready' })
-          }
-        }
-      } catch {
-        delay = RETRY_MS
-        if (!cancelled)
-          setState((previous) => (previous.kind === 'setup' ? previous : { kind: 'error' }))
-      } finally {
-        if (!cancelled) timeout = setTimeout(poll, delay)
-      }
-    }
-
-    void poll()
-    return () => {
-      cancelled = true
-      if (timeout) clearTimeout(timeout)
-    }
-  }, [])
-
-  return state
+  if (query.data?.health.status === 'OK') return { kind: 'ready' }
+  if (freshCode) return { kind: 'setup', code: freshCode }
+  if (lastCode.current) return { kind: 'setup', code: lastCode.current }
+  if (query.isError) return { kind: 'error' }
+  return { kind: 'loading' }
 }

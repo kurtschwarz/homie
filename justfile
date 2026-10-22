@@ -1,5 +1,8 @@
-pi_host := "homie.local"
+set dotenv-load := true
+
+pi_host := env_var_or_default("PI_HOST","homie.local")
 pi_conf := "/etc/homie"
+
 ios_simulator_id := env_var_or_default("IOS_SIMULATOR_ID", "6106C956-E47A-4099-81F5-851AB83AB540")
 ios_derived_data := "/tmp/homie-ios-derived-data"
 ios_app := ios_derived_data + "/Build/Products/Debug-iphonesimulator/Homie.app"

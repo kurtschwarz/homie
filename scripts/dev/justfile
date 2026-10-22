@@ -83,3 +83,8 @@ dev:
     ) >"$profile/firefox.log" 2>&1 &
     firefox_pid=$!
     docker compose up --build
+
+# Tear down the local dev stack: containers, networks, and named volumes.
+# Host state under .scratch (synced photos, the Firefox profile) is left alone.
+reset:
+    docker compose down --volumes --remove-orphans

@@ -1,5 +1,20 @@
 {
   "permissions": {
     "deny": ["Bash(just dev)"]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PROJECT_DIR}/.agents/hooks/after-file-modified.sh",
+            "args": [],
+            "timeout": 30
+          }
+        ]
+      }
+    ]
   }
 }

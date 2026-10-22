@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import { BrandMark } from "../shell/brand-mark";
+import type { ReactNode } from 'react'
+import { BrandMark } from '../shell/brand-mark'
 
 /** The centered card setup and login share: there is no sidebar yet to sit beside. */
 export function AuthCard({
@@ -7,9 +7,9 @@ export function AuthCard({
   description,
   children,
 }: {
-  title: string;
-  description: string;
-  children: ReactNode;
+  title: string
+  description: string
+  children: ReactNode
 }) {
   return (
     <main className="flex min-h-dvh items-center justify-center bg-hm-shell p-6">
@@ -27,5 +27,5 @@ export function AuthCard({
         {children}
       </div>
     </main>
-  );
+  )
 }

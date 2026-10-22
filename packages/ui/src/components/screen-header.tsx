@@ -1,11 +1,11 @@
-"use client";
+'use client'
 
-import { ChevronLeft } from "lucide-react";
-import type * as React from "react";
+import { ChevronLeft } from 'lucide-react'
+import type * as React from 'react'
 
-import { cn } from "../lib/utils";
-import { Button } from "./button";
-import { Clock } from "./clock";
+import { cn } from '../lib/utils'
+import { Button } from './button'
+import { Clock } from './clock'
 
 /**
  * Top bar of a full screen (Week, Weather): Home button, title, a middle slot, and the small clock.
@@ -15,19 +15,19 @@ import { Clock } from "./clock";
 export function ScreenHeader({
   title,
   onHome,
-  homeLabel = "Home",
+  homeLabel = 'Home',
   children,
   className,
   ...props
-}: Omit<React.ComponentProps<"header">, "title"> & {
-  title: React.ReactNode;
-  onHome: () => void;
-  homeLabel?: string;
+}: Omit<React.ComponentProps<'header'>, 'title'> & {
+  title: React.ReactNode
+  onHome: () => void
+  homeLabel?: string
 }) {
   return (
     <header
       data-slot="screen-header"
-      className={cn("flex items-center gap-hm-32 mobile:flex-wrap mobile:gap-y-hm-12", className)}
+      className={cn('flex items-center gap-hm-32 mobile:flex-wrap mobile:gap-y-hm-12', className)}
       {...props}
     >
       <Button onClick={onHome}>
@@ -38,7 +38,7 @@ export function ScreenHeader({
       {children && (
         <div className="min-w-0 flex-1 mobile:order-3 mobile:basis-full">{children}</div>
       )}
-      <Clock size="sm" className={cn("mobile:hidden", !children && "ml-auto")} />
+      <Clock size="sm" className={cn('mobile:hidden', !children && 'ml-auto')} />
     </header>
-  );
+  )
 }

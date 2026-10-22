@@ -1,15 +1,15 @@
-import * as React from "react";
-import { type HealthState, useHealth } from "./lib/use-health";
-import type { User } from "./lib/use-session";
-import { useSettings } from "./lib/use-settings";
+import * as React from 'react'
+import { type HealthState, useHealth } from './lib/use-health'
+import type { User } from './lib/use-session'
+import { useSettings } from './lib/use-settings'
 
 type AppData = ReturnType<typeof useSettings> & {
-  health: HealthState;
-  user: User | null;
-  logout: () => Promise<void>;
-};
+  health: HealthState
+  user: User | null
+  logout: () => Promise<void>
+}
 
-const AppDataContext = React.createContext<AppData | null>(null);
+const AppDataContext = React.createContext<AppData | null>(null)
 
 /**
  * Settings, health and the logged-in user, held once for the whole shell
@@ -23,22 +23,22 @@ export function AppDataProvider({
   logout,
   children,
 }: {
-  user: User | null;
-  logout: () => Promise<void>;
-  children: React.ReactNode;
+  user: User | null
+  logout: () => Promise<void>
+  children: React.ReactNode
 }) {
-  const settings = useSettings();
-  const health = useHealth();
+  const settings = useSettings()
+  const health = useHealth()
 
   const value = React.useMemo(
     () => ({ ...settings, health, user, logout }),
     [settings, health, user, logout],
-  );
-  return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>;
+  )
+  return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>
 }
 
 export function useAppData() {
-  const value = React.useContext(AppDataContext);
-  if (!value) throw new Error("App data context is missing");
-  return value;
+  const value = React.useContext(AppDataContext)
+  if (!value) throw new Error('App data context is missing')
+  return value
 }

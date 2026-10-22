@@ -1,5 +1,5 @@
-import { Outlet } from "react-router-dom";
-import { Sidebar } from "./sidebar";
+import { Outlet } from 'react-router-dom'
+import { Sidebar } from './sidebar'
 
 /** Sidebar beside a raised panel that holds the active section. */
 export function AdminShell() {
@@ -10,5 +10,5 @@ export function AdminShell() {
         <Outlet />
       </div>
     </main>
-  );
+  )
 }

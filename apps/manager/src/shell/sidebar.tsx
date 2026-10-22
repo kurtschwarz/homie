@@ -1,11 +1,11 @@
-import { Link, NavLink } from "react-router-dom";
-import { useAppData } from "../app-data";
-import { BrandMark } from "./brand-mark";
-import { sections } from "./sections";
+import { Link, NavLink } from 'react-router-dom'
+import { useAppData } from '../app-data'
+import { BrandMark } from './brand-mark'
+import { sections } from './sections'
 
 export function Sidebar() {
-  const { state, health } = useAppData();
-  const peopleCount = state.kind === "ready" ? state.settings.people.length : undefined;
+  const { state, health } = useAppData()
+  const peopleCount = state.kind === 'ready' ? state.settings.people.length : undefined
 
   return (
     <aside className="flex shrink-0 flex-col gap-4 md:w-[264px] md:gap-10 md:px-[18px] md:pb-[22px] md:pt-[30px]">
@@ -27,7 +27,7 @@ export function Sidebar() {
             to={to}
             end
             className={({ isActive }) =>
-              `flex h-11 shrink-0 items-center gap-3 rounded-xl px-3 text-left text-[15px] no-underline transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-hm-accent ${isActive ? "bg-hm-surface font-semibold text-hm-ink shadow-hm-raised" : "text-hm-ink-2 hover:bg-hm-surface/70"}`
+              `flex h-11 shrink-0 items-center gap-3 rounded-xl px-3 text-left text-[15px] no-underline transition-colors focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-hm-accent ${isActive ? 'bg-hm-surface font-semibold text-hm-ink shadow-hm-raised' : 'text-hm-ink-2 hover:bg-hm-surface/70'}`
             }
           >
             {({ isActive }) => (
@@ -35,10 +35,10 @@ export function Sidebar() {
                 <Icon
                   aria-hidden="true"
                   size={20}
-                  className={isActive ? "text-hm-accent" : "text-hm-ink-3"}
+                  className={isActive ? 'text-hm-accent' : 'text-hm-ink-3'}
                 />
                 <span className="md:flex-1">{label}</span>
-                {label === "People" && peopleCount !== undefined && (
+                {label === 'People' && peopleCount !== undefined && (
                   <span className="grid min-w-7 place-items-center rounded-lg bg-hm-accent px-2 text-xs font-semibold leading-6 text-hm-on-accent">
                     {peopleCount}
                   </span>
@@ -54,12 +54,12 @@ export function Sidebar() {
         aria-live="polite"
       >
         <span
-          className={`size-2 rounded-full ${health.kind === "ok" ? "bg-hm-accent" : "bg-hm-ink-3"}`}
+          className={`size-2 rounded-full ${health.kind === 'ok' ? 'bg-hm-accent' : 'bg-hm-ink-3'}`}
         />
-        {health.kind === "connecting" && "Connecting to API…"}
-        {health.kind === "error" && "API unavailable"}
-        {health.kind === "ok" && `API ${health.health.status}`}
+        {health.kind === 'connecting' && 'Connecting to API…'}
+        {health.kind === 'error' && 'API unavailable'}
+        {health.kind === 'ok' && `API ${health.health.status}`}
       </div>
     </aside>
-  );
+  )
 }

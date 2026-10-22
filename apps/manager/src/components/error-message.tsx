@@ -1,9 +1,9 @@
 export function ErrorMessage({
   message,
-  label = "Settings unavailable",
+  label = 'Settings unavailable',
 }: {
-  message: string;
-  label?: string;
+  message: string
+  label?: string
 }) {
   return (
     <p
@@ -12,5 +12,5 @@ export function ErrorMessage({
     >
       {label}: {message}
     </p>
-  );
+  )
 }

@@ -1,14 +1,14 @@
-import homieAnimationUrl from "@homie/ui/assets/homie-confetti.lottie?url";
-import { HomieAnimation } from "@homie/ui/components/homie-animation";
-import { ScanQrCode, Smartphone, Wifi } from "lucide-react";
-import QRCode from "react-qr-code";
-import { setupCodeCharacters } from "./setup-code";
+import homieAnimationUrl from '@homie/ui/assets/homie-confetti.lottie?url'
+import { HomieAnimation } from '@homie/ui/components/homie-animation'
+import { ScanQrCode, Smartphone, Wifi } from 'lucide-react'
+import QRCode from 'react-qr-code'
+import { setupCodeCharacters } from './setup-code'
 
-const MANAGE_URL = "homie.local/manage";
+const MANAGE_URL = 'homie.local/manage'
 
 export function SetupPage({ code }: { code: string }) {
-  const characters = setupCodeCharacters(code);
-  const qrValue = `http://${MANAGE_URL}?code=${characters.join("")}`;
+  const characters = setupCodeCharacters(code)
+  const qrValue = `http://${MANAGE_URL}?code=${characters.join('')}`
 
   return (
     <main className="fixed inset-0 flex h-dvh w-screen flex-col items-center justify-center gap-hm-52 bg-hm-shell px-hm-screen py-hm-screen text-hm-ink">
@@ -107,5 +107,5 @@ export function SetupPage({ code }: { code: string }) {
         <span>Waiting for you to pair</span>
       </footer>
     </main>
-  );
+  )
 }

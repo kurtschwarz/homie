@@ -1,5 +1,5 @@
-import { ChevronDown } from "lucide-react";
-import type { ReactNode } from "react";
+import { ChevronDown } from 'lucide-react'
+import type { ReactNode } from 'react'
 
 export function SetupStep({
   number,
@@ -9,23 +9,23 @@ export function SetupStep({
   onOpen,
   children,
 }: {
-  number: number;
-  title: string;
-  description: string;
-  state: "active" | "upcoming" | "done";
-  onOpen: () => void;
-  children: ReactNode;
+  number: number
+  title: string
+  description: string
+  state: 'active' | 'upcoming' | 'done'
+  onOpen: () => void
+  children: ReactNode
 }) {
-  const active = state === "active";
-  const upcoming = state === "upcoming";
+  const active = state === 'active'
+  const upcoming = state === 'upcoming'
 
   return (
     <section
-      className={`rounded-hm-20 bg-hm-surface p-5 sm:p-6 ${active ? "shadow-hm-panel" : ""}`}
+      className={`rounded-hm-20 bg-hm-surface p-5 sm:p-6 ${active ? 'shadow-hm-panel' : ''}`}
     >
       <div className="flex items-start gap-4">
         <span
-          className={`flex size-8 shrink-0 items-center justify-center rounded-hm-6 text-hm-label ${active ? "bg-hm-accent-soft text-hm-accent" : "bg-hm-shell text-hm-ink-3"}`}
+          className={`flex size-8 shrink-0 items-center justify-center rounded-hm-6 text-hm-label ${active ? 'bg-hm-accent-soft text-hm-accent' : 'bg-hm-shell text-hm-ink-3'}`}
           aria-hidden="true"
         >
           {number}
@@ -41,7 +41,7 @@ export function SetupStep({
               className="flex w-full items-start justify-between gap-3 text-left disabled:cursor-default"
             >
               <span
-                className={`text-hm-title-sm font-semibold ${upcoming ? "text-hm-ink-2" : "text-hm-ink"}`}
+                className={`text-hm-title-sm font-semibold ${upcoming ? 'text-hm-ink-2' : 'text-hm-ink'}`}
               >
                 {title}
               </span>
@@ -53,5 +53,5 @@ export function SetupStep({
         </div>
       </div>
     </section>
-  );
+  )
 }

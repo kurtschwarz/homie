@@ -1,12 +1,12 @@
-import { Button } from "@homie/ui/components/button";
-import { useAppData } from "../../app-data";
-import { SettingsGate } from "../../components/settings-gate";
-import { Page } from "../../shell/page";
-import { TagMappingSection } from "./tag-mapping-section";
+import { Button } from '@homie/ui/components/button'
+import { useAppData } from '../../app-data'
+import { SettingsGate } from '../../components/settings-gate'
+import { Page } from '../../shell/page'
+import { TagMappingSection } from './tag-mapping-section'
 
 export function CalendarsPage() {
-  const { state, saveTagMapping, deleteTagMapping, refreshEvents } = useAppData();
-  const syncing = state.kind === "ready" && state.saving;
+  const { state, saveTagMapping, deleteTagMapping, refreshEvents } = useAppData()
+  const syncing = state.kind === 'ready' && state.saving
 
   return (
     <Page
@@ -14,7 +14,7 @@ export function CalendarsPage() {
       description="Choose which calendar tags appear on Homie and who they belong to."
       actions={
         <Button variant="solid" onClick={refreshEvents} disabled={syncing}>
-          {syncing ? "Syncing…" : "Sync calendar"}
+          {syncing ? 'Syncing…' : 'Sync calendar'}
         </Button>
       }
     >
@@ -31,5 +31,5 @@ export function CalendarsPage() {
         )}
       </SettingsGate>
     </Page>
-  );
+  )
 }

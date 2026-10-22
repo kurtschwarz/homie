@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import { PageHeader } from "./page-header";
+import type { ReactNode } from 'react'
+import { PageHeader } from './page-header'
 
 /** A section of the admin: fixed header over a body that scrolls on its own. */
 export function Page({
@@ -8,10 +8,10 @@ export function Page({
   actions,
   children,
 }: {
-  title: string;
-  description: string;
-  actions?: ReactNode;
-  children: ReactNode;
+  title: string
+  description: string
+  actions?: ReactNode
+  children: ReactNode
 }) {
   return (
     <>
@@ -20,5 +20,5 @@ export function Page({
         {children}
       </div>
     </>
-  );
+  )
 }

@@ -1,8 +1,8 @@
-import type * as React from "react";
+import type * as React from 'react'
 
-import { cn } from "../lib/utils";
-import { Eyebrow } from "./eyebrow";
-import { CONDITION_LABEL, type WeatherCondition, WeatherIcon } from "./weather-icon";
+import { cn } from '../lib/utils'
+import { Eyebrow } from './eyebrow'
+import { CONDITION_LABEL, type WeatherCondition, WeatherIcon } from './weather-icon'
 
 /**
  * The Weather screen's Now card: big icon and temperature, condition, a sub-line, three metrics
@@ -17,18 +17,18 @@ export function WeatherNow({
   children,
   className,
   ...props
-}: React.ComponentProps<"section"> & {
-  condition: WeatherCondition;
-  temperature: number;
-  sub?: string;
-  metrics: { label: string; value: string }[];
+}: React.ComponentProps<'section'> & {
+  condition: WeatherCondition
+  temperature: number
+  sub?: string
+  metrics: { label: string; value: string }[]
 }) {
   return (
     <section
       data-slot="weather-now"
       aria-label="Right now"
       className={cn(
-        "flex flex-col gap-hm-28 rounded-hm-32 bg-hm-surface p-hm-40 kiosk:w-hm-now-card",
+        'flex flex-col gap-hm-28 rounded-hm-32 bg-hm-surface p-hm-40 kiosk:w-hm-now-card',
         className,
       )}
       {...props}
@@ -51,5 +51,5 @@ export function WeatherNow({
       </div>
       {children && <div className="mt-auto">{children}</div>}
     </section>
-  );
+  )
 }

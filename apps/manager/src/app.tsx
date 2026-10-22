@@ -1,11 +1,11 @@
-import { Navigate, Route, Routes } from "react-router-dom";
-import { AppDataProvider } from "./app-data";
-import { AuthGate } from "./auth/auth-gate";
-import { CalendarsPage } from "./features/calendars/calendars-page";
-import { PeoplePage } from "./features/people/people-page";
-import { PlaceholderPage } from "./features/placeholder/placeholder-page";
-import { SystemPage } from "./features/system/system-page";
-import { AdminShell } from "./shell/admin-shell";
+import { Navigate, Route, Routes } from 'react-router-dom'
+import { AppDataProvider } from './app-data'
+import { AuthGate } from './auth/auth-gate'
+import { CalendarsPage } from './features/calendars/calendars-page'
+import { PeoplePage } from './features/people/people-page'
+import { PlaceholderPage } from './features/placeholder/placeholder-page'
+import { SystemPage } from './features/system/system-page'
+import { AdminShell } from './shell/admin-shell'
 
 export function App() {
   return (
@@ -48,5 +48,5 @@ export function App() {
         </AppDataProvider>
       )}
     </AuthGate>
-  );
+  )
 }

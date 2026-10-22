@@ -38,5 +38,5 @@ export function BrandMark() {
         strokeLinecap="round"
       />
     </svg>
-  );
+  )
 }

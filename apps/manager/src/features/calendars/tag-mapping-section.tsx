@@ -1,6 +1,6 @@
-import { Button } from "@homie/ui/components/button";
-import * as React from "react";
-import type { ManagerPerson, TagKind, TagMapping } from "../../lib/use-settings";
+import { Button } from '@homie/ui/components/button'
+import * as React from 'react'
+import type { ManagerPerson, TagKind, TagMapping } from '../../lib/use-settings'
 
 export function TagMappingSection({
   tagMappings,
@@ -10,27 +10,27 @@ export function TagMappingSection({
   onDelete,
   refreshing,
 }: {
-  tagMappings: TagMapping[];
-  calendarTags: string[];
-  people: ManagerPerson[];
-  onSave: (input: { tag: string; kind: TagKind; personId?: string }) => void;
-  onDelete: (tag: string) => void;
-  refreshing: boolean;
+  tagMappings: TagMapping[]
+  calendarTags: string[]
+  people: ManagerPerson[]
+  onSave: (input: { tag: string; kind: TagKind; personId?: string }) => void
+  onDelete: (tag: string) => void
+  refreshing: boolean
 }) {
-  const mappingByTag = new Map(tagMappings.map((m) => [m.tag, m]));
-  const tags = [...new Set([...calendarTags, ...tagMappings.map((m) => m.tag)])].sort();
-  const [newTag, setNewTag] = React.useState("");
+  const mappingByTag = new Map(tagMappings.map((m) => [m.tag, m]))
+  const tags = [...new Set([...calendarTags, ...tagMappings.map((m) => m.tag)])].sort()
+  const [newTag, setNewTag] = React.useState('')
 
   // calendarTags only covers the synced window, so a tag used outside it is
   // invisible here and cannot be mapped — including, on a fresh install,
   // every tag. Adding by hand is the only way to break that deadlock.
   const addTag = (e: React.FormEvent) => {
-    e.preventDefault();
-    const tag = newTag.trim();
-    if (!tag) return;
-    onSave({ tag, kind: "INCLUDE" });
-    setNewTag("");
-  };
+    e.preventDefault()
+    const tag = newTag.trim()
+    if (!tag) return
+    onSave({ tag, kind: 'INCLUDE' })
+    setNewTag('')
+  }
 
   return (
     <section className="flex flex-col gap-4">
@@ -43,8 +43,8 @@ export function TagMappingSection({
       </div>
       <div className="flex flex-col gap-2">
         {tags.map((tag) => {
-          const mapping = mappingByTag.get(tag);
-          const stale = !calendarTags.includes(tag);
+          const mapping = mappingByTag.get(tag)
+          const stale = !calendarTags.includes(tag)
           return (
             <div
               key={tag}
@@ -60,22 +60,22 @@ export function TagMappingSection({
                 aria-label={`Mapping for ${tag}`}
                 value={
                   mapping
-                    ? mapping.kind === "INCLUDE"
-                      ? "include"
-                      : (mapping.person?.id ?? "")
-                    : "unmapped"
+                    ? mapping.kind === 'INCLUDE'
+                      ? 'include'
+                      : (mapping.person?.id ?? '')
+                    : 'unmapped'
                 }
                 onChange={(e) => {
-                  const value = e.target.value;
-                  if (value === "unmapped") {
-                    if (mapping) onDelete(tag);
-                    return;
+                  const value = e.target.value
+                  if (value === 'unmapped') {
+                    if (mapping) onDelete(tag)
+                    return
                   }
-                  if (value === "include") {
-                    onSave({ tag: mapping?.label ?? tag, kind: "INCLUDE" });
-                    return;
+                  if (value === 'include') {
+                    onSave({ tag: mapping?.label ?? tag, kind: 'INCLUDE' })
+                    return
                   }
-                  onSave({ tag: mapping?.label ?? tag, kind: "PERSON", personId: value });
+                  onSave({ tag: mapping?.label ?? tag, kind: 'PERSON', personId: value })
                 }}
                 className="rounded-hm-control border border-hm-line bg-hm-surface px-3 py-2 text-hm-body text-hm-ink"
               >
@@ -93,7 +93,7 @@ export function TagMappingSection({
                 </Button>
               )}
             </div>
-          );
+          )
         })}
         {tags.length === 0 && (
           <p className="m-0 text-hm-body text-hm-ink-2">
@@ -122,5 +122,5 @@ export function TagMappingSection({
         </span>
       )}
     </section>
-  );
+  )
 }

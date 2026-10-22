@@ -1,13 +1,13 @@
-"use client";
+'use client'
 
-import * as React from "react";
+import * as React from 'react'
 
-import { type HomieThemeSetting, useHomieTheme } from "../hooks/use-homie-theme";
-import { cn } from "../lib/utils";
+import { type HomieThemeSetting, useHomieTheme } from '../hooks/use-homie-theme'
+import { cn } from '../lib/utils'
 
-const THEME_CLASSES = ["light", "dark", "night"];
+const THEME_CLASSES = ['light', 'dark', 'night']
 
-export type HomieSurface = "auto" | "desktop" | "mobile" | "kiosk";
+export type HomieSurface = 'auto' | 'desktop' | 'mobile' | 'kiosk'
 
 /**
  * Applies the Homie theme and surface.
@@ -20,38 +20,38 @@ export type HomieSurface = "auto" | "desktop" | "mobile" | "kiosk";
  * components and portals follow along. With scope="local" it wraps its children instead.
  */
 export function HomieThemeProvider({
-  theme = "auto",
-  surface = "auto",
-  scope = "document",
+  theme = 'auto',
+  surface = 'auto',
+  scope = 'document',
   className,
   children,
 }: {
-  theme?: HomieThemeSetting;
-  surface?: HomieSurface;
-  scope?: "document" | "local";
-  className?: string;
-  children: React.ReactNode;
+  theme?: HomieThemeSetting
+  surface?: HomieSurface
+  scope?: 'document' | 'local'
+  className?: string
+  children: React.ReactNode
 }) {
-  const mode = useHomieTheme(theme);
+  const mode = useHomieTheme(theme)
 
   React.useEffect(() => {
-    if (scope !== "document") return;
-    const root = document.documentElement;
-    root.dataset.theme = mode;
-    root.classList.remove(...THEME_CLASSES);
-    root.classList.add(mode);
-    if (surface === "auto") delete root.dataset.surface;
-    else root.dataset.surface = surface;
-  }, [mode, surface, scope]);
+    if (scope !== 'document') return
+    const root = document.documentElement
+    root.dataset.theme = mode
+    root.classList.remove(...THEME_CLASSES)
+    root.classList.add(mode)
+    if (surface === 'auto') delete root.dataset.surface
+    else root.dataset.surface = surface
+  }, [mode, surface, scope])
 
-  if (scope === "document") return <>{children}</>;
+  if (scope === 'document') return <>{children}</>
   return (
     <div
       data-theme={mode}
-      data-surface={surface === "auto" ? undefined : surface}
-      className={cn(mode, "bg-hm-bg text-hm-ink transition-colors duration-1500", className)}
+      data-surface={surface === 'auto' ? undefined : surface}
+      className={cn(mode, 'bg-hm-bg text-hm-ink transition-colors duration-1500', className)}
     >
       {children}
     </div>
-  );
+  )
 }

@@ -1,13 +1,13 @@
-import type { ReactNode } from "react";
+import type { ReactNode } from 'react'
 
 export function PageHeader({
   title,
   description,
   actions,
 }: {
-  title: string;
-  description: string;
-  actions?: ReactNode;
+  title: string
+  description: string
+  actions?: ReactNode
 }) {
   return (
     <header className="flex shrink-0 flex-col gap-4 border-b border-hm-line px-6 pb-5 pt-6 sm:flex-row sm:items-start sm:justify-between sm:gap-6 sm:px-9 sm:pb-6 sm:pt-[30px]">
@@ -19,5 +19,5 @@ export function PageHeader({
       </div>
       {actions && <div className="flex shrink-0 items-center gap-3 sm:pt-1">{actions}</div>}
     </header>
-  );
+  )
 }

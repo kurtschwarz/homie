@@ -1,9 +1,9 @@
-"use client";
+'use client'
 
-import { Drawer } from "@base-ui/react/drawer";
-import * as React from "react";
+import { Drawer } from '@base-ui/react/drawer'
+import * as React from 'react'
 
-import { cn } from "../lib/utils";
+import { cn } from '../lib/utils'
 
 /**
  * The Coming up sheet, built on Base UI's Drawer (non-modal, swipe down to close).
@@ -27,16 +27,16 @@ function ComingUp({
   autoCloseMs = 45_000,
   children,
 }: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  autoCloseMs?: number;
-  children: React.ReactNode;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  autoCloseMs?: number
+  children: React.ReactNode
 }) {
   React.useEffect(() => {
-    if (!open || !autoCloseMs) return;
-    const id = setTimeout(() => onOpenChange(false), autoCloseMs);
-    return () => clearTimeout(id);
-  }, [open, autoCloseMs, onOpenChange]);
+    if (!open || !autoCloseMs) return
+    const id = setTimeout(() => onOpenChange(false), autoCloseMs)
+    return () => clearTimeout(id)
+  }, [open, autoCloseMs, onOpenChange])
 
   return (
     <Drawer.Root
@@ -47,21 +47,21 @@ function ComingUp({
     >
       {children}
     </Drawer.Root>
-  );
+  )
 }
 
 function ComingUpSwipeArea({ className, ...props }: Drawer.SwipeArea.Props) {
   return (
     <Drawer.SwipeArea
       data-slot="coming-up-swipe-area"
-      className={cn("flex touch-none flex-col", className)}
+      className={cn('flex touch-none flex-col', className)}
       {...props}
     />
-  );
+  )
 }
 
 const handleClass =
-  "grid h-[max(2rem,calc(2.75rem*var(--hm-density)))] w-[max(7.5rem,calc(12.5rem*var(--hm-density)))] flex-none cursor-pointer place-items-center self-center border-0 bg-transparent p-0 before:block before:h-[max(0.25rem,calc(0.375rem*var(--hm-density)))] before:w-[max(2.25rem,calc(4.5rem*var(--hm-density)))] before:rounded-full before:bg-hm-line before:content-[''] focus-visible:outline-3 focus-visible:outline-hm-accent";
+  "grid h-[max(2rem,calc(2.75rem*var(--hm-density)))] w-[max(7.5rem,calc(12.5rem*var(--hm-density)))] flex-none cursor-pointer place-items-center self-center border-0 bg-transparent p-0 before:block before:h-[max(0.25rem,calc(0.375rem*var(--hm-density)))] before:w-[max(2.25rem,calc(4.5rem*var(--hm-density)))] before:rounded-full before:bg-hm-line before:content-[''] focus-visible:outline-3 focus-visible:outline-hm-accent"
 
 /** The grab bar. Outside the sheet it opens it; the sheet has its own that closes it. */
 function ComingUpHandle({ className, ...props }: Drawer.Trigger.Props) {
@@ -71,43 +71,43 @@ function ComingUpHandle({ className, ...props }: Drawer.Trigger.Props) {
       className={cn(handleClass, className)}
       {...props}
     />
-  );
+  )
 }
 
 function ComingUpSheet({
   container,
-  title = "Coming up",
-  hint = "Swipe down to close",
+  title = 'Coming up',
+  hint = 'Swipe down to close',
   action,
   className,
   viewportClassName,
   children,
 }: {
   /** The element the sheet rises inside (kiosk and desktop: the events column). Leave out on mobile. */
-  container?: React.RefObject<HTMLElement | null> | HTMLElement | null;
-  title?: React.ReactNode;
-  hint?: React.ReactNode;
-  action?: React.ReactNode;
-  className?: string;
+  container?: React.RefObject<HTMLElement | null> | HTMLElement | null
+  title?: React.ReactNode
+  hint?: React.ReactNode
+  action?: React.ReactNode
+  className?: string
   /** Position of the sheet's frame inside the container (default: fills it). The kiosk prototype uses "-left-6 right-2". */
-  viewportClassName?: string;
-  children: React.ReactNode;
+  viewportClassName?: string
+  children: React.ReactNode
 }) {
   return (
     <Drawer.Portal container={container}>
       <Drawer.Viewport
         className={cn(
-          container ? "absolute" : "fixed",
-          "inset-0 z-50 flex items-end",
+          container ? 'absolute' : 'fixed',
+          'inset-0 z-50 flex items-end',
           viewportClassName,
         )}
       >
         <Drawer.Popup
           data-slot="coming-up-sheet"
           className={cn(
-            "[--bleed:2rem] relative -mb-(--bleed) flex max-h-[calc(100%-0.5rem+var(--bleed))] w-full flex-col overflow-hidden rounded-t-hm-28 bg-hm-surface px-hm-32 pt-1 pb-[calc(1.5rem*var(--hm-density)+var(--bleed))] text-hm-ink shadow-hm-sheet outline-none",
-            "[transform:translateY(var(--drawer-swipe-movement-y))] transition-transform duration-340 ease-hm-sheet data-swiping:select-none data-swiping:duration-0",
-            "data-starting-style:[transform:translateY(calc(100%+5rem))] data-ending-style:[transform:translateY(calc(100%+5rem))]",
+            '[--bleed:2rem] relative -mb-(--bleed) flex max-h-[calc(100%-0.5rem+var(--bleed))] w-full flex-col overflow-hidden rounded-t-hm-28 bg-hm-surface px-hm-32 pt-1 pb-[calc(1.5rem*var(--hm-density)+var(--bleed))] text-hm-ink shadow-hm-sheet outline-none',
+            '[transform:translateY(var(--drawer-swipe-movement-y))] transition-transform duration-340 ease-hm-sheet data-swiping:select-none data-swiping:duration-0',
+            'data-starting-style:[transform:translateY(calc(100%+5rem))] data-ending-style:[transform:translateY(calc(100%+5rem))]',
             className,
           )}
         >
@@ -129,7 +129,7 @@ function ComingUpSheet({
         </Drawer.Popup>
       </Drawer.Viewport>
     </Drawer.Portal>
-  );
+  )
 }
 
-export { ComingUp, ComingUpHandle, ComingUpSheet, ComingUpSwipeArea };
+export { ComingUp, ComingUpHandle, ComingUpSheet, ComingUpSwipeArea }

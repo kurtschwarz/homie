@@ -1,24 +1,24 @@
-import { Button } from "@homie/ui/components/button";
-import { useAppData } from "../../app-data";
-import { SettingsGate } from "../../components/settings-gate";
-import type { ManagerPerson, PersonInput } from "../../lib/use-settings";
-import { Page } from "../../shell/page";
-import { PersonRow } from "./person-row";
+import { Button } from '@homie/ui/components/button'
+import { useAppData } from '../../app-data'
+import { SettingsGate } from '../../components/settings-gate'
+import type { ManagerPerson, PersonInput } from '../../lib/use-settings'
+import { Page } from '../../shell/page'
+import { PersonRow } from './person-row'
 
 export function PeoplePage() {
-  const { savePerson, deletePerson } = useAppData();
+  const { savePerson, deletePerson } = useAppData()
   const actions = (
     <Button
       variant="solid"
       onClick={() =>
         document
-          .getElementById("new-person")
-          ?.scrollIntoView({ behavior: "smooth", block: "center" })
+          .getElementById('new-person')
+          ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       }
     >
       + New person
     </Button>
-  );
+  )
 
   return (
     <Page
@@ -32,7 +32,7 @@ export function PeoplePage() {
         )}
       </SettingsGate>
     </Page>
-  );
+  )
 }
 
 function PeopleSection({
@@ -40,15 +40,15 @@ function PeopleSection({
   onSave,
   onDelete,
 }: {
-  people: ManagerPerson[];
-  onSave: (input: PersonInput) => void;
-  onDelete: (id: string) => void;
+  people: ManagerPerson[]
+  onSave: (input: PersonInput) => void
+  onDelete: (id: string) => void
 }) {
   return (
     <section className="flex flex-col gap-4">
       {people.length === 0 && (
         <p className="m-0 text-hm-body text-hm-ink-2">
-          No one is set up yet. Add the first person below and mark them as family — events tagged{" "}
+          No one is set up yet. Add the first person below and mark them as family — events tagged{' '}
           <strong>Homie</strong> attribute to whoever holds that flag.
         </p>
       )}
@@ -76,5 +76,5 @@ function PeopleSection({
         </div>
       </div>
     </section>
-  );
+  )
 }

@@ -1,4 +1,4 @@
-import { Page } from "../../shell/page";
+import { Page } from '../../shell/page'
 
 /** A section that has a home in the sidebar but nothing behind it yet. */
 export function PlaceholderPage({ title, description }: { title: string; description: string }) {
@@ -8,5 +8,5 @@ export function PlaceholderPage({ title, description }: { title: string; descrip
         This section is not available yet.
       </p>
     </Page>
-  );
+  )
 }

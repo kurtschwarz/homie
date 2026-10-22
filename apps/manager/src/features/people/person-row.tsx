@@ -1,8 +1,8 @@
-import { Button } from "@homie/ui/components/button";
-import { PersonBadge } from "@homie/ui/components/person-badge";
-import { DEFAULT_SWATCH, SWATCHES, type Swatch } from "@homie/ui/lib/people";
-import * as React from "react";
-import type { ManagerPerson, PersonInput } from "../../lib/use-settings";
+import { Button } from '@homie/ui/components/button'
+import { PersonBadge } from '@homie/ui/components/person-badge'
+import { DEFAULT_SWATCH, SWATCHES, type Swatch } from '@homie/ui/lib/people'
+import * as React from 'react'
+import type { ManagerPerson, PersonInput } from '../../lib/use-settings'
 
 /** One person's row. Without a `person` it is the add form instead, and clears itself on submit. */
 export function PersonRow({
@@ -12,34 +12,34 @@ export function PersonRow({
   onSetFamily,
   onDelete,
 }: {
-  person?: ManagerPerson;
-  familyChecked?: boolean;
-  onSave: (input: PersonInput) => void;
-  onSetFamily?: () => void;
-  onDelete?: () => void;
+  person?: ManagerPerson
+  familyChecked?: boolean
+  onSave: (input: PersonInput) => void
+  onSetFamily?: () => void
+  onDelete?: () => void
 }) {
-  const [name, setName] = React.useState(person?.name ?? "");
-  const [emoji, setEmoji] = React.useState(person?.emoji ?? "");
-  const [swatch, setSwatch] = React.useState<Swatch>(person?.swatch ?? DEFAULT_SWATCH);
-  const [confirmingDelete, setConfirmingDelete] = React.useState(false);
+  const [name, setName] = React.useState(person?.name ?? '')
+  const [emoji, setEmoji] = React.useState(person?.emoji ?? '')
+  const [swatch, setSwatch] = React.useState<Swatch>(person?.swatch ?? DEFAULT_SWATCH)
+  const [confirmingDelete, setConfirmingDelete] = React.useState(false)
   const dirty = person
     ? name !== person.name || emoji !== person.emoji || swatch !== person.swatch
-    : name.trim().length > 0;
+    : name.trim().length > 0
 
   function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name.trim()) return;
+    e.preventDefault()
+    if (!name.trim()) return
     onSave({
       id: person?.id,
       name: name.trim(),
       emoji,
       swatch,
       isFamily: person?.isFamily ?? false,
-    });
+    })
     if (!person) {
-      setName("");
-      setEmoji("");
-      setSwatch(DEFAULT_SWATCH);
+      setName('')
+      setEmoji('')
+      setSwatch(DEFAULT_SWATCH)
     }
   }
 
@@ -49,7 +49,7 @@ export function PersonRow({
       className="flex flex-wrap items-center gap-3 rounded-hm-16 border border-hm-line bg-hm-surface p-4"
     >
       <PersonBadge
-        person={{ id: person?.id ?? "preview", name: name || "?", emoji, swatch }}
+        person={{ id: person?.id ?? 'preview', name: name || '?', emoji, swatch }}
         size="md"
       />
       <input
@@ -78,7 +78,7 @@ export function PersonRow({
             className="size-6 rounded-full border-2"
             style={{
               backgroundColor: `var(--hm-swatch-${s})`,
-              borderColor: swatch === s ? "var(--hm-accent)" : "transparent",
+              borderColor: swatch === s ? 'var(--hm-accent)' : 'transparent',
             }}
           />
         ))}
@@ -90,7 +90,7 @@ export function PersonRow({
         </label>
       )}
       <Button type="submit" variant="text" disabled={!dirty}>
-        {person ? "Save" : "Add person"}
+        {person ? 'Save' : 'Add person'}
       </Button>
       {person &&
         onDelete &&
@@ -110,5 +110,5 @@ export function PersonRow({
           </Button>
         ))}
     </form>
-  );
+  )
 }

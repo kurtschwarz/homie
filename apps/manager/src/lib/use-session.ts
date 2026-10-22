@@ -1,15 +1,15 @@
-import { useCallback, useEffect, useState } from "react";
-import { graphql } from "./graphql";
-import type { HealthStatus } from "./use-health";
+import { useCallback, useEffect, useState } from 'react'
+import { graphql } from './graphql'
+import type { HealthStatus } from './use-health'
 
-export type User = { id: string; username: string; role: "ADMIN" };
+export type User = { id: string; username: string; role: 'ADMIN' }
 
 type SessionState =
-  | { kind: "loading" }
-  | { kind: "error"; message: string }
-  | { kind: "ready"; setupRequired: boolean; user: User | null };
+  | { kind: 'loading' }
+  | { kind: 'error'; message: string }
+  | { kind: 'ready'; setupRequired: boolean; user: User | null }
 
-const SESSION_QUERY = `{ session { user { id username role } } health { status } }`;
+const SESSION_QUERY = `{ session { user { id username role } } health { status } }`
 
 /**
  * Whether setup or login is needed, polled once and refreshed after every
@@ -19,38 +19,38 @@ const SESSION_QUERY = `{ session { user { id username role } } health { status }
  * first-run setup is still required.
  */
 export function useSession() {
-  const [state, setState] = useState<SessionState>({ kind: "loading" });
+  const [state, setState] = useState<SessionState>({ kind: 'loading' })
 
   const load = useCallback(async () => {
     try {
       const data = await graphql<{
-        session: { user: User } | null;
-        health: { status: HealthStatus };
-      }>(SESSION_QUERY);
+        session: { user: User } | null
+        health: { status: HealthStatus }
+      }>(SESSION_QUERY)
       setState({
-        kind: "ready",
-        setupRequired: data.health.status === "SETUP_REQUIRED",
+        kind: 'ready',
+        setupRequired: data.health.status === 'SETUP_REQUIRED',
         user: data.session?.user ?? null,
-      });
+      })
     } catch (err) {
-      setState({ kind: "error", message: err instanceof Error ? err.message : String(err) });
+      setState({ kind: 'error', message: err instanceof Error ? err.message : String(err) })
     }
-  }, []);
+  }, [])
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    void load()
+  }, [load])
 
   const setup = useCallback(
     async (code: string, username: string, password: string) => {
       await graphql(
         `mutation($code: String!, $username: String!, $password: String!) { setup(code: $code, username: $username, password: $password) { id } }`,
         { code, username, password },
-      );
-      await load();
+      )
+      await load()
     },
     [load],
-  );
+  )
 
   const login = useCallback(
     async (username: string, password: string) => {
@@ -60,16 +60,16 @@ export function useSession() {
           username,
           password,
         },
-      );
-      await load();
+      )
+      await load()
     },
     [load],
-  );
+  )
 
   const logout = useCallback(async () => {
-    await graphql(`mutation { logout }`);
-    await load();
-  }, [load]);
+    await graphql(`mutation { logout }`)
+    await load()
+  }, [load])
 
-  return { state, setup, login, logout };
+  return { state, setup, login, logout }
 }

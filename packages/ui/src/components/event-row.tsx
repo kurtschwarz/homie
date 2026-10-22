@@ -1,8 +1,8 @@
-import type * as React from "react";
+import type * as React from 'react'
 
-import type { Person } from "../lib/people";
-import { cn } from "../lib/utils";
-import { PersonBadges } from "./person-badge";
+import type { Person } from '../lib/people'
+import { cn } from '../lib/utils'
+import { PersonBadges } from './person-badge'
 
 /**
  * One upcoming event as a row: when, who, what. `time` is "5:45 pm" or "All day"; pass `day` ("Tomorrow",
@@ -16,19 +16,19 @@ export function EventRow({
   compact = false,
   className,
   ...props
-}: React.ComponentProps<"div"> & {
-  time: string;
-  day?: string;
-  people: Person[];
-  title: string;
-  compact?: boolean;
+}: React.ComponentProps<'div'> & {
+  time: string
+  day?: string
+  people: Person[]
+  title: string
+  compact?: boolean
 }) {
   return (
     <div
       data-slot="event-row"
       className={cn(
-        "grid grid-cols-[var(--hm-time-col)_auto_minmax(0,1fr)] items-center gap-hm-20 border-t-2 border-hm-line",
-        compact ? "py-hm-14" : "py-hm-16",
+        'grid grid-cols-[var(--hm-time-col)_auto_minmax(0,1fr)] items-center gap-hm-20 border-t-2 border-hm-line',
+        compact ? 'py-hm-14' : 'py-hm-16',
         className,
       )}
       {...props}
@@ -40,11 +40,11 @@ export function EventRow({
         <span className="text-hm-body leading-[1.15] text-hm-ink-2">{time}</span>
       </div>
       <PersonBadges people={people} ring={!compact} />
-      <div className={cn("truncate", compact ? "text-hm-item" : "text-hm-item-lg")}>{title}</div>
+      <div className={cn('truncate', compact ? 'text-hm-item' : 'text-hm-item-lg')}>{title}</div>
     </div>
-  );
+  )
 }
 
-export function EventList({ className, ...props }: React.ComponentProps<"div">) {
-  return <div data-slot="event-list" className={cn("flex flex-col", className)} {...props} />;
+export function EventList({ className, ...props }: React.ComponentProps<'div'>) {
+  return <div data-slot="event-list" className={cn('flex flex-col', className)} {...props} />
 }

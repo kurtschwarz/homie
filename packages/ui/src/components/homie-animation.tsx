@@ -1,8 +1,8 @@
-"use client";
+'use client'
 
-import { DotLottieReact } from "@lottiefiles/dotlottie-react";
-import type * as React from "react";
-import { cn } from "../lib/utils";
+import { DotLottieReact } from '@lottiefiles/dotlottie-react'
+import type * as React from 'react'
+import { cn } from '../lib/utils'
 
 /**
  * The looping Homie mascot animation used by first-run setup screens.
@@ -17,11 +17,11 @@ export function HomieAnimation({
   src,
   className,
   ...props
-}: React.ComponentProps<"div"> & { src: string }) {
+}: React.ComponentProps<'div'> & { src: string }) {
   return (
     <div
       data-slot="homie-animation"
-      className={cn("size-56", className)}
+      className={cn('size-56', className)}
       role="img"
       aria-label="Homie"
       {...props}
@@ -31,9 +31,9 @@ export function HomieAnimation({
         autoplay
         loop
         renderConfig={{
-          devicePixelRatio: typeof window === "undefined" ? 1 : window.devicePixelRatio,
+          devicePixelRatio: typeof window === 'undefined' ? 1 : window.devicePixelRatio,
         }}
       />
     </div>
-  );
+  )
 }

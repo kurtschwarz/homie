@@ -1,10 +1,10 @@
-"use client";
+'use client'
 
-import type * as React from "react";
+import type * as React from 'react'
 
-import { useNow } from "../hooks/use-now";
-import { clockParts } from "../lib/time";
-import { cn } from "../lib/utils";
+import { useNow } from '../hooks/use-now'
+import { clockParts } from '../lib/time'
+import { cn } from '../lib/utils'
 
 /**
  * The time with a colon that blinks every 2 s (stopped under prefers-reduced-motion).
@@ -13,23 +13,23 @@ import { cn } from "../lib/utils";
  */
 export function Clock({
   date,
-  size = "default",
+  size = 'default',
   className,
   ...props
-}: React.ComponentProps<"div"> & { date?: Date; size?: "default" | "sm" }) {
-  const live = useNow();
-  const { hours, minutes, ampm } = clockParts(date ?? live);
+}: React.ComponentProps<'div'> & { date?: Date; size?: 'default' | 'sm' }) {
+  const live = useNow()
+  const { hours, minutes, ampm } = clockParts(date ?? live)
   return (
     <div
       data-slot="clock"
       className={cn(
-        "flex items-baseline leading-none",
-        size === "sm" ? "gap-hm-10" : "gap-hm-12",
+        'flex items-baseline leading-none',
+        size === 'sm' ? 'gap-hm-10' : 'gap-hm-12',
         className,
       )}
       {...props}
     >
-      <span className={size === "sm" ? "text-hm-clock-sm" : "text-hm-clock"}>
+      <span className={size === 'sm' ? 'text-hm-clock-sm' : 'text-hm-clock'}>
         {hours}
         <span aria-hidden className="inline-block motion-safe:animate-hm-blink">
           :
@@ -38,12 +38,12 @@ export function Clock({
       </span>
       <span
         className={cn(
-          "leading-none font-normal text-hm-ink-3",
-          size === "sm" ? "text-hm-label" : "text-hm-item",
+          'leading-none font-normal text-hm-ink-3',
+          size === 'sm' ? 'text-hm-label' : 'text-hm-item',
         )}
       >
         {ampm}
       </span>
     </div>
-  );
+  )
 }

@@ -1,22 +1,22 @@
-import type { Swatch } from "@homie/ui/lib/people";
-import { useEffect, useState } from "react";
-import { graphql } from "../../lib/graphql";
-import type { CalendarEvent } from "./calendar-event";
+import type { Swatch } from '@homie/ui/lib/people'
+import { useEffect, useState } from 'react'
+import { graphql } from '../../lib/graphql'
+import type { CalendarEvent } from './calendar-event'
 
 type EventRecord = {
-  id: string;
-  title: string;
-  location: string | null;
-  start: number;
-  end: number;
-  allDay: boolean;
-  people: { id: string; name: string; emoji: string; swatch: string }[];
-};
+  id: string
+  title: string
+  location: string | null
+  start: number
+  end: number
+  allDay: boolean
+  people: { id: string; name: string; emoji: string; swatch: string }[]
+}
 
 type EventsState =
-  | { kind: "loading" }
-  | { kind: "ready"; events: CalendarEvent[] }
-  | { kind: "error" };
+  | { kind: 'loading' }
+  | { kind: 'ready'; events: CalendarEvent[] }
+  | { kind: 'error' }
 
 const QUERY = `
   query Events {
@@ -30,7 +30,7 @@ const QUERY = `
       people { id name emoji swatch }
     }
   }
-`;
+`
 
 function toCalendarEvent(record: EventRecord): CalendarEvent {
   return {
@@ -46,7 +46,7 @@ function toCalendarEvent(record: EventRecord): CalendarEvent {
       emoji: p.emoji,
       swatch: p.swatch as Swatch,
     })),
-  };
+  }
 }
 
 /**
@@ -56,37 +56,37 @@ function toCalendarEvent(record: EventRecord): CalendarEvent {
  * last good schedule: a stale schedule is useful, an empty one is alarming.
  */
 export function useEvents(): EventsState {
-  const [state, setState] = useState<EventsState>({ kind: "loading" });
+  const [state, setState] = useState<EventsState>({ kind: 'loading' })
 
   useEffect(() => {
-    let cancelled = false;
-    let timeout: ReturnType<typeof setTimeout> | undefined;
+    let cancelled = false
+    let timeout: ReturnType<typeof setTimeout> | undefined
 
     async function fetchEvents() {
-      let retryDelay = 5 * 60_000;
+      let retryDelay = 5 * 60_000
       try {
-        const data = await graphql<{ events?: EventRecord[] }>(QUERY);
-        if (!data.events) throw new Error("Events query failed");
-        const events = data.events.map(toCalendarEvent);
-        if (!cancelled) setState({ kind: "ready", events });
+        const data = await graphql<{ events?: EventRecord[] }>(QUERY)
+        if (!data.events) throw new Error('Events query failed')
+        const events = data.events.map(toCalendarEvent)
+        if (!cancelled) setState({ kind: 'ready', events })
       } catch {
-        retryDelay = 30_000;
+        retryDelay = 30_000
         if (!cancelled) {
           setState((prev) =>
-            prev.kind === "ready" && prev.events.length > 0 ? prev : { kind: "error" },
-          );
+            prev.kind === 'ready' && prev.events.length > 0 ? prev : { kind: 'error' },
+          )
         }
       } finally {
-        if (!cancelled) timeout = setTimeout(fetchEvents, retryDelay);
+        if (!cancelled) timeout = setTimeout(fetchEvents, retryDelay)
       }
     }
 
-    void fetchEvents();
+    void fetchEvents()
     return () => {
-      cancelled = true;
-      if (timeout) clearTimeout(timeout);
-    };
-  }, []);
+      cancelled = true
+      if (timeout) clearTimeout(timeout)
+    }
+  }, [])
 
-  return state;
+  return state
 }

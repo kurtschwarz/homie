@@ -1,51 +1,51 @@
-import homieAnimationUrl from "@homie/ui/assets/homie-confetti.lottie?url";
-import { Button } from "@homie/ui/components/button";
-import { Callout } from "@homie/ui/components/callout";
-import { HomieAnimation } from "@homie/ui/components/homie-animation";
-import { Lock } from "lucide-react";
-import * as React from "react";
-import { CodeInput } from "../../components/code-input";
-import { ErrorMessage } from "../../components/error-message";
-import { Field } from "../../components/field";
-import { SetupStep } from "./setup-step";
+import homieAnimationUrl from '@homie/ui/assets/homie-confetti.lottie?url'
+import { Button } from '@homie/ui/components/button'
+import { Callout } from '@homie/ui/components/callout'
+import { HomieAnimation } from '@homie/ui/components/homie-animation'
+import { Lock } from 'lucide-react'
+import * as React from 'react'
+import { CodeInput } from '../../components/code-input'
+import { ErrorMessage } from '../../components/error-message'
+import { Field } from '../../components/field'
+import { SetupStep } from './setup-step'
 
 export function SetupPage({
   onSetup,
 }: {
-  onSetup: (code: string, username: string, password: string) => Promise<void>;
+  onSetup: (code: string, username: string, password: string) => Promise<void>
 }) {
-  const [step, setStep] = React.useState<1 | 2>(1);
-  const [code, setCode] = React.useState("");
-  const [username, setUsername] = React.useState("");
-  const [password, setPassword] = React.useState("");
-  const [confirm, setConfirm] = React.useState("");
-  const [error, setError] = React.useState<string>();
-  const [submitting, setSubmitting] = React.useState(false);
+  const [step, setStep] = React.useState<1 | 2>(1)
+  const [code, setCode] = React.useState('')
+  const [username, setUsername] = React.useState('')
+  const [password, setPassword] = React.useState('')
+  const [confirm, setConfirm] = React.useState('')
+  const [error, setError] = React.useState<string>()
+  const [submitting, setSubmitting] = React.useState(false)
 
   const continueToAccount = (event: React.FormEvent) => {
-    event.preventDefault();
-    if (code.length !== 8) return;
-    setError(undefined);
-    setStep(2);
-  };
+    event.preventDefault()
+    if (code.length !== 8) return
+    setError(undefined)
+    setStep(2)
+  }
 
   const submit = async (event: React.FormEvent) => {
-    event.preventDefault();
+    event.preventDefault()
     if (password !== confirm) {
-      setError("Passwords don't match");
-      return;
+      setError("Passwords don't match")
+      return
     }
-    setSubmitting(true);
-    setError(undefined);
+    setSubmitting(true)
+    setError(undefined)
     try {
-      await onSetup(`${code.slice(0, 4)}-${code.slice(4)}`, username.trim(), password);
+      await onSetup(`${code.slice(0, 4)}-${code.slice(4)}`, username.trim(), password)
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      setError(message);
-      if (/setup code/i.test(message)) setStep(1);
-      setSubmitting(false);
+      const message = err instanceof Error ? err.message : String(err)
+      setError(message)
+      if (/setup code/i.test(message)) setStep(1)
+      setSubmitting(false)
     }
-  };
+  }
 
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-8 bg-hm-shell px-5 py-10 sm:gap-9 sm:px-8">
@@ -64,10 +64,10 @@ export function SetupPage({
           number={1}
           title="Enter your setup code"
           description="Look at the Homie device screen. It's showing a setup code."
-          state={step === 1 ? "active" : "done"}
+          state={step === 1 ? 'active' : 'done'}
           onOpen={() => {
-            setError(undefined);
-            setStep(1);
+            setError(undefined)
+            setStep(1)
           }}
         >
           <form className="flex flex-col gap-4" onSubmit={continueToAccount}>
@@ -75,8 +75,8 @@ export function SetupPage({
             <CodeInput
               value={code}
               onChange={(value) => {
-                setCode(value);
-                setError(undefined);
+                setCode(value)
+                setError(undefined)
               }}
             />
             <p className="m-0 max-w-lg text-hm-caption text-hm-ink-3">
@@ -95,7 +95,7 @@ export function SetupPage({
           number={2}
           title="Create your admin account"
           description="Pick the username and password you'll sign in with from now on."
-          state={step === 2 ? "active" : "upcoming"}
+          state={step === 2 ? 'active' : 'upcoming'}
           onOpen={() => setStep(2)}
         >
           <form className="flex flex-col gap-4" onSubmit={submit}>
@@ -138,5 +138,5 @@ export function SetupPage({
         <span>Only works on your home network · homie.local</span>
       </footer>
     </main>
-  );
+  )
 }

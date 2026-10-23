@@ -1,7 +1,7 @@
 import { Button } from '@homie/ui/components/button'
-import { Page } from '@/app/shell/page'
 import { HouseholdGate, useSyncCalendar } from '@/features/household'
 import { ErrorMessage } from '@/shared/ui/error-message'
+import { Page } from '@/shared/ui/page'
 import { TagMappingSection } from './tag-mapping-section'
 
 export function CalendarsPage() {

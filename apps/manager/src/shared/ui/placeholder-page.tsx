@@ -1,4 +1,4 @@
-import { Page } from '@/app/shell/page'
+import { Page } from '@/shared/ui/page'
 
 /** A section that has a home in the sidebar but nothing behind it yet. */
 export function PlaceholderPage({ title, description }: { title: string; description: string }) {

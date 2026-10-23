@@ -1,8 +1,8 @@
 import { Button } from '@homie/ui/components/button'
 import { useQuery } from '@tanstack/react-query'
-import { Page } from '@/app/shell/page'
 import { useLogout, useSession } from '@/features/auth'
 import { ErrorMessage } from '@/shared/ui/error-message'
+import { Page } from '@/shared/ui/page'
 import { useRevokeSession } from './api/system.mutations'
 import { systemQueries } from './api/system.queries'
 

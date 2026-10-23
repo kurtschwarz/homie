@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link, NavLink } from 'react-router-dom'
 import { householdQueries } from '@/features/household'
 import { systemQueries } from '@/features/system'
-import { BrandMark } from './brand-mark'
+import { BrandMark } from '@/shared/ui/brand-mark'
 import { sections } from './sections'
 
 export function Sidebar() {

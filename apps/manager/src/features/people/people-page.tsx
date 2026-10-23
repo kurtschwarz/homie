@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import * as React from 'react'
-import { Page } from '@/app/shell/page'
 import { eventQueries } from '@/features/events'
 import { HouseholdGate } from '@/features/household'
+import { Page } from '@/shared/ui/page'
 import { PersonList } from './components/person-list'
 import { PersonEditor } from './person-editor'
 

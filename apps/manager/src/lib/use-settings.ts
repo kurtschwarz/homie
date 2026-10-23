@@ -93,15 +93,24 @@ export function useSettings() {
   )
 
   const savePerson = useCallback(
-    (input: PersonInput) =>
-      mutate(`mutation SavePerson($input: PersonInput!) { savePerson(input: $input) { id } }`, {
-        input,
-      }),
+    async (input: PersonInput) => {
+      const data = await mutate<{ savePerson: { id: string } }>(
+        `mutation SavePerson($input: PersonInput!) { savePerson(input: $input) { id } }`,
+        { input },
+      )
+      return data?.savePerson.id
+    },
     [mutate],
   )
 
   const deletePerson = useCallback(
-    (id: string) => mutate(`mutation DeletePerson($id: ID!) { deletePerson(id: $id) }`, { id }),
+    async (id: string) => {
+      const data = await mutate<{ deletePerson: boolean }>(
+        `mutation DeletePerson($id: ID!) { deletePerson(id: $id) }`,
+        { id },
+      )
+      return data?.deletePerson ?? false
+    },
     [mutate],
   )
 
@@ -115,8 +124,13 @@ export function useSettings() {
   )
 
   const deleteTagMapping = useCallback(
-    (tag: string) =>
-      mutate(`mutation DeleteTagMapping($tag: String!) { deleteTagMapping(tag: $tag) }`, { tag }),
+    async (tag: string) => {
+      const data = await mutate<{ deleteTagMapping: boolean }>(
+        `mutation DeleteTagMapping($tag: String!) { deleteTagMapping(tag: $tag) }`,
+        { tag },
+      )
+      return data?.deleteTagMapping ?? false
+    },
     [mutate],
   )
 

@@ -3,7 +3,7 @@ import { AppDataProvider } from '@/app-data'
 import { AuthGate } from '@/features/auth'
 import { CalendarsPage } from '@/features/calendars/calendars-page'
 import { PeoplePage } from '@/features/people/people-page'
-import { SystemPage } from '@/features/system/system-page'
+import { SystemPage } from '@/features/system'
 import { PlaceholderPage } from '@/shared/ui/placeholder-page'
 import { AdminShell } from './shell/admin-shell'
 

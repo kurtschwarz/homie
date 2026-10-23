@@ -16,6 +16,10 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: false,
+      // The default of 0 refetches on every mount and every focus. Settings
+      // and sessions change only when someone changes them here, so half a
+      // minute of trust costs nothing. Health opts back out to 0.
+      staleTime: 30_000,
     },
   },
 })

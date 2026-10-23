@@ -1,12 +1,13 @@
+import { useQuery } from '@tanstack/react-query'
 import { Link, NavLink } from 'react-router-dom'
 import { useAppData } from '@/app-data'
-import { useHealth } from '@/lib/use-health'
+import { systemQueries } from '@/features/system'
 import { BrandMark } from './brand-mark'
 import { sections } from './sections'
 
 export function Sidebar() {
   const { settings } = useAppData()
-  const health = useHealth()
+  const health = useQuery(systemQueries.health())
   const peopleCount = settings?.people.length
 
   return (

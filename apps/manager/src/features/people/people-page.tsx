@@ -1,8 +1,9 @@
+import { useQuery } from '@tanstack/react-query'
 import * as React from 'react'
 import { Page } from '@/app/shell/page'
 import { useAppData } from '@/app-data'
 import { SettingsGate } from '@/components/settings-gate'
-import { useEvents } from '@/lib/use-events'
+import { eventQueries } from '@/features/events'
 import { PersonList } from './components/person-list'
 import { PersonEditor } from './person-editor'
 
@@ -10,7 +11,7 @@ export function PeoplePage() {
   const { savePerson, deletePerson, saveTagMapping, deleteTagMapping } = useAppData()
   // Every mutation below invalidates the events query, so there is nothing to
   // refresh by hand after a save: the week strip catches up on its own.
-  const { data: events = [], isError: eventsFailed } = useEvents()
+  const { data: events = [], isError: eventsFailed } = useQuery(eventQueries.list())
   const [selectedId, setSelectedId] = React.useState<string>()
   const [adding, setAdding] = React.useState(false)
   const [editorDirty, setEditorDirty] = React.useState(false)

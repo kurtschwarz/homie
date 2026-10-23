@@ -1,16 +1,18 @@
 import { Button } from '@homie/ui/components/button'
+import { useQuery } from '@tanstack/react-query'
 import { Page } from '@/app/shell/page'
 import { useLogout, useSession } from '@/features/auth'
-import { useHealth } from '@/lib/use-health'
-import { useSessions } from '@/lib/use-sessions'
 import { ErrorMessage } from '@/shared/ui/error-message'
+import { useRevokeSession } from './api/system.mutations'
+import { systemQueries } from './api/system.queries'
 
 /** Deliberately independent of settings: this is the page that stays usable when the API is unreachable. */
 export function SystemPage() {
   const { user } = useSession()
   const logout = useLogout()
-  const health = useHealth()
-  const { sessions, isPending, error, revoke, revokeError } = useSessions()
+  const health = useQuery(systemQueries.health())
+  const sessions = useQuery(systemQueries.sessions())
+  const revoke = useRevokeSession()
 
   return (
     <Page title="System" description="API connection and manager access.">
@@ -43,15 +45,19 @@ export function SystemPage() {
       {user && (
         <section className="flex max-w-3xl flex-col gap-4">
           <h2 className="m-0 text-hm-title-sm">Active sessions</h2>
-          {isPending && <p className="m-0 text-hm-body text-hm-ink-2">Loading sessions…</p>}
-          {error && <ErrorMessage label="Sessions unavailable" message={error.message} />}
-          {sessions && (
+          {sessions.isPending && (
+            <p className="m-0 text-hm-body text-hm-ink-2">Loading sessions…</p>
+          )}
+          {sessions.isError && (
+            <ErrorMessage label="Sessions unavailable" message={sessions.error.message} />
+          )}
+          {sessions.isSuccess && (
             <>
-              {revokeError && (
-                <ErrorMessage label="Couldn't revoke session" message={revokeError.message} />
+              {revoke.error && (
+                <ErrorMessage label="Couldn't revoke session" message={revoke.error.message} />
               )}
               <ul className="m-0 flex list-none flex-col gap-2 p-0">
-                {sessions.map((session) => (
+                {sessions.data.map((session) => (
                   <li
                     key={session.id}
                     className="flex items-center justify-between gap-4 rounded-hm-16 border border-hm-line px-4 py-3 text-hm-body text-hm-ink-2"
@@ -65,7 +71,7 @@ export function SystemPage() {
                         Last used {new Date(session.lastSeenAt * 1000).toLocaleString()}
                       </span>
                     </span>
-                    <Button variant="outline" onClick={() => void revoke(session.id)}>
+                    <Button variant="outline" onClick={() => revoke.mutate(session.id)}>
                       Revoke
                     </Button>
                   </li>

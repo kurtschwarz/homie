@@ -1,6 +1,12 @@
-import type { HealthStatus } from '@/lib/use-health'
-
 export type User = { id: string; username: string; role: 'ADMIN' }
+
+/**
+ * Mirrors the API's health status enum, which the system feature also types.
+ * Auth keeps its own copy rather than importing that one: auth is a dependency
+ * of the shell that renders before anything else, and reaching into the system
+ * feature for two string literals would put the two features in a cycle.
+ */
+type SetupStatus = 'OK' | 'SETUP_REQUIRED'
 
 /**
  * Health status rides along with the session because the gate needs both
@@ -9,7 +15,7 @@ export type User = { id: string; username: string; role: 'ADMIN' }
  */
 export type SessionResponse = {
   session: { user: User } | null
-  health: { status: HealthStatus }
+  health: { status: SetupStatus }
 }
 
 export type Credentials = { username: string; password: string }

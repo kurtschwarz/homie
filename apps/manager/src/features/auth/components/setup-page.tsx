@@ -7,44 +7,50 @@ import * as React from 'react'
 import { CodeInput } from '@/shared/ui/code-input'
 import { ErrorMessage } from '@/shared/ui/error-message'
 import { Field } from '@/shared/ui/field'
+import { useSetup } from '../api/auth.mutations'
 import { SetupStep } from './setup-step'
 
-export function SetupPage({
-  onSetup,
-}: {
-  onSetup: (code: string, username: string, password: string) => Promise<void>
-}) {
+export function SetupPage() {
   const [step, setStep] = React.useState<1 | 2>(1)
   const [code, setCode] = React.useState('')
   const [username, setUsername] = React.useState('')
   const [password, setPassword] = React.useState('')
   const [confirm, setConfirm] = React.useState('')
-  const [error, setError] = React.useState<string>()
-  const [submitting, setSubmitting] = React.useState(false)
+  const [mismatch, setMismatch] = React.useState<string>()
+  const setup = useSetup()
+
+  // Two sources: the mismatch never reaches the API, so it is held here while
+  // everything the API rejected lives on the mutation.
+  const error = mismatch ?? setup.error?.message
+
+  const clearErrors = () => {
+    setMismatch(undefined)
+    setup.reset()
+  }
 
   const continueToAccount = (event: React.FormEvent) => {
     event.preventDefault()
     if (code.length !== 8) return
-    setError(undefined)
+    clearErrors()
     setStep(2)
   }
 
-  const submit = async (event: React.FormEvent) => {
+  const submit = (event: React.FormEvent) => {
     event.preventDefault()
     if (password !== confirm) {
-      setError("Passwords don't match")
+      setMismatch("Passwords don't match")
       return
     }
-    setSubmitting(true)
-    setError(undefined)
-    try {
-      await onSetup(`${code.slice(0, 4)}-${code.slice(4)}`, username.trim(), password)
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
-      setError(message)
-      if (/setup code/i.test(message)) setStep(1)
-      setSubmitting(false)
-    }
+    setMismatch(undefined)
+    setup.mutate(
+      {
+        code: `${code.slice(0, 4)}-${code.slice(4)}`,
+        username: username.trim(),
+        password,
+      },
+      // A rejected code is only fixable back on step 1, so send them there.
+      { onError: (err) => /setup code/i.test(err.message) && setStep(1) },
+    )
   }
 
   return (
@@ -66,7 +72,7 @@ export function SetupPage({
           description="Look at the Homie device screen. It's showing a setup code."
           state={step === 1 ? 'active' : 'done'}
           onOpen={() => {
-            setError(undefined)
+            clearErrors()
             setStep(1)
           }}
         >
@@ -76,7 +82,7 @@ export function SetupPage({
               value={code}
               onChange={(value) => {
                 setCode(value)
-                setError(undefined)
+                clearErrors()
               }}
             />
             <p className="m-0 max-w-lg text-hm-caption text-hm-ink-3">
@@ -123,7 +129,7 @@ export function SetupPage({
               onChange={setConfirm}
               autoComplete="new-password"
             />
-            <Button type="submit" variant="solid" block disabled={submitting}>
+            <Button type="submit" variant="solid" block disabled={setup.isPending}>
               Create account
             </Button>
             <Callout lead="This account gates the whole network admin.">

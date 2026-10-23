@@ -1,13 +1,14 @@
 import { Button } from '@homie/ui/components/button'
 import { Page } from '@/app/shell/page'
-import { useAppData } from '@/app-data'
+import { useLogout, useSession } from '@/features/auth'
 import { useHealth } from '@/lib/use-health'
 import { useSessions } from '@/lib/use-sessions'
 import { ErrorMessage } from '@/shared/ui/error-message'
 
 /** Deliberately independent of settings: this is the page that stays usable when the API is unreachable. */
 export function SystemPage() {
-  const { user, logout } = useAppData()
+  const { user } = useSession()
+  const logout = useLogout()
   const health = useHealth()
   const { sessions, isPending, error, revoke, revokeError } = useSessions()
 
@@ -33,7 +34,7 @@ export function SystemPage() {
           <p className="m-0 text-hm-body text-hm-ink-2">
             Signed in as <span className="text-hm-ink">{user.username}</span> ({user.role}).
           </p>
-          <Button variant="outline" onClick={() => void logout()}>
+          <Button variant="outline" onClick={() => logout.mutate()}>
             Log out
           </Button>
         </section>

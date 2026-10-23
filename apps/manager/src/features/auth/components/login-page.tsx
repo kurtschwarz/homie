@@ -2,34 +2,25 @@ import { Button } from '@homie/ui/components/button'
 import * as React from 'react'
 import { ErrorMessage } from '@/shared/ui/error-message'
 import { Field } from '@/shared/ui/field'
+import { useLogin } from '../api/auth.mutations'
 import { AuthCard } from './auth-card'
 
-export function LoginPage({
-  onLogin,
-}: {
-  onLogin: (username: string, password: string) => Promise<void>
-}) {
+export function LoginPage() {
   const [username, setUsername] = React.useState('')
   const [password, setPassword] = React.useState('')
-  const [error, setError] = React.useState<string>()
-  const [submitting, setSubmitting] = React.useState(false)
+  const login = useLogin()
 
-  const submit = async (event: React.FormEvent) => {
+  // No need to clear `isPending` on success: the gate replaces this page as
+  // soon as the refetched session names a user.
+  const submit = (event: React.FormEvent) => {
     event.preventDefault()
-    setSubmitting(true)
-    setError(undefined)
-    try {
-      await onLogin(username.trim(), password)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
-      setSubmitting(false)
-    }
+    login.mutate({ username: username.trim(), password })
   }
 
   return (
     <AuthCard title="Log in" description="Sign in to manage Homie.">
       <form className="flex flex-col gap-4" onSubmit={submit}>
-        {error && <ErrorMessage label="Login failed" message={error} />}
+        {login.error && <ErrorMessage label="Login failed" message={login.error.message} />}
         <Field
           id="login-username"
           label="Username"
@@ -45,7 +36,7 @@ export function LoginPage({
           onChange={setPassword}
           autoComplete="current-password"
         />
-        <Button type="submit" variant="solid" block disabled={submitting}>
+        <Button type="submit" variant="solid" block disabled={login.isPending}>
           Log in
         </Button>
       </form>

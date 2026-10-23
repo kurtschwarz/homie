@@ -1,11 +1,21 @@
 import { Button } from '@homie/ui/components/button'
-import { HouseholdGate, useSyncCalendar } from '@/features/household'
+import { useQuery } from '@tanstack/react-query'
+import { peopleQueries } from '@/features/people'
+import { tagQueries } from '@/features/tags'
 import { ErrorMessage } from '@/shared/ui/error-message'
 import { Page } from '@/shared/ui/page'
+import { useSyncCalendar } from './api/calendars.mutations'
+import { calendarQueries } from './api/calendars.queries'
 import { TagMappingSection } from './tag-mapping-section'
 
 export function CalendarsPage() {
   const syncCalendar = useSyncCalendar()
+  const people = useQuery(peopleQueries.list())
+  const tags = useQuery(tagQueries.list())
+  const calendarTags = useQuery(calendarQueries.tags())
+
+  const pending = people.isPending || tags.isPending || calendarTags.isPending
+  const loadError = people.error ?? tags.error ?? calendarTags.error
 
   return (
     <Page
@@ -24,15 +34,20 @@ export function CalendarsPage() {
       {syncCalendar.error && (
         <ErrorMessage label="Couldn't sync calendar" message={syncCalendar.error.message} />
       )}
-      <HouseholdGate>
-        {(household) => (
+      {people.data && tags.data && calendarTags.data ? (
+        <>
+          {loadError && <ErrorMessage message={loadError.message} />}
           <TagMappingSection
-            tagMappings={household.tagMappings}
-            calendarTags={household.calendarTags}
-            people={household.people}
+            tagMappings={tags.data}
+            calendarTags={calendarTags.data}
+            people={people.data}
           />
-        )}
-      </HouseholdGate>
+        </>
+      ) : pending ? (
+        <p className="text-hm-body text-hm-ink-2">Loading calendar settings…</p>
+      ) : (
+        <ErrorMessage message={loadError?.message ?? 'Calendar settings unavailable'} />
+      )}
     </Page>
   )
 }

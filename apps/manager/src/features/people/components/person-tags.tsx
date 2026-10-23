@@ -1,6 +1,7 @@
 import { Button } from '@homie/ui/components/button'
+import { useQuery } from '@tanstack/react-query'
 import * as React from 'react'
-import { type TagMapping, useDeleteTagMapping, useSaveTagMapping } from '@/features/household'
+import { tagQueries, useDeleteTagMapping, useSaveTagMapping } from '@/features/tags'
 import { ErrorMessage } from '@/shared/ui/error-message'
 
 /**
@@ -18,21 +19,28 @@ import { ErrorMessage } from '@/shared/ui/error-message'
 export function PersonTags({
   personId,
   personName,
-  tagMappings,
 }: {
   /** The person the tags belong to. New tags are saved against this id. */
   personId: string
   /** Used in the explanatory copy, e.g. "show with Lana’s badge too". */
   personName: string
-  /**
-   * Every tag mapping, not just this person's. The component keeps the
-   * `PERSON` mappings that point at `personId` and ignores the rest.
-   */
-  tagMappings: TagMapping[]
 }) {
   const [newTag, setNewTag] = React.useState('')
+  const mappings = useQuery(tagQueries.list())
   const saveTag = useSaveTagMapping()
   const deleteTag = useDeleteTagMapping()
+
+  if (mappings.isPending) {
+    return <p className="m-0 text-hm-body text-hm-ink-2">Loading tags…</p>
+  }
+  if (!mappings.data) {
+    return (
+      <ErrorMessage label="Tags unavailable" message={mappings.error?.message ?? 'Unknown error'} />
+    )
+  }
+
+  // Keep the PERSON mappings that point at this person and ignore the rest.
+  const tagMappings = mappings.data
   const tags = tagMappings.filter(
     (mapping) => mapping.kind === 'PERSON' && mapping.person?.id === personId,
   )

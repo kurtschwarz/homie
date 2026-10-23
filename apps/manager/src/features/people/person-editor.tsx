@@ -5,16 +5,12 @@ import { formatTime, shortDayLabel } from '@homie/ui/lib/time'
 import { Check } from 'lucide-react'
 import * as React from 'react'
 import { eventsFor, type ManagerEvent } from '@/features/events'
-import {
-  type ManagerPerson,
-  type TagMapping,
-  useDeletePerson,
-  useSavePerson,
-} from '@/features/household'
 import { ErrorMessage } from '@/shared/ui/error-message'
 import { Tabs } from '@/shared/ui/tabs'
+import { useDeletePerson, useSavePerson } from './api/people.mutations'
 import { PersonTags } from './components/person-tags'
 import { PersonIdentity } from './person-identity'
+import type { ManagerPerson } from './types'
 
 export type PersonDraft = {
   name: string
@@ -52,7 +48,6 @@ function draftFor(person?: ManagerPerson): PersonDraft {
 export function PersonEditor({
   person,
   people,
-  tagMappings,
   events,
   eventsFailed,
   onDirtyChange,
@@ -62,7 +57,6 @@ export function PersonEditor({
 }: {
   person?: ManagerPerson
   people: ManagerPerson[]
-  tagMappings: TagMapping[]
   events: ManagerEvent[]
   eventsFailed: boolean
   onDirtyChange: (dirty: boolean) => void
@@ -249,7 +243,7 @@ export function PersonEditor({
           role="tabpanel"
           aria-labelledby="person-settings-tags-tab"
         >
-          <PersonTags personId={person.id} personName={person.name} tagMappings={tagMappings} />
+          <PersonTags personId={person.id} personName={person.name} />
         </div>
       )}
 

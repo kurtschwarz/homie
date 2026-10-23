@@ -1,11 +1,7 @@
 import { Button } from '@homie/ui/components/button'
 import * as React from 'react'
-import {
-  type ManagerPerson,
-  type TagMapping,
-  useDeleteTagMapping,
-  useSaveTagMapping,
-} from '@/features/household'
+import type { ManagerPerson } from '@/features/people'
+import { type TagMapping, useDeleteTagMapping, useSaveTagMapping } from '@/features/tags'
 import { ErrorMessage } from '@/shared/ui/error-message'
 
 export function TagMappingSection({

@@ -2,7 +2,7 @@ import { PersonBadge } from '@homie/ui/components/person-badge'
 import { varsFor } from '@homie/ui/lib/people'
 import { Plus } from 'lucide-react'
 import { eventsFor, type ManagerEvent } from '@/features/events'
-import type { ManagerPerson } from '@/features/household'
+import type { ManagerPerson } from '../types'
 import { PersonWeek } from './person-week'
 
 /**

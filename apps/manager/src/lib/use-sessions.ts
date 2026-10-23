@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { graphql } from './graphql'
 
 export type ActiveSession = {
@@ -9,44 +9,37 @@ export type ActiveSession = {
   current: boolean
 }
 
-type SessionsState =
-  | { kind: 'loading' }
-  | { kind: 'error'; message: string }
-  | { kind: 'ready'; sessions: ActiveSession[]; error?: string }
-
 const SESSIONS_QUERY = `{ sessions { id userAgent createdAt lastSeenAt current } }`
 
 /** The signed-in devices list for the System page, with revoke. */
 export function useSessions() {
-  const [state, setState] = useState<SessionsState>({ kind: 'loading' })
+  const queryClient = useQueryClient()
 
-  const load = useCallback(async () => {
-    try {
-      const data = await graphql<{ sessions: ActiveSession[] }>(SESSIONS_QUERY)
-      setState({ kind: 'ready', sessions: data.sessions })
-    } catch (err) {
-      setState({ kind: 'error', message: err instanceof Error ? err.message : String(err) })
-    }
-  }, [])
+  const query = useQuery({
+    queryKey: ['sessions'],
+    queryFn: () => graphql<{ sessions: ActiveSession[] }>(SESSIONS_QUERY),
+    select: (data) => data.sessions,
+  })
 
-  useEffect(() => {
-    void load()
-  }, [load])
+  const revoke = useMutation({
+    mutationFn: (id: string) => graphql(`mutation($id: ID!) { revokeSession(id: $id) }`, { id }),
+    // Revoking the session you are signed in with logs you out, so the gate's
+    // session query is refreshed too rather than leaving it to notice on the
+    // next request that fails.
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['sessions'] }),
+        queryClient.invalidateQueries({ queryKey: ['session'] }),
+      ]),
+  })
 
-  const revoke = useCallback(
-    async (id: string) => {
-      try {
-        await graphql(`mutation($id: ID!) { revokeSession(id: $id) }`, { id })
-        await load()
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err)
-        setState((prev) =>
-          prev.kind === 'ready' ? { ...prev, error: message } : { kind: 'error', message },
-        )
-      }
-    },
-    [load],
-  )
-
-  return { state, revoke }
+  return {
+    sessions: query.data,
+    isPending: query.isPending,
+    error: query.error,
+    // `mutate` rather than `mutateAsync`: a failed revoke belongs on
+    // `revokeError` next to the list, and the caller has nothing to await.
+    revoke: revoke.mutate,
+    revokeError: revoke.error,
+  }
 }

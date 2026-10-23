@@ -1,5 +1,6 @@
 import type { Swatch } from '@homie/ui/lib/people'
-import { useCallback, useEffect, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useCallback } from 'react'
 import { graphql } from './graphql'
 
 export type ManagerPerson = {
@@ -25,11 +26,6 @@ export type Settings = {
   calendarTags: string[]
 }
 
-type SettingsState =
-  | { kind: 'loading' }
-  | { kind: 'ready'; settings: Settings; saving: boolean; error?: string }
-  | { kind: 'error'; message: string }
-
 const SETTINGS_QUERY = `
   query Settings {
     people { id name emoji swatch isFamily }
@@ -47,99 +43,105 @@ export type PersonInput = {
 }
 export type TagMappingInput = { tag: string; kind: TagKind; personId?: string }
 
+type SaveRequest = { query: string; variables?: Record<string, unknown> }
+
 /**
  * One hook for people and tag mappings: they are edited together (assigning
  * a tag to a person needs the people list to be current), and every
- * mutation refetches both. Refetching rather than patching local state is
+ * mutation refetches both. Refetching rather than patching the cache is
  * the right call for a single-user settings page where correctness beats a
  * frame of latency.
+ *
+ * All five mutations share one `useMutation`, so there is a single `saving`
+ * flag and a single `saveError` to show, however the save was started. That
+ * matches how the pages read it — one banner above the settings, one disabled
+ * state — and is why `AppDataProvider` holds this hook once for the shell
+ * instead of each page calling it.
  */
 export function useSettings() {
-  const [state, setState] = useState<SettingsState>({ kind: 'loading' })
+  const queryClient = useQueryClient()
 
-  const load = useCallback(async () => {
-    try {
-      const data = await graphql<Settings>(SETTINGS_QUERY)
-      setState({ kind: 'ready', settings: data, saving: false })
-    } catch (err) {
-      setState({ kind: 'error', message: err instanceof Error ? err.message : String(err) })
-    }
-  }, [])
+  const query = useQuery({
+    queryKey: ['settings'],
+    queryFn: () => graphql<Settings>(SETTINGS_QUERY),
+  })
 
-  useEffect(() => {
-    void load()
-  }, [load])
+  const save = useMutation({
+    mutationFn: (request: SaveRequest) =>
+      graphql<Record<string, unknown>>(request.query, request.variables),
+    // Returning the invalidations makes `mutateAsync` resolve only once the
+    // refetches have landed, so a caller that saves and then reads is never a
+    // render behind. Events are attributed to people by tag, so every one of
+    // these mutations can change which events belong to whom.
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['settings'] }),
+        queryClient.invalidateQueries({ queryKey: ['events'] }),
+      ]),
+  })
 
-  const mutate = useCallback(
-    async <T>(query: string, variables: Record<string, unknown>): Promise<T | undefined> => {
-      setState((prev) =>
-        prev.kind === 'ready' ? { ...prev, saving: true, error: undefined } : prev,
-      )
+  /**
+   * Runs one mutation and resolves to `undefined` if it failed rather than
+   * throwing. The error is already on `saveError` for the page to show, and
+   * the editors read a falsy result as "not saved" — a rejection would leave
+   * them stuck on "Saving…".
+   */
+  const run = useCallback(
+    async <T>(query: string, variables?: Record<string, unknown>) => {
       try {
-        const data = await graphql<T>(query, variables)
-        await load()
-        return data
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err)
-        setState((prev) =>
-          prev.kind === 'ready'
-            ? { ...prev, saving: false, error: message }
-            : { kind: 'error', message },
-        )
+        return (await save.mutateAsync({ query, variables })) as T
+      } catch {
         return undefined
       }
     },
-    [load],
+    [save.mutateAsync],
   )
 
   const savePerson = useCallback(
     async (input: PersonInput) => {
-      const data = await mutate<{ savePerson: { id: string } }>(
+      const data = await run<{ savePerson: { id: string } }>(
         `mutation SavePerson($input: PersonInput!) { savePerson(input: $input) { id } }`,
         { input },
       )
       return data?.savePerson.id
     },
-    [mutate],
+    [run],
   )
 
   const deletePerson = useCallback(
-    async (id: string) => {
-      const data = await mutate<{ deletePerson: boolean }>(
-        `mutation DeletePerson($id: ID!) { deletePerson(id: $id) }`,
-        { id },
-      )
-      return data?.deletePerson ?? false
-    },
-    [mutate],
+    (id: string) => run(`mutation DeletePerson($id: ID!) { deletePerson(id: $id) }`, { id }),
+    [run],
   )
 
   const saveTagMapping = useCallback(
     (input: TagMappingInput) =>
-      mutate(
+      run(
         `mutation SaveTagMapping($input: TagMappingInput!) { saveTagMapping(input: $input) { tag } }`,
         { input },
       ),
-    [mutate],
+    [run],
   )
 
   const deleteTagMapping = useCallback(
-    async (tag: string) => {
-      const data = await mutate<{ deleteTagMapping: boolean }>(
-        `mutation DeleteTagMapping($tag: String!) { deleteTagMapping(tag: $tag) }`,
-        { tag },
-      )
-      return data?.deleteTagMapping ?? false
-    },
-    [mutate],
+    (tag: string) =>
+      run(`mutation DeleteTagMapping($tag: String!) { deleteTagMapping(tag: $tag) }`, { tag }),
+    [run],
   )
 
-  // Going through mutate means the refetch afterwards picks up any tag the
-  // sync just discovered, which is the whole point of refreshing from here.
-  const refreshEvents = useCallback(
-    () => mutate(`mutation RefreshEvents { refreshEvents }`, {}),
-    [mutate],
-  )
+  // Going through the same lane means the refetch afterwards picks up any tag
+  // the sync just discovered, which is the whole point of syncing from here.
+  const syncCalendar = useCallback(() => run(`mutation RefreshEvents { refreshEvents }`), [run])
 
-  return { state, savePerson, deletePerson, saveTagMapping, deleteTagMapping, refreshEvents }
+  return {
+    settings: query.data,
+    isPending: query.isPending,
+    error: query.error,
+    saving: save.isPending,
+    saveError: save.error,
+    savePerson,
+    deletePerson,
+    saveTagMapping,
+    deleteTagMapping,
+    syncCalendar,
+  }
 }

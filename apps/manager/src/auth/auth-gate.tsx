@@ -16,17 +16,16 @@ export function AuthGate({
 }: {
   children: (user: User | null, logout: () => Promise<void>) => ReactNode
 }) {
-  const { state, setup, login, logout } = useSession()
+  const { isPending, error, setupRequired, user, setup, login, logout } = useSession()
 
-  if (state.kind === 'loading')
-    return <p className="p-6 text-hm-body text-hm-ink-2">Connecting to API…</p>
-  if (state.kind === 'error')
+  if (isPending) return <p className="p-6 text-hm-body text-hm-ink-2">Connecting to API…</p>
+  if (error)
     return (
       <div className="p-6">
-        <ErrorMessage label="Connection failed" message={state.message} />
+        <ErrorMessage label="Connection failed" message={error.message} />
       </div>
     )
-  if (state.setupRequired) return <SetupPage onSetup={setup} />
-  if (!state.user) return <LoginPage onLogin={login} />
-  return <>{children(state.user, logout)}</>
+  if (setupRequired) return <SetupPage onSetup={setup} />
+  if (!user) return <LoginPage onLogin={login} />
+  return <>{children(user, logout)}</>
 }

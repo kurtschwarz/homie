@@ -1,75 +1,97 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useCallback } from 'react'
 import { graphql } from './graphql'
 import type { HealthStatus } from './use-health'
 
 export type User = { id: string; username: string; role: 'ADMIN' }
 
-type SessionState =
-  | { kind: 'loading' }
-  | { kind: 'error'; message: string }
-  | { kind: 'ready'; setupRequired: boolean; user: User | null }
+type Session = {
+  session: { user: User } | null
+  health: { status: HealthStatus }
+}
 
 const SESSION_QUERY = `{ session { user { id username role } } health { status } }`
 
 /**
- * Whether setup or login is needed, polled once and refreshed after every
- * setup, login or logout. Failures from setup/login are left to the
- * caller: a wrong code or password is a form error, not a reason to tear
- * down the whole gate. Health status is the source of truth for whether
- * first-run setup is still required.
+ * Whether setup or login is needed, refreshed after every setup, login or
+ * logout. Failures from setup/login reject to the caller: a wrong code or
+ * password is a form error, not a reason to tear down the whole gate. Health
+ * status is the source of truth for whether first-run setup is still required.
+ *
+ * This asks for `health { status }` alongside the session rather than sharing
+ * the `health` query, because the gate needs both answers in one round trip
+ * before it can decide what to render.
  */
 export function useSession() {
-  const [state, setState] = useState<SessionState>({ kind: 'loading' })
+  const queryClient = useQueryClient()
 
-  const load = useCallback(async () => {
-    try {
-      const data = await graphql<{
-        session: { user: User } | null
-        health: { status: HealthStatus }
-      }>(SESSION_QUERY)
-      setState({
-        kind: 'ready',
-        setupRequired: data.health.status === 'SETUP_REQUIRED',
-        user: data.session?.user ?? null,
-      })
-    } catch (err) {
-      setState({ kind: 'error', message: err instanceof Error ? err.message : String(err) })
-    }
-  }, [])
+  const query = useQuery({
+    queryKey: ['session'],
+    queryFn: () => graphql<Session>(SESSION_QUERY),
+  })
 
-  useEffect(() => {
-    void load()
-  }, [load])
+  // Awaited by each mutation below, so `mutateAsync` resolves only once the
+  // refetched session is in the cache and the gate has what it needs to move on.
+  const refresh = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: ['session'] }),
+    [queryClient],
+  )
+
+  const setupMutation = useMutation({
+    mutationFn: (input: { code: string; username: string; password: string }) =>
+      graphql(
+        `mutation($code: String!, $username: String!, $password: String!) { setup(code: $code, username: $username, password: $password) { id } }`,
+        input,
+      ),
+    onSuccess: refresh,
+  })
+
+  const loginMutation = useMutation({
+    mutationFn: (input: { username: string; password: string }) =>
+      graphql(
+        `mutation($username: String!, $password: String!) { login(username: $username, password: $password) { id } }`,
+        input,
+      ),
+    onSuccess: refresh,
+  })
+
+  const logoutMutation = useMutation({
+    mutationFn: () => graphql(`mutation { logout }`),
+    onSuccess: async () => {
+      // Everything else in the cache was read as the user who just left, so
+      // drop it: the next person to log in must not find their people,
+      // sessions or events sitting there. The session query itself is kept and
+      // refetched, which is what flips the gate back to the login form.
+      queryClient.removeQueries({ predicate: (cached) => cached.queryKey[0] !== 'session' })
+      await refresh()
+    },
+  })
 
   const setup = useCallback(
     async (code: string, username: string, password: string) => {
-      await graphql(
-        `mutation($code: String!, $username: String!, $password: String!) { setup(code: $code, username: $username, password: $password) { id } }`,
-        { code, username, password },
-      )
-      await load()
+      await setupMutation.mutateAsync({ code, username, password })
     },
-    [load],
+    [setupMutation.mutateAsync],
   )
 
   const login = useCallback(
     async (username: string, password: string) => {
-      await graphql(
-        `mutation($username: String!, $password: String!) { login(username: $username, password: $password) { id } }`,
-        {
-          username,
-          password,
-        },
-      )
-      await load()
+      await loginMutation.mutateAsync({ username, password })
     },
-    [load],
+    [loginMutation.mutateAsync],
   )
 
   const logout = useCallback(async () => {
-    await graphql(`mutation { logout }`)
-    await load()
-  }, [load])
+    await logoutMutation.mutateAsync()
+  }, [logoutMutation.mutateAsync])
 
-  return { state, setup, login, logout }
+  return {
+    isPending: query.isPending,
+    error: query.error,
+    setupRequired: query.data?.health.status === 'SETUP_REQUIRED',
+    user: query.data?.session?.user ?? null,
+    setup,
+    login,
+    logout,
+  }
 }

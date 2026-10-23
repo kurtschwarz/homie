@@ -1,5 +1,5 @@
 import type { Swatch } from '@homie/ui/lib/people'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { graphql } from './graphql'
 
 export type ManagerEvent = {
@@ -33,56 +33,46 @@ const QUERY = `
   }
 `
 
+function toManagerEvent(record: EventRecord): ManagerEvent {
+  return {
+    id: record.id,
+    title: record.title,
+    start: new Date(record.start * 1000),
+    end: new Date(record.end * 1000),
+    allDay: record.allDay,
+    people: record.people.map((person) => ({
+      ...person,
+      swatch: person.swatch as Swatch,
+    })),
+  }
+}
+
+function select(data: { events: EventRecord[] }): ManagerEvent[] {
+  return data.events.map(toManagerEvent)
+}
+
 /**
  * The coming week, already attributed to people by the API. The manager only
  * reads this to show someone what their badge is actually doing — it never
- * writes here — so a failed fetch reports `failed` and the page drops the
+ * writes here — so a failed fetch leaves `isError` set and the page drops the
  * week strip rather than claiming nobody has any events.
  *
  * `events(days:)` counts forward from now, so this is the next seven days
  * rather than Monday to Sunday: earlier days of the current week are not
- * available to ask for. The hook refreshes every five minutes and exposes
- * `refresh` so a settings mutation can update attribution immediately.
+ * available to ask for.
+ *
+ * Polling pauses while the tab is hidden and catches up when it regains focus,
+ * which is the right trade for a page someone tabs away from. Saves that can
+ * change attribution invalidate this key, so an edit shows up without waiting
+ * for the interval.
  */
 export function useEvents() {
-  const [events, setEvents] = useState<ManagerEvent[]>([])
-  const [failed, setFailed] = useState(false)
-  const request = useRef(0)
-
-  const refresh = useCallback(async () => {
-    const current = ++request.current
-    try {
-      const data = await graphql<{ events: EventRecord[] }>(QUERY)
-      if (current !== request.current) return
-      setEvents(
-        data.events.map((record) => ({
-          id: record.id,
-          title: record.title,
-          start: new Date(record.start * 1000),
-          end: new Date(record.end * 1000),
-          allDay: record.allDay,
-          people: record.people.map((person) => ({
-            ...person,
-            swatch: person.swatch as Swatch,
-          })),
-        })),
-      )
-      setFailed(false)
-    } catch {
-      if (current === request.current) setFailed(true)
-    }
-  }, [])
-
-  useEffect(() => {
-    void refresh()
-    const timer = setInterval(refresh, 5 * 60_000)
-    return () => {
-      request.current++
-      clearInterval(timer)
-    }
-  }, [refresh])
-
-  return { events, failed, refresh }
+  return useQuery({
+    queryKey: ['events'],
+    queryFn: () => graphql<{ events: EventRecord[] }>(QUERY),
+    select,
+    refetchInterval: 5 * 60_000,
+  })
 }
 
 /**

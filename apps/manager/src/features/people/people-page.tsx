@@ -9,7 +9,9 @@ import { PersonEditor } from './person-editor'
 
 export function PeoplePage() {
   const { savePerson, deletePerson, saveTagMapping, deleteTagMapping } = useAppData()
-  const { events, failed: eventsFailed, refresh: refreshEvents } = useEvents()
+  // Every mutation below invalidates the events query, so there is nothing to
+  // refresh by hand after a save: the week strip catches up on its own.
+  const { data: events = [], isError: eventsFailed } = useEvents()
   const [selectedId, setSelectedId] = React.useState<string>()
   const [adding, setAdding] = React.useState(false)
   const [editorDirty, setEditorDirty] = React.useState(false)
@@ -60,11 +62,7 @@ export function PeoplePage() {
                   events={events}
                   eventsFailed={eventsFailed}
                   onDirtyChange={setEditorDirty}
-                  onSave={async (input) => {
-                    const id = await savePerson(input)
-                    if (id) await refreshEvents()
-                    return id
-                  }}
+                  onSave={savePerson}
                   onCreated={(id) => {
                     setAdding(false)
                     setSelectedId(id)
@@ -73,20 +71,11 @@ export function PeoplePage() {
                     if (!active) return
                     const deleted = await deletePerson(active.id)
                     if (!deleted) return
-                    await refreshEvents()
                     setSelectedId(undefined)
                   }}
                   onCancelAdd={() => setAdding(false)}
-                  onSaveTag={async (input) => {
-                    const result = await saveTagMapping(input)
-                    if (result) await refreshEvents()
-                    return result
-                  }}
-                  onDeleteTag={async (tag) => {
-                    const result = await deleteTagMapping(tag)
-                    if (result) await refreshEvents()
-                    return result
-                  }}
+                  onSaveTag={saveTagMapping}
+                  onDeleteTag={deleteTagMapping}
                 />
               ) : (
                 <p className="m-0 text-hm-body text-hm-ink-2">

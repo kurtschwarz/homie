@@ -1,10 +1,8 @@
 import * as React from 'react'
-import { type HealthState, useHealth } from './lib/use-health'
 import type { User } from './lib/use-session'
 import { useSettings } from './lib/use-settings'
 
 type AppData = ReturnType<typeof useSettings> & {
-  health: HealthState
   user: User | null
   logout: () => Promise<void>
 }
@@ -12,11 +10,16 @@ type AppData = ReturnType<typeof useSettings> & {
 const AppDataContext = React.createContext<AppData | null>(null)
 
 /**
- * Settings, health and the logged-in user, held once for the whole shell
- * so the sidebar badge and every page read the same copy - and so health
- * is polled once rather than per consumer. user and logout come from
- * AuthGate, which resolved them before this ever mounted. user is null
- * when the API isn't gating at all.
+ * Settings and the logged-in user, held once for the whole shell. The query
+ * itself would be shared without this - the cache dedupes by key - but the
+ * save lane would not: a `useSettings` call per page means a `saving` flag and
+ * a `saveError` per page, and the banner would miss a failure started
+ * elsewhere. Holding the hook once keeps one lane for every page to read.
+ *
+ * user and logout come from AuthGate, which resolved them before this ever
+ * mounted. user is null when the API isn't gating at all. Health is not here:
+ * it is read-only, so consumers call useHealth directly and the cache does the
+ * sharing.
  */
 export function AppDataProvider({
   user,
@@ -28,12 +31,8 @@ export function AppDataProvider({
   children: React.ReactNode
 }) {
   const settings = useSettings()
-  const health = useHealth()
 
-  const value = React.useMemo(
-    () => ({ ...settings, health, user, logout }),
-    [settings, health, user, logout],
-  )
+  const value = React.useMemo(() => ({ ...settings, user, logout }), [settings, user, logout])
   return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>
 }
 

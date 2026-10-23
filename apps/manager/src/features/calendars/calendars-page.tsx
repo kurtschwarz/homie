@@ -5,16 +5,15 @@ import { Page } from '../../shell/page'
 import { TagMappingSection } from './tag-mapping-section'
 
 export function CalendarsPage() {
-  const { state, saveTagMapping, deleteTagMapping, refreshEvents } = useAppData()
-  const syncing = state.kind === 'ready' && state.saving
+  const { saveTagMapping, deleteTagMapping, syncCalendar, saving } = useAppData()
 
   return (
     <Page
       title="Calendars"
       description="Choose which calendar tags appear on Homie and who they belong to."
       actions={
-        <Button variant="solid" onClick={refreshEvents} disabled={syncing}>
-          {syncing ? 'Syncing…' : 'Sync calendar'}
+        <Button variant="solid" onClick={() => void syncCalendar()} disabled={saving}>
+          {saving ? 'Syncing…' : 'Sync calendar'}
         </Button>
       }
     >
@@ -26,7 +25,7 @@ export function CalendarsPage() {
             people={settings.people}
             onSave={saveTagMapping}
             onDelete={deleteTagMapping}
-            refreshing={syncing}
+            refreshing={saving}
           />
         )}
       </SettingsGate>

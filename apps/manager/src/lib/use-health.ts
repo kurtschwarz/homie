@@ -1,48 +1,29 @@
-import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { graphql } from './graphql'
 
 export type HealthStatus = 'OK' | 'SETUP_REQUIRED'
 
-type Health = {
+export type Health = {
   status: HealthStatus
   version: string
   uptimeSeconds: number
 }
 
-export type HealthState =
-  | { kind: 'connecting' }
-  | { kind: 'ok'; health: Health }
-  | { kind: 'error'; message: string }
-
 const QUERY = `{ health { status version uptimeSeconds } }`
-const RETRY_MS = 3000
 
-export function useHealth(): HealthState {
-  const [state, setState] = useState<HealthState>({ kind: 'connecting' })
-
-  useEffect(() => {
-    let cancelled = false
-    let timer: ReturnType<typeof setTimeout>
-
-    const poll = async () => {
-      try {
-        const data = await graphql<{ health: Health }>(QUERY)
-        if (!cancelled) setState({ kind: 'ok', health: data.health })
-      } catch (err) {
-        if (!cancelled) {
-          setState({ kind: 'error', message: err instanceof Error ? err.message : String(err) })
-        }
-      } finally {
-        if (!cancelled) timer = setTimeout(poll, RETRY_MS)
-      }
-    }
-
-    poll()
-    return () => {
-      cancelled = true
-      clearTimeout(timer)
-    }
-  }, [])
-
-  return state
+/**
+ * The API's report on itself, polled every 3 seconds so the sidebar dot and
+ * the System page notice an outage without anyone reloading.
+ *
+ * Consumers show `isError` in preference to the cached `data` behind it: a
+ * stale `OK` reads as a working API, which is worse than admitting the
+ * connection is down.
+ */
+export function useHealth() {
+  return useQuery({
+    queryKey: ['health'],
+    queryFn: () => graphql<{ health: Health }>(QUERY),
+    select: (data) => data.health,
+    refetchInterval: 3000,
+  })
 }

@@ -1,11 +1,13 @@
 import { Link, NavLink } from 'react-router-dom'
 import { useAppData } from '../app-data'
+import { useHealth } from '../lib/use-health'
 import { BrandMark } from './brand-mark'
 import { sections } from './sections'
 
 export function Sidebar() {
-  const { state, health } = useAppData()
-  const peopleCount = state.kind === 'ready' ? state.settings.people.length : undefined
+  const { settings } = useAppData()
+  const health = useHealth()
+  const peopleCount = settings?.people.length
 
   return (
     <aside className="flex shrink-0 flex-col gap-4 md:w-[264px] md:gap-10 md:px-[18px] md:pb-[22px] md:pt-[30px]">
@@ -54,11 +56,11 @@ export function Sidebar() {
         aria-live="polite"
       >
         <span
-          className={`size-2 rounded-full ${health.kind === 'ok' ? 'bg-hm-accent' : 'bg-hm-ink-3'}`}
+          className={`size-2 rounded-full ${health.isSuccess ? 'bg-hm-accent' : 'bg-hm-ink-3'}`}
         />
-        {health.kind === 'connecting' && 'Connecting to API…'}
-        {health.kind === 'error' && 'API unavailable'}
-        {health.kind === 'ok' && `API ${health.health.status}`}
+        {health.isPending && 'Connecting to API…'}
+        {health.isError && 'API unavailable'}
+        {health.isSuccess && `API ${health.data.status}`}
       </div>
     </aside>
   )

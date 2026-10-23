@@ -10,7 +10,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/kurtschwarz/homie/services/api/internal/events/caldav"
+	"github.com/kurtschwarz/homie/services/api/internal/calendars"
+	"github.com/kurtschwarz/homie/services/api/internal/calendars/caldav"
 )
 
 const (
@@ -40,6 +41,11 @@ type DisplayEvent struct {
 	People []Person
 }
 
+type mappingKey struct {
+	CalendarID uuid.UUID
+	Tag        string
+}
+
 // Fetcher is the portion of the CalDAV client used by Service.
 type Fetcher interface {
 	Report(ctx context.Context, from, to time.Time) ([]caldav.Occurrence, error)
@@ -50,6 +56,14 @@ type Fetcher interface {
 // returning ErrEventsReadOnly instead of panicking on a failed type assertion.
 type Writer interface {
 	Put(ctx context.Context, occ caldav.Occurrence) error
+}
+
+type SourceProvider interface {
+	Sources(context.Context) ([]calendars.Source, error)
+	Source(context.Context, uuid.UUID) (calendars.Source, error)
+	RecordSuccess(context.Context, uuid.UUID, time.Time) error
+	RecordFailure(context.Context, uuid.UUID, string) error
+	RecordAttempt(context.Context, uuid.UUID, time.Time) error
 }
 
 // ErrEventsReadOnly is returned by CreateEvent when the configured CalDAV
@@ -65,14 +79,17 @@ var ErrTagTaken = errors.New("events: tag already mapped to something else")
 // has an invalid time range.
 var ErrInvalidDraft = errors.New("events: invalid event draft")
 
+var legacyCalendarID = uuid.MustParse("00000000-0000-7000-8000-000000000001")
+
 // Draft is a locally authored event awaiting a CalDAV UID.
 type Draft struct {
-	Summary   string
-	Location  string
-	Start     time.Time
-	End       time.Time
-	AllDay    bool
-	PersonIDs []uuid.UUID
+	CalendarID uuid.UUID
+	Summary    string
+	Location   string
+	Start      time.Time
+	End        time.Time
+	AllDay     bool
+	PersonIDs  []uuid.UUID
 }
 
 // Service serves displayable events and the people/mapping surface backing
@@ -80,8 +97,9 @@ type Draft struct {
 // in after construction, without changing New's signature for the tests and
 // call sites that only need the repository.
 type Service struct {
-	Client Fetcher
-	Logger *slog.Logger
+	Client    Fetcher
+	Calendars SourceProvider
+	Logger    *slog.Logger
 
 	repo Repository
 	now  func() time.Time
@@ -96,6 +114,9 @@ func New(repo Repository) *Service {
 // The service stores everything the report returns, tagged or not; the tag
 // filter belongs to the read path in Displayable.
 func (s *Service) Refresh(ctx context.Context) error {
+	if s.Calendars != nil {
+		return s.refreshCalendars(ctx, false)
+	}
 	if s.Client == nil {
 		return nil
 	}
@@ -111,24 +132,112 @@ func (s *Service) Refresh(ctx context.Context) error {
 	newEvents := make([]Event, 0, len(occurrences))
 	untagged := 0
 	for _, occurrence := range occurrences {
-		id, err := uuid.NewV7()
-		if err != nil {
-			return err
-		}
+		id := eventID(legacyCalendarID, occurrence.UID, occurrence.RecurrenceID)
 		if len(occurrence.Categories) == 0 {
 			untagged++
 		}
 		newEvents = append(newEvents, Event{
-			ID: id, UID: occurrence.UID, RecurrenceID: occurrence.RecurrenceID,
+			ID: id, CalendarID: legacyCalendarID, UID: occurrence.UID, RecurrenceID: occurrence.RecurrenceID,
 			Summary: occurrence.Summary, Location: occurrence.Location,
 			Start: occurrence.Start, End: occurrence.End, AllDay: occurrence.AllDay,
 			Categories: occurrence.Categories,
 		})
 	}
-	if err := s.repo.ReplaceWindow(ctx, from, to, newEvents); err != nil {
+	if err := s.repo.ReplaceWindow(ctx, legacyCalendarID, from, to, newEvents); err != nil {
 		return err
 	}
 	s.logger().InfoContext(ctx, "events refresh", "fetched", len(occurrences), "written", len(newEvents), "untagged", untagged)
+	return nil
+}
+
+// RefreshDue refreshes every calendar whose account's interval has elapsed.
+func (s *Service) RefreshDue(ctx context.Context) error {
+	if s.Calendars == nil {
+		return s.Refresh(ctx)
+	}
+	return s.refreshCalendars(ctx, true)
+}
+
+// RefreshCalendar refreshes one calendar immediately.
+func (s *Service) RefreshCalendar(ctx context.Context, id uuid.UUID) error {
+	if s.Calendars == nil {
+		return ErrEventsReadOnly
+	}
+	source, err := s.Calendars.Source(ctx, id)
+	if err != nil {
+		return err
+	}
+	now := s.now()
+	refreshErr := s.refreshSource(ctx, source, now)
+	return errors.Join(refreshErr, s.Calendars.RecordAttempt(ctx, source.Account.ID, now))
+}
+
+func (s *Service) refreshCalendars(ctx context.Context, dueOnly bool) error {
+	sources, err := s.Calendars.Sources(ctx)
+	if err != nil {
+		return err
+	}
+	now := s.now()
+	byAccount := make(map[uuid.UUID][]calendars.Source)
+	for _, source := range sources {
+		byAccount[source.Account.ID] = append(byAccount[source.Account.ID], source)
+	}
+	results := make(chan error, len(byAccount))
+	started := 0
+	for _, accountSources := range byAccount {
+		account := accountSources[0].Account
+		if dueOnly && account.LastAttemptedAt != nil && account.LastAttemptedAt.Add(account.RefreshInterval).After(now) {
+			continue
+		}
+		started++
+		go func(sources []calendars.Source) { results <- s.refreshAccount(ctx, sources, now) }(accountSources)
+	}
+	var errs []error
+	for range started {
+		if err := <-results; err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
+}
+
+func (s *Service) refreshAccount(ctx context.Context, sources []calendars.Source, now time.Time) error {
+	results := make(chan error, len(sources))
+	for _, source := range sources {
+		go func(source calendars.Source) { results <- s.refreshSource(ctx, source, now) }(source)
+	}
+	var errs []error
+	for range sources {
+		if err := <-results; err != nil {
+			errs = append(errs, err)
+		}
+	}
+	if err := s.Calendars.RecordAttempt(ctx, sources[0].Account.ID, now); err != nil {
+		errs = append(errs, err)
+	}
+	return errors.Join(errs...)
+}
+
+func (s *Service) refreshSource(ctx context.Context, source calendars.Source, now time.Time) error {
+	from, to := now.Add(-source.Account.WindowPast), now.Add(source.Account.WindowFuture)
+	occurrences, err := source.Client.Report(ctx, from, to)
+	if err != nil {
+		_ = s.Calendars.RecordFailure(ctx, source.Calendar.ID, err.Error())
+		return fmt.Errorf("refresh calendar %s: %w", source.Calendar.ID, err)
+	}
+	newEvents := make([]Event, 0, len(occurrences))
+	for _, occurrence := range occurrences {
+		id := eventID(source.Calendar.ID, occurrence.UID, occurrence.RecurrenceID)
+		newEvents = append(newEvents, Event{ID: id, CalendarID: source.Calendar.ID, UID: occurrence.UID, RecurrenceID: occurrence.RecurrenceID, Summary: occurrence.Summary, Location: occurrence.Location, Start: occurrence.Start, End: occurrence.End, AllDay: occurrence.AllDay, Categories: occurrence.Categories})
+	}
+	if err := s.repo.ReplaceWindow(ctx, source.Calendar.ID, from, to, newEvents); err != nil {
+		_ = s.Calendars.RecordFailure(ctx, source.Calendar.ID, err.Error())
+		return err
+	}
+	if err := s.Calendars.RecordSuccess(ctx, source.Calendar.ID, now); err != nil {
+		return err
+	}
+	s.logger().InfoContext(ctx, "calendar refresh", "calendar_id", source.Calendar.ID, "fetched", len(occurrences))
 	return nil
 }
 
@@ -138,6 +247,9 @@ func (s *Service) Refresh(ctx context.Context) error {
 func (s *Service) CreateEvent(ctx context.Context, draft Draft) (DisplayEvent, error) {
 	if strings.TrimSpace(draft.Summary) == "" || !draft.End.After(draft.Start) || len(draft.PersonIDs) == 0 {
 		return DisplayEvent{}, ErrInvalidDraft
+	}
+	if s.Calendars != nil {
+		return s.createCalendarEvent(ctx, draft)
 	}
 	if s.Client == nil {
 		return DisplayEvent{}, ErrEventsReadOnly
@@ -187,17 +299,69 @@ func (s *Service) CreateEvent(ctx context.Context, draft Draft) (DisplayEvent, e
 
 	return DisplayEvent{
 		Event: Event{
-			ID: id, UID: occurrence.UID, Summary: draft.Summary, Location: draft.Location,
+			ID: id, CalendarID: legacyCalendarID, UID: occurrence.UID, Summary: draft.Summary, Location: draft.Location,
 			Start: draft.Start, End: draft.End, AllDay: draft.AllDay, Categories: categories,
 		},
 		People: s.peopleForIDs(ctx, draft.PersonIDs),
 	}, nil
 }
 
+func (s *Service) createCalendarEvent(ctx context.Context, draft Draft) (DisplayEvent, error) {
+	if draft.CalendarID == uuid.Nil {
+		return DisplayEvent{}, ErrInvalidDraft
+	}
+	sources, err := s.Calendars.Sources(ctx)
+	if err != nil {
+		return DisplayEvent{}, err
+	}
+	var source *calendars.Source
+	for i := range sources {
+		if sources[i].Calendar.ID == draft.CalendarID {
+			source = &sources[i]
+			break
+		}
+	}
+	if source == nil {
+		return DisplayEvent{}, ErrEventsReadOnly
+	}
+	categories, err := s.tagsForPeopleInCalendar(ctx, draft.CalendarID, draft.PersonIDs)
+	if err != nil {
+		return DisplayEvent{}, err
+	}
+	id, err := uuid.NewV7()
+	if err != nil {
+		return DisplayEvent{}, err
+	}
+	occurrence := calendars.Occurrence{UID: id.String() + "@homie", Summary: draft.Summary, Location: draft.Location, Start: draft.Start, End: draft.End, AllDay: draft.AllDay, Categories: categories}
+	if err := source.Client.Put(ctx, occurrence); err != nil {
+		return DisplayEvent{}, err
+	}
+	if err := s.RefreshCalendar(ctx, draft.CalendarID); err != nil {
+		s.logger().WarnContext(ctx, "events refresh after create failed", "error", err)
+	}
+	stored, err := s.repo.ListWindow(ctx, draft.Start, draft.Start.Add(time.Second))
+	if err == nil {
+		for _, event := range stored {
+			if event.CalendarID == draft.CalendarID && event.UID == occurrence.UID {
+				return DisplayEvent{Event: event, People: s.peopleForIDs(ctx, draft.PersonIDs)}, nil
+			}
+		}
+	}
+	return DisplayEvent{Event: Event{ID: eventID(draft.CalendarID, occurrence.UID, occurrence.RecurrenceID), CalendarID: draft.CalendarID, UID: occurrence.UID, Summary: draft.Summary, Location: draft.Location, Start: draft.Start, End: draft.End, AllDay: draft.AllDay, Categories: categories}, People: s.peopleForIDs(ctx, draft.PersonIDs)}, nil
+}
+
+func eventID(calendarID uuid.UUID, uid, recurrenceID string) uuid.UUID {
+	return uuid.NewSHA1(calendarID, []byte(uid+"\x00"+recurrenceID))
+}
+
 // tagsForPeople resolves each person to a PERSON tag, creating one from
 // their normalised name when they have none. It errors rather than steal a
 // tag already mapped to someone else.
 func (s *Service) tagsForPeople(ctx context.Context, personIDs []uuid.UUID) ([]string, error) {
+	return s.tagsForPeopleInCalendar(ctx, legacyCalendarID, personIDs)
+}
+
+func (s *Service) tagsForPeopleInCalendar(ctx context.Context, calendarID uuid.UUID, personIDs []uuid.UUID) ([]string, error) {
 	if len(personIDs) == 0 {
 		return nil, nil
 	}
@@ -214,7 +378,7 @@ func (s *Service) tagsForPeople(ctx context.Context, personIDs []uuid.UUID) ([]s
 			return nil, fmt.Errorf("events: person %s does not exist", personID)
 		}
 	}
-	mappings, err := s.repo.ListTagMappings(ctx)
+	mappings, err := s.repo.ListTagMappings(ctx, calendarID)
 	if err != nil {
 		return nil, err
 	}
@@ -248,7 +412,7 @@ func (s *Service) tagsForPeople(ctx context.Context, personIDs []uuid.UUID) ([]s
 		if existing, ok := mappingByTag[tag]; ok && (existing.Kind != TagKindPerson || existing.PersonID == nil || *existing.PersonID != personID) {
 			return nil, fmt.Errorf("%w: %q", ErrTagTaken, tag)
 		}
-		mapping := TagMapping{Tag: tag, Label: person.Name, Kind: TagKindPerson, PersonID: &personID}
+		mapping := TagMapping{CalendarID: calendarID, Tag: tag, Label: person.Name, Kind: TagKindPerson, PersonID: &personID}
 		if err := s.repo.UpsertTagMapping(ctx, mapping); err != nil {
 			return nil, err
 		}
@@ -306,11 +470,6 @@ func (s *Service) Displayable(ctx context.Context, days int) ([]DisplayEvent, er
 	if err != nil {
 		return nil, err
 	}
-	mappings, err := s.repo.ListTagMappings(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	peopleByID := make(map[uuid.UUID]Person, len(people))
 	var family *Person
 	for _, p := range people {
@@ -319,9 +478,19 @@ func (s *Service) Displayable(ctx context.Context, days int) ([]DisplayEvent, er
 			family = &p
 		}
 	}
-	mappingByTag := make(map[string]TagMapping, len(mappings))
-	for _, m := range mappings {
-		mappingByTag[m.Tag] = m
+	mappingByCalendarTag := make(map[mappingKey]TagMapping)
+	calendarIDs := make(map[uuid.UUID]struct{})
+	for _, event := range events {
+		calendarIDs[event.CalendarID] = struct{}{}
+	}
+	for calendarID := range calendarIDs {
+		mappings, err := s.repo.ListTagMappings(ctx, calendarID)
+		if err != nil {
+			return nil, err
+		}
+		for _, m := range mappings {
+			mappingByCalendarTag[mappingKey{CalendarID: m.CalendarID, Tag: m.Tag}] = m
+		}
 	}
 
 	result := make([]DisplayEvent, 0, len(events))
@@ -330,7 +499,7 @@ func (s *Service) Displayable(ctx context.Context, days int) ([]DisplayEvent, er
 		include := false
 		seen := make(map[uuid.UUID]struct{})
 		for _, tag := range event.Categories {
-			mapping, ok := mappingByTag[normalizeTag(tag)]
+			mapping, ok := mappingByCalendarTag[mappingKey{CalendarID: event.CalendarID, Tag: normalizeTag(tag)}]
 			if !ok {
 				continue
 			}
@@ -369,12 +538,20 @@ func (s *Service) ListPeople(ctx context.Context) ([]Person, error) { return s.r
 
 // ListTagMappings returns every stored tag mapping.
 func (s *Service) ListTagMappings(ctx context.Context) ([]TagMapping, error) {
-	return s.repo.ListTagMappings(ctx)
+	return s.repo.ListTagMappings(ctx, legacyCalendarID)
+}
+
+func (s *Service) ListCalendarTagMappings(ctx context.Context, calendarID uuid.UUID) ([]TagMapping, error) {
+	return s.repo.ListTagMappings(ctx, calendarID)
 }
 
 // CalendarTags returns every distinct category seen in the synced window.
 func (s *Service) CalendarTags(ctx context.Context) ([]string, error) {
-	return s.repo.DistinctCategories(ctx)
+	return s.repo.DistinctCategories(ctx, legacyCalendarID)
+}
+
+func (s *Service) CalendarTagsFor(ctx context.Context, calendarID uuid.UUID) ([]string, error) {
+	return s.repo.DistinctCategories(ctx, calendarID)
 }
 
 // SavePerson validates the swatch, then creates or updates the person.
@@ -409,13 +586,17 @@ func (s *Service) DeletePerson(ctx context.Context, id uuid.UUID) error {
 
 // SaveTagMapping normalises the tag and stores the original spelling as Label.
 func (s *Service) SaveTagMapping(ctx context.Context, rawTag string, kind TagKind, personID *uuid.UUID) (TagMapping, error) {
+	return s.SaveCalendarTagMapping(ctx, legacyCalendarID, rawTag, kind, personID)
+}
+
+func (s *Service) SaveCalendarTagMapping(ctx context.Context, calendarID uuid.UUID, rawTag string, kind TagKind, personID *uuid.UUID) (TagMapping, error) {
 	if kind == TagKindPerson && personID == nil {
 		return TagMapping{}, ErrPersonMappingNeedsPerson
 	}
 	if kind == TagKindInclude {
 		personID = nil
 	}
-	mapping := TagMapping{Tag: normalizeTag(rawTag), Label: strings.TrimSpace(rawTag), Kind: kind, PersonID: personID}
+	mapping := TagMapping{CalendarID: calendarID, Tag: normalizeTag(rawTag), Label: strings.TrimSpace(rawTag), Kind: kind, PersonID: personID}
 	if err := s.repo.UpsertTagMapping(ctx, mapping); err != nil {
 		return TagMapping{}, err
 	}
@@ -424,7 +605,11 @@ func (s *Service) SaveTagMapping(ctx context.Context, rawTag string, kind TagKin
 
 // DeleteTagMapping removes a mapping. The caller passes the raw tag; it is normalised here.
 func (s *Service) DeleteTagMapping(ctx context.Context, rawTag string) error {
-	return s.repo.DeleteTagMapping(ctx, normalizeTag(rawTag))
+	return s.repo.DeleteTagMapping(ctx, legacyCalendarID, normalizeTag(rawTag))
+}
+
+func (s *Service) DeleteCalendarTagMapping(ctx context.Context, calendarID uuid.UUID, rawTag string) error {
+	return s.repo.DeleteTagMapping(ctx, calendarID, normalizeTag(rawTag))
 }
 
 func normalizeTag(tag string) string {

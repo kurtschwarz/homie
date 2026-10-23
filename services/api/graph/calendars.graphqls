@@ -1,0 +1,98 @@
+enum CalendarProvider {
+  CALDAV
+}
+
+type CalDAVConnection {
+  url: String!
+  username: String!
+  timezone: String!
+}
+
+union CalendarConnection = CalDAVConnection
+
+type CalendarAccount {
+  id: ID!
+  name: String!
+  provider: CalendarProvider!
+  connection: CalendarConnection!
+  refreshIntervalSeconds: Int!
+  windowPastSeconds: Int!
+  windowFutureSeconds: Int!
+}
+
+type Calendar {
+  id: ID!
+  accountId: ID!
+  providerRef: String!
+  name: String!
+  readOnly: Boolean!
+  visible: Boolean!
+  lastSyncedAt: Int
+  lastError: String!
+}
+
+input CalDAVConnectionInput {
+  url: String!
+  username: String!
+  "Write-only."
+  password: String!
+  timezone: String = "UTC"
+}
+
+"Exactly one provider key. The provider is the key that is set."
+input CalendarConnectionInput @oneOf {
+  caldav: CalDAVConnectionInput
+}
+
+input CreateCalendarAccountInput {
+  name: String!
+  connection: CalendarConnectionInput!
+  refreshIntervalSeconds: Int! = 900
+  windowPastSeconds: Int! = 86400
+  windowFutureSeconds: Int! = 1814400
+}
+
+"Omitted fields keep their stored value."
+input UpdateCalDAVConnectionInput {
+  url: String
+  username: String
+  "Write-only. Required when url or username changes."
+  password: String
+  timezone: String
+}
+
+input UpdateCalendarConnectionInput @oneOf {
+  caldav: UpdateCalDAVConnectionInput
+}
+
+"Omitted fields keep their stored value. The connection key must match the account's provider."
+input UpdateCalendarAccountInput {
+  id: ID!
+  name: String
+  connection: UpdateCalendarConnectionInput
+  refreshIntervalSeconds: Int
+  windowPastSeconds: Int
+  windowFutureSeconds: Int
+}
+
+"Checks a connection without saving it. Set id to test a stored account with its stored credentials, or connection to test a draft."
+input TestCalendarAccountInput @oneOf {
+  id: ID
+  connection: CalendarConnectionInput
+}
+
+extend type Query {
+  calendarAccounts: [CalendarAccount!]! @protected
+  calendars(accountId: ID): [Calendar!]! @protected
+}
+
+extend type Mutation {
+  createCalendarAccount(input: CreateCalendarAccountInput!): CalendarAccount! @protected
+  updateCalendarAccount(input: UpdateCalendarAccountInput!): CalendarAccount! @protected
+  deleteCalendarAccount(id: ID!): Boolean! @protected
+  testCalendarAccount(input: TestCalendarAccountInput!): Boolean! @protected
+  discoverCalendars(accountId: ID!): [Calendar!]! @protected
+  "Shows or hides a calendar's events on the display. Hidden calendars keep syncing."
+  updateCalendarVisibility(id: ID!, visible: Boolean!): Calendar! @protected
+  refreshCalendar(id: ID!): Boolean! @protected
+}

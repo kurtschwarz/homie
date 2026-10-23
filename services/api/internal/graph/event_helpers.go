@@ -35,6 +35,10 @@ func toModelPerson(person events.Person) model.Person {
 }
 
 func fromModelEventInput(input model.EventInput) (events.Draft, error) {
+	calendarID, err := uuid.Parse(input.CalendarID)
+	if err != nil {
+		return events.Draft{}, err
+	}
 	personIDs := make([]uuid.UUID, 0, len(input.PersonIds))
 	for _, raw := range input.PersonIds {
 		id, err := uuid.Parse(raw)
@@ -44,7 +48,8 @@ func fromModelEventInput(input model.EventInput) (events.Draft, error) {
 		personIDs = append(personIDs, id)
 	}
 	draft := events.Draft{
-		Summary: input.Title, Start: time.Unix(int64(input.Start), 0), End: time.Unix(int64(input.End), 0),
+		CalendarID: calendarID,
+		Summary:    input.Title, Start: time.Unix(int64(input.Start), 0), End: time.Unix(int64(input.End), 0),
 		AllDay: input.AllDay, PersonIDs: personIDs,
 	}
 	if input.Location != nil {
@@ -63,14 +68,14 @@ func toModelEvent(event events.DisplayEvent) model.Event {
 		people = append(people, toModelPerson(person))
 	}
 	return model.Event{
-		ID: event.ID.String(), Title: event.Summary, Location: location,
+		ID: event.ID.String(), CalendarID: event.CalendarID.String(), Title: event.Summary, Location: location,
 		Start: int(event.Start.Unix()), End: int(event.End.Unix()), AllDay: event.AllDay,
 		People: people,
 	}
 }
 
 func toModelTagMapping(mapping events.TagMapping, peopleByID map[uuid.UUID]events.Person) model.TagMapping {
-	result := model.TagMapping{Tag: mapping.Tag, Label: mapping.Label, Kind: toModelTagKind(mapping.Kind)}
+	result := model.TagMapping{CalendarID: mapping.CalendarID.String(), Tag: mapping.Tag, Label: mapping.Label, Kind: toModelTagKind(mapping.Kind)}
 	if mapping.PersonID != nil {
 		if person, ok := peopleByID[*mapping.PersonID]; ok {
 			modelPerson := toModelPerson(person)

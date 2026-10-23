@@ -79,7 +79,11 @@ func (r *mutationResolver) SaveTagMapping(ctx context.Context, input model.TagMa
 		}
 		personID = &id
 	}
-	mapping, err := r.Resolver.Events.SaveTagMapping(ctx, input.Tag, fromModelTagKind(input.Kind), personID)
+	calendarID, err := uuid.Parse(input.CalendarID)
+	if err != nil {
+		return nil, err
+	}
+	mapping, err := r.Resolver.Events.SaveCalendarTagMapping(ctx, calendarID, input.Tag, fromModelTagKind(input.Kind), personID)
 	if err != nil {
 		return nil, err
 	}
@@ -92,11 +96,15 @@ func (r *mutationResolver) SaveTagMapping(ctx context.Context, input model.TagMa
 }
 
 // DeleteTagMapping is the resolver for the deleteTagMapping field.
-func (r *mutationResolver) DeleteTagMapping(ctx context.Context, tag string) (bool, error) {
+func (r *mutationResolver) DeleteTagMapping(ctx context.Context, calendarID string, tag string) (bool, error) {
 	if r.Resolver.Events == nil {
 		return false, errEventsNotConfigured
 	}
-	if err := r.Resolver.Events.DeleteTagMapping(ctx, tag); err != nil {
+	id, err := uuid.Parse(calendarID)
+	if err != nil {
+		return false, err
+	}
+	if err := r.Resolver.Events.DeleteCalendarTagMapping(ctx, id, tag); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -150,11 +158,15 @@ func (r *queryResolver) People(ctx context.Context) ([]model.Person, error) {
 }
 
 // TagMappings is the resolver for the tagMappings field.
-func (r *queryResolver) TagMappings(ctx context.Context) ([]model.TagMapping, error) {
+func (r *queryResolver) TagMappings(ctx context.Context, calendarID string) ([]model.TagMapping, error) {
 	if r.Resolver.Events == nil {
 		return []model.TagMapping{}, nil
 	}
-	mappings, err := r.Resolver.Events.ListTagMappings(ctx)
+	id, err := uuid.Parse(calendarID)
+	if err != nil {
+		return nil, err
+	}
+	mappings, err := r.Resolver.Events.ListCalendarTagMappings(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -170,9 +182,13 @@ func (r *queryResolver) TagMappings(ctx context.Context) ([]model.TagMapping, er
 }
 
 // CalendarTags is the resolver for the calendarTags field.
-func (r *queryResolver) CalendarTags(ctx context.Context) ([]string, error) {
+func (r *queryResolver) CalendarTags(ctx context.Context, calendarID string) ([]string, error) {
 	if r.Resolver.Events == nil {
 		return []string{}, nil
 	}
-	return r.Resolver.Events.CalendarTags(ctx)
+	id, err := uuid.Parse(calendarID)
+	if err != nil {
+		return nil, err
+	}
+	return r.Resolver.Events.CalendarTagsFor(ctx, id)
 }

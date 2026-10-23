@@ -82,8 +82,9 @@ connects to that browser for local UI verification. Its dedicated profile and
 | GraphQL | http://localhost:3030/graphql |
 | Playground | http://localhost:3030/playground |
 
-Calendar and weather need credentials (below) and stay empty without them; the
-rest of the screen works regardless.
+Calendar connections are managed through the GraphQL API. Weather needs the
+credentials below. Either feature stays empty when unconfigured; the rest of
+the screen works regardless.
 
 Run the Go tests with `docker compose run --rm --no-deps api go test ./...`, and
 regenerate the GraphQL layer with `just codegen` after editing anything in
@@ -106,7 +107,8 @@ The API is configured by environment variables. On the Pi they live in
 | `HOMIE_DB_PATH` | `/var/lib/homie/homie.db` | Main database |
 | `HOMIE_RIVER_DB_PATH` | `/var/lib/homie/river.db` | Job queue database |
 | `HOMIE_PHOTOS_PATH` | `/var/lib/homie/photos` | Where uploaded photos are stored |
-| `HOMIE_CALDAV_URL`<br>`HOMIE_CALDAV_USER`<br>`HOMIE_CALDAV_PASSWORD` | — | All three or none. Without them, events stay empty |
+| `HOMIE_SECRET_KEY` | *(generated once)* | Base64-encoded 32-byte key used to encrypt calendar credentials; stored at `/var/lib/homie/secret-key` if unset. |
+| `HOMIE_SECRET_KEY_PATH` | `/var/lib/homie/secret-key` | Path used for the persisted calendar credential key. |
 | `HOMIE_WEATHERKIT_TEAM_ID`<br>`HOMIE_WEATHERKIT_SERVICE_ID`<br>`HOMIE_WEATHERKIT_KEY_ID`<br>`HOMIE_WEATHERKIT_KEY_PATH`<br>`HOMIE_WEATHER_LAT`<br>`HOMIE_WEATHER_LON` | — | All six or none. The key path must be `/var/lib/homie/weatherkit.p8` |
 
 Install the WeatherKit key on the Pi with `just deploy-weatherkit`, which keeps

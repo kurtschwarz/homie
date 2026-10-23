@@ -9,6 +9,10 @@ import (
 	"strconv"
 )
 
+type CalendarConnection interface {
+	IsCalendarConnection()
+}
+
 // One browser session belonging to the signed-in user.
 type ActiveSession struct {
 	ID         string  `json:"id"`
@@ -18,28 +22,80 @@ type ActiveSession struct {
 	Current    bool    `json:"current"`
 }
 
+type CalDAVConnection struct {
+	URL      string `json:"url"`
+	Username string `json:"username"`
+	Timezone string `json:"timezone"`
+}
+
+func (CalDAVConnection) IsCalendarConnection() {}
+
+type CalDAVConnectionInput struct {
+	URL      string `json:"url"`
+	Username string `json:"username"`
+	// Write-only.
+	Password string  `json:"password"`
+	Timezone *string `json:"timezone,omitempty"`
+}
+
+type Calendar struct {
+	ID           string `json:"id"`
+	AccountID    string `json:"accountId"`
+	ProviderRef  string `json:"providerRef"`
+	Name         string `json:"name"`
+	ReadOnly     bool   `json:"readOnly"`
+	Visible      bool   `json:"visible"`
+	LastSyncedAt *int   `json:"lastSyncedAt,omitempty"`
+	LastError    string `json:"lastError"`
+}
+
+type CalendarAccount struct {
+	ID                     string             `json:"id"`
+	Name                   string             `json:"name"`
+	Provider               CalendarProvider   `json:"provider"`
+	Connection             CalendarConnection `json:"connection"`
+	RefreshIntervalSeconds int                `json:"refreshIntervalSeconds"`
+	WindowPastSeconds      int                `json:"windowPastSeconds"`
+	WindowFutureSeconds    int                `json:"windowFutureSeconds"`
+}
+
+// Exactly one provider key. The provider is the key that is set.
+type CalendarConnectionInput struct {
+	Caldav *CalDAVConnectionInput `json:"caldav,omitempty"`
+}
+
 type Coordinate struct {
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
 }
 
+type CreateCalendarAccountInput struct {
+	Name                   string                   `json:"name"`
+	Connection             *CalendarConnectionInput `json:"connection"`
+	RefreshIntervalSeconds int                      `json:"refreshIntervalSeconds"`
+	WindowPastSeconds      int                      `json:"windowPastSeconds"`
+	WindowFutureSeconds    int                      `json:"windowFutureSeconds"`
+}
+
 type Event struct {
-	ID       string   `json:"id"`
-	Title    string   `json:"title"`
-	Location *string  `json:"location,omitempty"`
-	Start    int      `json:"start"`
-	End      int      `json:"end"`
-	AllDay   bool     `json:"allDay"`
-	People   []Person `json:"people"`
+	ID         string   `json:"id"`
+	CalendarID string   `json:"calendarId"`
+	Title      string   `json:"title"`
+	Location   *string  `json:"location,omitempty"`
+	Start      int      `json:"start"`
+	End        int      `json:"end"`
+	AllDay     bool     `json:"allDay"`
+	People     []Person `json:"people"`
 }
 
 type EventInput struct {
-	Title     string   `json:"title"`
-	Location  *string  `json:"location,omitempty"`
-	Start     int      `json:"start"`
-	End       int      `json:"end"`
-	AllDay    bool     `json:"allDay"`
-	PersonIds []string `json:"personIds"`
+	CalendarID string   `json:"calendarId"`
+	Title      string   `json:"title"`
+	Location   *string  `json:"location,omitempty"`
+	Start      int      `json:"start"`
+	End        int      `json:"end"`
+	AllDay     bool     `json:"allDay"`
+	PersonIds  []string `json:"personIds"`
 }
 
 // A normalized region of interest, with top-left origin.
@@ -129,16 +185,24 @@ type SessionInfo struct {
 }
 
 type TagMapping struct {
-	Tag    string  `json:"tag"`
-	Label  string  `json:"label"`
-	Kind   TagKind `json:"kind"`
-	Person *Person `json:"person,omitempty"`
+	CalendarID string  `json:"calendarId"`
+	Tag        string  `json:"tag"`
+	Label      string  `json:"label"`
+	Kind       TagKind `json:"kind"`
+	Person     *Person `json:"person,omitempty"`
 }
 
 type TagMappingInput struct {
-	Tag      string  `json:"tag"`
-	Kind     TagKind `json:"kind"`
-	PersonID *string `json:"personId,omitempty"`
+	CalendarID string  `json:"calendarId"`
+	Tag        string  `json:"tag"`
+	Kind       TagKind `json:"kind"`
+	PersonID   *string `json:"personId,omitempty"`
+}
+
+// Checks a connection without saving it. Set id to test a stored account with its stored credentials, or connection to test a draft.
+type TestCalendarAccountInput struct {
+	ID         *string                  `json:"id,omitempty"`
+	Connection *CalendarConnectionInput `json:"connection,omitempty"`
 }
 
 type Timer struct {
@@ -148,6 +212,29 @@ type Timer struct {
 	RemainingSeconds int    `json:"remainingSeconds"`
 	EndsAt           int    `json:"endsAt"`
 	Paused           bool   `json:"paused"`
+}
+
+// Omitted fields keep their stored value.
+type UpdateCalDAVConnectionInput struct {
+	URL      *string `json:"url,omitempty"`
+	Username *string `json:"username,omitempty"`
+	// Write-only. Required when url or username changes.
+	Password *string `json:"password,omitempty"`
+	Timezone *string `json:"timezone,omitempty"`
+}
+
+// Omitted fields keep their stored value. The connection key must match the account's provider.
+type UpdateCalendarAccountInput struct {
+	ID                     string                         `json:"id"`
+	Name                   *string                        `json:"name,omitempty"`
+	Connection             *UpdateCalendarConnectionInput `json:"connection,omitempty"`
+	RefreshIntervalSeconds *int                           `json:"refreshIntervalSeconds,omitempty"`
+	WindowPastSeconds      *int                           `json:"windowPastSeconds,omitempty"`
+	WindowFutureSeconds    *int                           `json:"windowFutureSeconds,omitempty"`
+}
+
+type UpdateCalendarConnectionInput struct {
+	Caldav *UpdateCalDAVConnectionInput `json:"caldav,omitempty"`
 }
 
 type User struct {
@@ -274,6 +361,59 @@ func (e *AuthRole) UnmarshalJSON(b []byte) error {
 }
 
 func (e AuthRole) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type CalendarProvider string
+
+const (
+	CalendarProviderCaldav CalendarProvider = "CALDAV"
+)
+
+var AllCalendarProvider = []CalendarProvider{
+	CalendarProviderCaldav,
+}
+
+func (e CalendarProvider) IsValid() bool {
+	switch e {
+	case CalendarProviderCaldav:
+		return true
+	}
+	return false
+}
+
+func (e CalendarProvider) String() string {
+	return string(e)
+}
+
+func (e *CalendarProvider) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = CalendarProvider(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid CalendarProvider", str)
+	}
+	return nil
+}
+
+func (e CalendarProvider) MarshalGQL(w io.Writer) {
+	_, _ = fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *CalendarProvider) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e CalendarProvider) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

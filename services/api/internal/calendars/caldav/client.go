@@ -26,14 +26,17 @@ import (
 // revoked is the failure that will actually happen.
 var ErrUnauthorized = errors.New("caldav: unauthorized")
 
-// Config configures a read-only CalDAV client for one calendar collection.
+// Config configures a CalDAV account and optional calendar collection.
 type Config struct {
-	// URL is the calendar collection URL, not a server root. See the trap
+	// URL is the calendar home URL, not a server root. See the trap
 	// documented in 090-events-overview.md: PROPFIND /dav/ returns 401 even
 	// with valid credentials.
 	URL      string
 	User     string
 	Password string
+	// CollectionPath is the opaque path returned by FindCalendars. When empty,
+	// the home URL itself is used, which preserves the old one-collection API.
+	CollectionPath string
 	// Location resolves floating (VALUE=DATE, no TZID) dates and times to a
 	// UTC instant. TZID- and Z-suffixed values use their own explicit zone
 	// regardless of this setting.
@@ -95,7 +98,42 @@ func New(config Config) (*Client, error) {
 	// path explicitly (ResolveHref returns an absolute path unmodified) so
 	// the REPORT request lands on the collection and not a cousin resource
 	// that may answer 405 instead of operating on it.
-	return &Client{inner: inner, path: parsed.Path, location: location}, nil
+	path := config.CollectionPath
+	if path == "" {
+		path = parsed.Path
+	}
+	if !strings.HasSuffix(path, "/") {
+		path += "/"
+	}
+	return &Client{inner: inner, path: path, location: location}, nil
+}
+
+// Calendar identifies one VEVENT-capable collection beneath a calendar home.
+type Calendar struct{ Path, Name string }
+
+// FindCalendars discovers event calendars beneath the configured home.
+func (c *Client) FindCalendars(ctx context.Context) ([]Calendar, error) {
+	rows, err := c.inner.FindCalendars(ctx, c.path)
+	if err != nil {
+		if strings.HasPrefix(err.Error(), fmt.Sprintf("%d ", http.StatusUnauthorized)) {
+			return nil, ErrUnauthorized
+		}
+		return nil, fmt.Errorf("caldav find calendars: %w", err)
+	}
+	result := make([]Calendar, 0, len(rows))
+	for _, row := range rows {
+		supportsEvents := len(row.SupportedComponentSet) == 0
+		for _, component := range row.SupportedComponentSet {
+			if component == ical.CompEvent {
+				supportsEvents = true
+				break
+			}
+		}
+		if supportsEvents {
+			result = append(result, Calendar{Path: row.Path, Name: row.Name})
+		}
+	}
+	return result, nil
 }
 
 // Report fetches every VEVENT instance overlapping [from, to), expanded

@@ -14,6 +14,8 @@ import (
 	"github.com/kurtschwarz/homie/services/api/internal/store"
 )
 
+const testCalendarID = "00000000-0000-7000-8000-000000000001"
+
 func newEventsRepoAndService(t *testing.T) (*events.SQLiteRepository, *events.Service) {
 	t.Helper()
 	db, err := store.Open(filepath.Join(t.TempDir(), "events.db"), slog.New(slog.NewTextHandler(io.Discard, nil)))
@@ -22,6 +24,13 @@ func newEventsRepoAndService(t *testing.T) (*events.SQLiteRepository, *events.Se
 	}
 	t.Cleanup(func() { _ = db.Close() })
 	repo := events.NewSQLiteRepository(db)
+	calendarID := uuid.MustParse(testCalendarID)
+	if _, err := db.Exec(`INSERT INTO calendar_accounts (id,name,provider,config,credentials) VALUES (?, 'Test', 'caldav', '{}', x'00')`, calendarID[:]); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO calendars (id,account_id,provider_ref,name,visible) VALUES (?, ?, '/test/', 'Test', 1)`, calendarID[:], calendarID[:]); err != nil {
+		t.Fatal(err)
+	}
 	return repo, events.New(repo)
 }
 
@@ -34,10 +43,10 @@ func TestEventsQueriesReturnEmptyWhenNotConfigured(t *testing.T) {
 	if got, err := resolver.People(ctx); err != nil || len(got) != 0 {
 		t.Fatalf("people: got=%+v err=%v", got, err)
 	}
-	if got, err := resolver.TagMappings(ctx); err != nil || len(got) != 0 {
+	if got, err := resolver.TagMappings(ctx, testCalendarID); err != nil || len(got) != 0 {
 		t.Fatalf("tagMappings: got=%+v err=%v", got, err)
 	}
-	if got, err := resolver.CalendarTags(ctx); err != nil || len(got) != 0 {
+	if got, err := resolver.CalendarTags(ctx, testCalendarID); err != nil || len(got) != 0 {
 		t.Fatalf("calendarTags: got=%+v err=%v", got, err)
 	}
 }
@@ -74,12 +83,12 @@ func TestSaveTagMappingResolverNormalisesAndRejectsMissingPerson(t *testing.T) {
 	}
 	personID := person.ID.String()
 
-	mapping, err := resolver.SaveTagMapping(ctx, model.TagMappingInput{Tag: " Elina ", Kind: model.TagKindPerson, PersonID: &personID})
+	mapping, err := resolver.SaveTagMapping(ctx, model.TagMappingInput{CalendarID: testCalendarID, Tag: " Elina ", Kind: model.TagKindPerson, PersonID: &personID})
 	if err != nil || mapping.Tag != "elina" || mapping.Label != "Elina" || mapping.Person == nil || mapping.Person.ID != personID {
 		t.Fatalf("save mapping: got=%+v err=%v", mapping, err)
 	}
 
-	if _, err := resolver.SaveTagMapping(ctx, model.TagMappingInput{Tag: "homie", Kind: model.TagKindPerson}); err != events.ErrPersonMappingNeedsPerson {
+	if _, err := resolver.SaveTagMapping(ctx, model.TagMappingInput{CalendarID: testCalendarID, Tag: "homie", Kind: model.TagKindPerson}); err != events.ErrPersonMappingNeedsPerson {
 		t.Fatalf("expected ErrPersonMappingNeedsPerson, got %v", err)
 	}
 }
@@ -103,7 +112,7 @@ func TestEventsResolverOrdersByStart(t *testing.T) {
 	now := time.Now()
 	later := events.Event{ID: uuid.New(), UID: "later", Summary: "Later", Start: now.Add(2 * time.Hour), End: now.Add(3 * time.Hour), Categories: []string{"elina"}}
 	sooner := events.Event{ID: uuid.New(), UID: "sooner", Summary: "Sooner", Start: now.Add(time.Hour), End: now.Add(2 * time.Hour), Categories: []string{"elina"}}
-	if err := repo.ReplaceWindow(ctx, now, now.Add(4*time.Hour), []events.Event{later, sooner}); err != nil {
+	if err := repo.ReplaceWindow(ctx, uuid.MustParse(testCalendarID), now, now.Add(4*time.Hour), []events.Event{later, sooner}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -119,10 +128,10 @@ func TestCalendarTagsResolverReturnsUnmappedTags(t *testing.T) {
 	ctx := context.Background()
 	now := time.Now()
 	event := events.Event{ID: uuid.New(), UID: "a", Summary: "A", Start: now, End: now.Add(time.Hour), Categories: []string{"yellow"}}
-	if err := repo.ReplaceWindow(ctx, now, now.Add(time.Hour), []events.Event{event}); err != nil {
+	if err := repo.ReplaceWindow(ctx, uuid.MustParse(testCalendarID), now, now.Add(time.Hour), []events.Event{event}); err != nil {
 		t.Fatal(err)
 	}
-	got, err := resolver.CalendarTags(ctx)
+	got, err := resolver.CalendarTags(ctx, testCalendarID)
 	if err != nil || len(got) != 1 || got[0] != "yellow" {
 		t.Fatalf("expected yellow in calendarTags even though unmapped: got=%+v err=%v", got, err)
 	}

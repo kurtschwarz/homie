@@ -3,12 +3,14 @@ package events_test
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/kurtschwarz/homie/services/api/internal/calendars"
+	"github.com/kurtschwarz/homie/services/api/internal/calendars/caldav"
 	"github.com/kurtschwarz/homie/services/api/internal/events"
-	"github.com/kurtschwarz/homie/services/api/internal/events/caldav"
 )
 
 type stubFetcher struct {
@@ -26,6 +28,68 @@ func (s stubFetcher) Report(context.Context, time.Time, time.Time) ([]caldav.Occ
 type stubWriter struct {
 	occurrences *[]caldav.Occurrence
 	putErr      error
+}
+
+type stubCalendarClient struct {
+	mu          sync.Mutex
+	occurrences []calendars.Occurrence
+	err         error
+	reports     int
+}
+
+func (s *stubCalendarClient) Report(context.Context, time.Time, time.Time) ([]calendars.Occurrence, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.reports++
+	return s.occurrences, s.err
+}
+func (s *stubCalendarClient) Put(context.Context, calendars.Occurrence) error { return nil }
+func (s *stubCalendarClient) reportCount() int                                { s.mu.Lock(); defer s.mu.Unlock(); return s.reports }
+
+type stubSourceProvider struct {
+	mu                  sync.Mutex
+	sources             []calendars.Source
+	byID                map[uuid.UUID]calendars.Source
+	successes, failures map[uuid.UUID]int
+}
+
+func (s *stubSourceProvider) Sources(context.Context) ([]calendars.Source, error) {
+	return s.sources, nil
+}
+func (s *stubSourceProvider) Source(_ context.Context, id uuid.UUID) (calendars.Source, error) {
+	source, ok := s.byID[id]
+	if !ok {
+		return calendars.Source{}, calendars.ErrNotFound
+	}
+	return source, nil
+}
+func (s *stubSourceProvider) RecordSuccess(_ context.Context, id uuid.UUID, _ time.Time) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.successes[id]++
+	return nil
+}
+func (s *stubSourceProvider) RecordFailure(_ context.Context, id uuid.UUID, _ string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.failures[id]++
+	return nil
+}
+func (s *stubSourceProvider) RecordAttempt(_ context.Context, id uuid.UUID, at time.Time) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for index := range s.sources {
+		if s.sources[index].Account.ID == id {
+			s.sources[index].Account.LastAttemptedAt = &at
+		}
+	}
+	for calendarID, source := range s.byID {
+		if source.Account.ID == id {
+			source.Account.LastAttemptedAt = &at
+			s.byID[calendarID] = source
+		}
+	}
+	return nil
 }
 
 func (s stubWriter) Report(context.Context, time.Time, time.Time) ([]caldav.Occurrence, error) {
@@ -47,7 +111,11 @@ func seedEvent(t *testing.T, repo events.Repository, uid string, start time.Time
 		t.Fatal(err)
 	}
 	event := events.Event{ID: id, UID: uid, Summary: uid, Start: start, End: start.Add(time.Hour), Categories: categories}
-	if err := repo.ReplaceWindow(context.Background(), start.Add(-time.Minute), start.Add(2*time.Hour), []events.Event{event}); err != nil {
+	existing, err := repo.ListWindow(context.Background(), time.Unix(0, 0), time.Now().AddDate(100, 0, 0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.ReplaceWindow(context.Background(), repositoryTestCalendarID, start.Add(-time.Minute), start.Add(2*time.Hour), append(existing, event)); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -92,10 +160,10 @@ func TestDisplayablePersonMapping(t *testing.T) {
 	if err := repo.UpsertPerson(ctx, events.Person{ID: lana, Name: "Lana", Swatch: "pine", Order: 0}); err != nil {
 		t.Fatal(err)
 	}
-	if err := repo.UpsertTagMapping(ctx, events.TagMapping{Tag: "elina", Label: "Elina", Kind: events.TagKindPerson, PersonID: &elina}); err != nil {
+	if err := repo.UpsertTagMapping(ctx, events.TagMapping{CalendarID: repositoryTestCalendarID, Tag: "elina", Label: "Elina", Kind: events.TagKindPerson, PersonID: &elina}); err != nil {
 		t.Fatal(err)
 	}
-	if err := repo.UpsertTagMapping(ctx, events.TagMapping{Tag: "lana", Label: "Lana", Kind: events.TagKindPerson, PersonID: &lana}); err != nil {
+	if err := repo.UpsertTagMapping(ctx, events.TagMapping{CalendarID: repositoryTestCalendarID, Tag: "lana", Label: "Lana", Kind: events.TagKindPerson, PersonID: &lana}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -138,7 +206,7 @@ func TestDisplayableIncludeOnlyAttributesToFamily(t *testing.T) {
 	if err := repo.SetFamily(ctx, family); err != nil {
 		t.Fatal(err)
 	}
-	if err := repo.UpsertTagMapping(ctx, events.TagMapping{Tag: "homie", Label: "Homie", Kind: events.TagKindInclude}); err != nil {
+	if err := repo.UpsertTagMapping(ctx, events.TagMapping{CalendarID: repositoryTestCalendarID, Tag: "homie", Label: "Homie", Kind: events.TagKindInclude}); err != nil {
 		t.Fatal(err)
 	}
 	seedEvent(t, repo, "homie-event", now.Add(time.Hour), []string{"Homie"})
@@ -156,7 +224,7 @@ func TestDisplayableIncludeWithoutFamilyYieldsEmptyPeople(t *testing.T) {
 	ctx := context.Background()
 	now := time.Now()
 
-	if err := repo.UpsertTagMapping(ctx, events.TagMapping{Tag: "homie", Label: "Homie", Kind: events.TagKindInclude}); err != nil {
+	if err := repo.UpsertTagMapping(ctx, events.TagMapping{CalendarID: repositoryTestCalendarID, Tag: "homie", Label: "Homie", Kind: events.TagKindInclude}); err != nil {
 		t.Fatal(err)
 	}
 	seedEvent(t, repo, "homie-event", now.Add(time.Hour), []string{"Homie"})
@@ -194,10 +262,10 @@ func TestDisplayablePersonAndIncludeKeepsOnlyPerson(t *testing.T) {
 	if err := repo.SetFamily(ctx, family); err != nil {
 		t.Fatal(err)
 	}
-	if err := repo.UpsertTagMapping(ctx, events.TagMapping{Tag: "elina", Label: "Elina", Kind: events.TagKindPerson, PersonID: &elina}); err != nil {
+	if err := repo.UpsertTagMapping(ctx, events.TagMapping{CalendarID: repositoryTestCalendarID, Tag: "elina", Label: "Elina", Kind: events.TagKindPerson, PersonID: &elina}); err != nil {
 		t.Fatal(err)
 	}
-	if err := repo.UpsertTagMapping(ctx, events.TagMapping{Tag: "homie", Label: "Homie", Kind: events.TagKindInclude}); err != nil {
+	if err := repo.UpsertTagMapping(ctx, events.TagMapping{CalendarID: repositoryTestCalendarID, Tag: "homie", Label: "Homie", Kind: events.TagKindInclude}); err != nil {
 		t.Fatal(err)
 	}
 	seedEvent(t, repo, "both", now.Add(time.Hour), []string{"Elina", "Homie"})
@@ -222,7 +290,7 @@ func TestDisplayableDaysBoundsTheWindow(t *testing.T) {
 	if err := repo.UpsertPerson(ctx, events.Person{ID: elina, Name: "Elina", Swatch: "clay"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := repo.UpsertTagMapping(ctx, events.TagMapping{Tag: "elina", Label: "Elina", Kind: events.TagKindPerson, PersonID: &elina}); err != nil {
+	if err := repo.UpsertTagMapping(ctx, events.TagMapping{CalendarID: repositoryTestCalendarID, Tag: "elina", Label: "Elina", Kind: events.TagKindPerson, PersonID: &elina}); err != nil {
 		t.Fatal(err)
 	}
 	seedEvent(t, repo, "far", now.AddDate(0, 0, 30), []string{"Elina"})
@@ -401,7 +469,7 @@ func TestRefreshUpdatesCategoriesOnRetag(t *testing.T) {
 	}
 }
 
-func TestRefreshLeavesRowsOutsideTheWindowUntouched(t *testing.T) {
+func TestRefreshRemovesRowsOutsideANewSnapshot(t *testing.T) {
 	repo, service := newEventsService(t)
 	ctx := context.Background()
 	now := time.Now()
@@ -411,8 +479,8 @@ func TestRefreshLeavesRowsOutsideTheWindowUntouched(t *testing.T) {
 		t.Fatal(err)
 	}
 	got, err := repo.ListWindow(ctx, now.AddDate(0, 0, 59), now.AddDate(0, 0, 61))
-	if err != nil || len(got) != 1 || got[0].UID != "far-future" {
-		t.Fatalf("expected the far-future row to survive: got=%+v err=%v", got, err)
+	if err != nil || len(got) != 0 {
+		t.Fatalf("expected stale far-future row to be removed: got=%+v err=%v", got, err)
 	}
 }
 
@@ -467,7 +535,7 @@ func TestCreateEventRoundTripsThroughRefresh(t *testing.T) {
 		t.Fatalf("expected the event attributed to Lana, got %+v", got.People)
 	}
 
-	mappings, err := repo.ListTagMappings(ctx)
+	mappings, err := repo.ListTagMappings(ctx, repositoryTestCalendarID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -491,7 +559,7 @@ func TestCreateEventReusesAnExistingPersonTag(t *testing.T) {
 	if err := repo.UpsertPerson(ctx, events.Person{ID: personID, Name: "Lana", Swatch: "sky"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := repo.UpsertTagMapping(ctx, events.TagMapping{Tag: "lana-nickname", Label: "Lana Nickname", Kind: events.TagKindPerson, PersonID: &personID}); err != nil {
+	if err := repo.UpsertTagMapping(ctx, events.TagMapping{CalendarID: repositoryTestCalendarID, Tag: "lana-nickname", Label: "Lana Nickname", Kind: events.TagKindPerson, PersonID: &personID}); err != nil {
 		t.Fatal(err)
 	}
 	var occurrences []caldav.Occurrence
@@ -502,7 +570,7 @@ func TestCreateEventReusesAnExistingPersonTag(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	mappings, err := repo.ListTagMappings(ctx)
+	mappings, err := repo.ListTagMappings(ctx, repositoryTestCalendarID)
 	if err != nil || len(mappings) != 1 {
 		t.Fatalf("expected the existing mapping to be reused, not a second one created: got=%+v err=%v", mappings, err)
 	}
@@ -525,7 +593,7 @@ func TestCreateEventRejectsATagAlreadyTakenBySomeoneElse(t *testing.T) {
 	if err := repo.UpsertPerson(ctx, events.Person{ID: elinaID, Name: "Elina", Swatch: "amber"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := repo.UpsertTagMapping(ctx, events.TagMapping{Tag: "lana", Label: "Lana", Kind: events.TagKindPerson, PersonID: &elinaID}); err != nil {
+	if err := repo.UpsertTagMapping(ctx, events.TagMapping{CalendarID: repositoryTestCalendarID, Tag: "lana", Label: "Lana", Kind: events.TagKindPerson, PersonID: &elinaID}); err != nil {
 		t.Fatal(err)
 	}
 	var occurrences []caldav.Occurrence
@@ -567,6 +635,53 @@ func TestCreateEventRejectsInvalidDraft(t *testing.T) {
 	if !errors.Is(err, events.ErrInvalidDraft) {
 		t.Fatalf("expected ErrInvalidDraft, got %v", err)
 	}
+}
+
+func TestRefreshDueIsolatesCalendarsAndHonorsIntervals(t *testing.T) {
+	db := openDB(t)
+	repo := events.NewSQLiteRepository(db)
+	secondID := uuid.New()
+	if _, err := db.Exec(`INSERT INTO calendars (id,account_id,provider_ref,name,visible) VALUES (?, ?, '/second/', 'Second', 1)`, secondID[:], repositoryTestCalendarID[:]); err != nil {
+		t.Fatal(err)
+	}
+	failing := &stubCalendarClient{err: errors.New("offline")}
+	healthy := &stubCalendarClient{occurrences: []calendars.Occurrence{{UID: "healthy", Summary: "Healthy", Start: time.Now().Add(time.Hour), End: time.Now().Add(2 * time.Hour)}}}
+	now := time.Now()
+	account := calendars.Account{ID: repositoryTestCalendarID, RefreshInterval: 15 * time.Minute, WindowPast: time.Hour, WindowFuture: 24 * time.Hour}
+	provider := &stubSourceProvider{sources: []calendars.Source{{Account: account, Calendar: calendars.Calendar{ID: repositoryTestCalendarID}, Client: failing}, {Account: account, Calendar: calendars.Calendar{ID: secondID}, Client: healthy}}, byID: map[uuid.UUID]calendars.Source{}, successes: map[uuid.UUID]int{}, failures: map[uuid.UUID]int{}}
+	service := events.New(repo)
+	service.Calendars = provider
+	if err := service.RefreshDue(context.Background()); err == nil {
+		t.Fatal("expected failed calendar to be reported")
+	}
+	if failing.reportCount() != 1 || healthy.reportCount() != 1 || provider.successes[secondID] != 1 || provider.failures[repositoryTestCalendarID] != 1 {
+		t.Fatalf("sources were not isolated: failing=%d healthy=%d successes=%v failures=%v", failing.reportCount(), healthy.reportCount(), provider.successes, provider.failures)
+	}
+	stored, err := repo.ListWindow(context.Background(), now, now.Add(3*time.Hour))
+	if err != nil || len(stored) != 1 || stored[0].CalendarID != secondID {
+		t.Fatalf("healthy calendar was not stored: %+v err=%v", stored, err)
+	}
+	if err := service.RefreshDue(context.Background()); err != nil {
+		t.Fatalf("account refreshed before its interval: %v", err)
+	}
+	if healthy.reportCount() != 1 {
+		t.Fatal("calendar refreshed before its configured interval")
+	}
+}
+
+func TestManualRefreshWorksForCalendarOutsideListedSources(t *testing.T) {
+	repo, service := newEventsService(t)
+	client := &stubCalendarClient{}
+	source := calendars.Source{Account: calendars.Account{ID: repositoryTestCalendarID, WindowPast: time.Hour, WindowFuture: time.Hour}, Calendar: calendars.Calendar{ID: repositoryTestCalendarID}, Client: client}
+	provider := &stubSourceProvider{byID: map[uuid.UUID]calendars.Source{repositoryTestCalendarID: source}, successes: map[uuid.UUID]int{}, failures: map[uuid.UUID]int{}}
+	service.Calendars = provider
+	if err := service.RefreshCalendar(context.Background(), repositoryTestCalendarID); err != nil {
+		t.Fatal(err)
+	}
+	if client.reportCount() != 1 {
+		t.Fatal("manual refresh did not run")
+	}
+	_ = repo
 }
 
 func newEventsService(t *testing.T) (events.Repository, *events.Service) {

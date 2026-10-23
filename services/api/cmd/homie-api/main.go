@@ -18,14 +18,15 @@ import (
 	assets "github.com/kurtschwarz/homie/services/api"
 	"github.com/kurtschwarz/homie/services/api/internal/accounts"
 	"github.com/kurtschwarz/homie/services/api/internal/auth"
+	"github.com/kurtschwarz/homie/services/api/internal/calendars"
 	"github.com/kurtschwarz/homie/services/api/internal/events"
-	"github.com/kurtschwarz/homie/services/api/internal/events/caldav"
 	eventsjobs "github.com/kurtschwarz/homie/services/api/internal/events/jobs"
 	"github.com/kurtschwarz/homie/services/api/internal/graph"
 	"github.com/kurtschwarz/homie/services/api/internal/photos"
 	photosjobs "github.com/kurtschwarz/homie/services/api/internal/photos/jobs"
 	"github.com/kurtschwarz/homie/services/api/internal/queue"
 	"github.com/kurtschwarz/homie/services/api/internal/sdnotify"
+	"github.com/kurtschwarz/homie/services/api/internal/secrets"
 	"github.com/kurtschwarz/homie/services/api/internal/server"
 	"github.com/kurtschwarz/homie/services/api/internal/store"
 	"github.com/kurtschwarz/homie/services/api/internal/weather"
@@ -71,15 +72,17 @@ func main() {
 		}
 	}
 	var eventsService *events.Service
+	var calendarsService *calendars.Service
 	if db != nil {
-		eventsService = events.New(events.NewSQLiteRepository(db))
-		caldavClient, err := configureCalDAV()
+		secretBox, err := secrets.Load(envOr("HOMIE_SECRET_KEY_PATH", secrets.DefaultKeyPath))
 		if err != nil {
-			logger.Error("configure CalDAV; events will stay empty until fixed", "error", err)
-		} else if caldavClient != nil {
-			eventsService.Client = caldavClient
-			eventsService.Logger = logger
+			logger.Error("load calendar credential encryption key", "error", err)
+			os.Exit(1)
 		}
+		calendarsService = calendars.New(calendars.NewSQLiteRepository(db), secretBox, logger)
+		eventsService = events.New(events.NewSQLiteRepository(db))
+		eventsService.Calendars = calendarsService
+		eventsService.Logger = logger
 	}
 
 	var refresher weatherjobs.Refresher
@@ -140,6 +143,7 @@ func main() {
 			Photos:        photosService,
 			PhotoRotation: photoRotation,
 			Events:        eventsService,
+			Calendars:     calendarsService,
 			PhotoSigner:   signer,
 			Accounts:      accountsService,
 		},
@@ -273,19 +277,6 @@ func configureWeather(repository weather.Repository, logger *slog.Logger) (*weat
 		Client: client, Repository: repository,
 		Latitude: lat, Longitude: lon, Logger: logger,
 	})
-}
-
-func configureCalDAV() (*caldav.Client, error) {
-	url := os.Getenv("HOMIE_CALDAV_URL")
-	user := os.Getenv("HOMIE_CALDAV_USER")
-	password := os.Getenv("HOMIE_CALDAV_PASSWORD")
-	if url == "" && user == "" && password == "" {
-		return nil, nil
-	}
-	if url == "" || user == "" || password == "" {
-		return nil, errors.New("all HOMIE_CALDAV_* values are required")
-	}
-	return caldav.New(caldav.Config{URL: url, User: user, Password: password, Location: time.Local})
 }
 
 // watchdogLoop pings systemd's WatchdogSec at roughly half its interval, as

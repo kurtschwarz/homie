@@ -15,8 +15,11 @@ const maxAttempts = 3
 
 // Refresher is implemented by the events service.
 type Refresher interface {
-	Refresh(context.Context) error
+	RefreshDue(context.Context) error
 }
+
+// scanInterval is how often the worker checks which accounts are due.
+const scanInterval = time.Minute
 
 var _ Refresher = (*events.Service)(nil)
 
@@ -29,7 +32,7 @@ func (RefreshArgs) InsertOpts() river.InsertOpts {
 	return river.InsertOpts{
 		MaxAttempts: maxAttempts,
 		UniqueOpts: river.UniqueOpts{
-			ByPeriod: events.RefreshInterval,
+			ByPeriod: scanInterval,
 			ByState: []rivertype.JobState{
 				rivertype.JobStateAvailable,
 				rivertype.JobStatePending,
@@ -62,13 +65,14 @@ func (w *RefreshWorker) Work(ctx context.Context, _ *river.Job[RefreshArgs]) err
 		w.logger.DebugContext(ctx, "events refresh skipped; CalDAV is not configured")
 		return nil
 	}
-	return w.refresher.Refresh(ctx)
+	return w.refresher.RefreshDue(ctx)
 }
 
-// PeriodicJob schedules an events refresh every fifteen minutes and on startup.
+// PeriodicJob scans for accounts whose refresh interval has elapsed, every
+// minute and on startup.
 func PeriodicJob() *river.PeriodicJob {
 	return river.NewPeriodicJob(
-		river.PeriodicInterval(events.RefreshInterval),
+		river.PeriodicInterval(scanInterval),
 		func() (river.JobArgs, *river.InsertOpts) { return RefreshArgs{}, nil },
 		&river.PeriodicJobOpts{RunOnStart: true},
 	)

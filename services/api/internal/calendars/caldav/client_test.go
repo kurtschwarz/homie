@@ -72,6 +72,45 @@ END:VCALENDAR
   </d:response>
 </d:multistatus>`
 
+const discoveryFixture = `<?xml version="1.0" encoding="UTF-8"?>
+<d:multistatus xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
+  <d:response><d:href>/home/family/</d:href><d:propstat><d:prop>
+    <d:resourcetype><d:collection/><c:calendar/></d:resourcetype>
+    <d:displayname>Family</d:displayname>
+    <c:supported-calendar-component-set><c:comp name="VEVENT"/></c:supported-calendar-component-set>
+  </d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response>
+  <d:response><d:href>/home/tasks/</d:href><d:propstat><d:prop>
+    <d:resourcetype><d:collection/><c:calendar/></d:resourcetype>
+    <d:displayname>Tasks</d:displayname>
+    <c:supported-calendar-component-set><c:comp name="VTODO"/></c:supported-calendar-component-set>
+  </d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response>
+</d:multistatus>`
+
+func TestFindCalendarsReturnsEventCollections(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "PROPFIND" {
+			t.Errorf("unexpected method: %s", r.Method)
+		}
+		if r.URL.Path != "/home/" {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+		}
+		w.WriteHeader(http.StatusMultiStatus)
+		_, _ = w.Write([]byte(discoveryFixture))
+	}))
+	defer server.Close()
+	client, err := New(Config{URL: server.URL + "/home/", User: "me", Password: "secret", HTTPClient: server.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	calendars, err := client.FindCalendars(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(calendars) != 1 || calendars[0].Path != "/home/family/" || calendars[0].Name != "Family" {
+		t.Fatalf("unexpected calendars: %+v", calendars)
+	}
+}
+
 func TestReportParsesMultistatusIntoOccurrences(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "REPORT" {

@@ -8,6 +8,7 @@ type Person {
 
 type Event {
   id: ID!
+  calendarId: ID!
   title: String!
   location: String
   start: Int!
@@ -22,6 +23,7 @@ enum TagKind {
 }
 
 type TagMapping {
+  calendarId: ID!
   tag: String!
   label: String!
   kind: TagKind!
@@ -37,12 +39,14 @@ input PersonInput {
 }
 
 input TagMappingInput {
+  calendarId: ID!
   tag: String!
   kind: TagKind!
   personId: ID
 }
 
 input EventInput {
+  calendarId: ID!
   title: String!
   location: String
   start: Int!
@@ -54,8 +58,8 @@ input EventInput {
 extend type Query {
   events(days: Int = 21): [Event!]! @protected(kinds: [USER, DISPLAY])
   people: [Person!]! @protected
-  tagMappings: [TagMapping!]! @protected
-  calendarTags: [String!]! @protected
+  tagMappings(calendarId: ID!): [TagMapping!]! @protected
+  calendarTags(calendarId: ID!): [String!]! @protected
 }
 
 extend type Mutation {
@@ -63,7 +67,7 @@ extend type Mutation {
   savePerson(input: PersonInput!): Person! @protected
   deletePerson(id: ID!): Boolean! @protected
   saveTagMapping(input: TagMappingInput!): TagMapping! @protected
-  deleteTagMapping(tag: String!): Boolean! @protected
+  deleteTagMapping(calendarId: ID!, tag: String!): Boolean! @protected
   """
   Syncs the calendar window from CalDAV and waits for it to finish. This runs
   the refresh inline rather than enqueuing the periodic job, whose uniqueness

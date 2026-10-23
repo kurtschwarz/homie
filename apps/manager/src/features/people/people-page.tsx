@@ -1,16 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import * as React from 'react'
 import { Page } from '@/app/shell/page'
-import { useAppData } from '@/app-data'
-import { SettingsGate } from '@/components/settings-gate'
 import { eventQueries } from '@/features/events'
+import { HouseholdGate } from '@/features/household'
 import { PersonList } from './components/person-list'
 import { PersonEditor } from './person-editor'
 
 export function PeoplePage() {
-  const { savePerson, deletePerson, saveTagMapping, deleteTagMapping } = useAppData()
-  // Every mutation below invalidates the events query, so there is nothing to
-  // refresh by hand after a save: the week strip catches up on its own.
   const { data: events = [], isError: eventsFailed } = useQuery(eventQueries.list())
   const [selectedId, setSelectedId] = React.useState<string>()
   const [adding, setAdding] = React.useState(false)
@@ -22,12 +18,12 @@ export function PeoplePage() {
 
   return (
     <Page title="People" description="Who lives here, their badge, and which events are theirs">
-      <SettingsGate>
-        {(settings) => {
+      <HouseholdGate>
+        {(household) => {
           // The catch-all person sits at the bottom of the list, so order here
           // rather than in PersonList: the default selection has to be the row
           // the reader sees first.
-          const ordered = [...settings.people].sort(
+          const ordered = [...household.people].sort(
             (a, b) => Number(a.isFamily) - Number(b.isFamily),
           )
           const selected = ordered.find((person) => person.id === selectedId)
@@ -57,25 +53,17 @@ export function PeoplePage() {
                 <PersonEditor
                   key={active?.id ?? 'new'}
                   person={active}
-                  people={settings.people}
-                  tagMappings={settings.tagMappings}
+                  people={household.people}
+                  tagMappings={household.tagMappings}
                   events={events}
                   eventsFailed={eventsFailed}
                   onDirtyChange={setEditorDirty}
-                  onSave={savePerson}
                   onCreated={(id) => {
                     setAdding(false)
                     setSelectedId(id)
                   }}
-                  onDelete={async () => {
-                    if (!active) return
-                    const deleted = await deletePerson(active.id)
-                    if (!deleted) return
-                    setSelectedId(undefined)
-                  }}
+                  onDeleted={() => setSelectedId(undefined)}
                   onCancelAdd={() => setAdding(false)}
-                  onSaveTag={saveTagMapping}
-                  onDeleteTag={deleteTagMapping}
                 />
               ) : (
                 <p className="m-0 text-hm-body text-hm-ink-2">
@@ -85,7 +73,7 @@ export function PeoplePage() {
             </div>
           )
         }}
-      </SettingsGate>
+      </HouseholdGate>
     </Page>
   )
 }

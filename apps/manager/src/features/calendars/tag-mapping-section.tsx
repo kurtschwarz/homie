@@ -1,25 +1,27 @@
 import { Button } from '@homie/ui/components/button'
 import * as React from 'react'
-import type { ManagerPerson, TagKind, TagMapping } from '@/lib/use-settings'
+import {
+  type ManagerPerson,
+  type TagMapping,
+  useDeleteTagMapping,
+  useSaveTagMapping,
+} from '@/features/household'
+import { ErrorMessage } from '@/shared/ui/error-message'
 
 export function TagMappingSection({
   tagMappings,
   calendarTags,
   people,
-  onSave,
-  onDelete,
-  refreshing,
 }: {
   tagMappings: TagMapping[]
   calendarTags: string[]
   people: ManagerPerson[]
-  onSave: (input: { tag: string; kind: TagKind; personId?: string }) => void
-  onDelete: (tag: string) => void
-  refreshing: boolean
 }) {
   const mappingByTag = new Map(tagMappings.map((m) => [m.tag, m]))
   const tags = [...new Set([...calendarTags, ...tagMappings.map((m) => m.tag)])].sort()
   const [newTag, setNewTag] = React.useState('')
+  const saveTag = useSaveTagMapping()
+  const deleteTag = useDeleteTagMapping()
 
   // calendarTags only covers the synced window, so a tag used outside it is
   // invisible here and cannot be mapped — including, on a fresh install,
@@ -28,8 +30,7 @@ export function TagMappingSection({
     e.preventDefault()
     const tag = newTag.trim()
     if (!tag) return
-    onSave({ tag, kind: 'INCLUDE' })
-    setNewTag('')
+    saveTag.mutate({ tag, kind: 'INCLUDE' }, { onSuccess: () => setNewTag('') })
   }
 
   return (
@@ -41,6 +42,10 @@ export function TagMappingSection({
           window are listed.
         </p>
       </div>
+      {saveTag.error && <ErrorMessage label="Couldn't save tag" message={saveTag.error.message} />}
+      {deleteTag.error && (
+        <ErrorMessage label="Couldn't remove tag" message={deleteTag.error.message} />
+      )}
       <div className="flex flex-col gap-2">
         {tags.map((tag) => {
           const mapping = mappingByTag.get(tag)
@@ -68,14 +73,14 @@ export function TagMappingSection({
                 onChange={(e) => {
                   const value = e.target.value
                   if (value === 'unmapped') {
-                    if (mapping) onDelete(tag)
+                    if (mapping) deleteTag.mutate(tag)
                     return
                   }
                   if (value === 'include') {
-                    onSave({ tag: mapping?.label ?? tag, kind: 'INCLUDE' })
+                    saveTag.mutate({ tag: mapping?.label ?? tag, kind: 'INCLUDE' })
                     return
                   }
-                  onSave({ tag: mapping?.label ?? tag, kind: 'PERSON', personId: value })
+                  saveTag.mutate({ tag: mapping?.label ?? tag, kind: 'PERSON', personId: value })
                 }}
                 className="rounded-hm-control border border-hm-line bg-hm-surface px-3 py-2 text-hm-body text-hm-ink"
               >
@@ -88,7 +93,12 @@ export function TagMappingSection({
                 ))}
               </select>
               {mapping && (
-                <Button type="button" variant="text" onClick={() => onDelete(tag)}>
+                <Button
+                  type="button"
+                  variant="text"
+                  disabled={deleteTag.isPending}
+                  onClick={() => deleteTag.mutate(tag)}
+                >
                   Remove
                 </Button>
               )}
@@ -112,15 +122,10 @@ export function TagMappingSection({
           aria-label="Tag name"
           className="min-w-0 flex-1 rounded-hm-control border border-hm-line bg-hm-surface px-3 py-2 text-hm-body text-hm-ink"
         />
-        <Button type="submit" variant="solid">
+        <Button type="submit" variant="solid" disabled={saveTag.isPending}>
           Add tag
         </Button>
       </form>
-      {refreshing && (
-        <span className="sr-only" aria-live="polite">
-          Syncing calendar…
-        </span>
-      )}
     </section>
   )
 }

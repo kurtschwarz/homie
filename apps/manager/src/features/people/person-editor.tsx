@@ -5,7 +5,13 @@ import { formatTime, shortDayLabel } from '@homie/ui/lib/time'
 import { Check } from 'lucide-react'
 import * as React from 'react'
 import { eventsFor, type ManagerEvent } from '@/features/events'
-import type { ManagerPerson, PersonInput, TagMapping, TagMappingInput } from '@/lib/use-settings'
+import {
+  type ManagerPerson,
+  type TagMapping,
+  useDeletePerson,
+  useSavePerson,
+} from '@/features/household'
+import { ErrorMessage } from '@/shared/ui/error-message'
 import { Tabs } from '@/shared/ui/tabs'
 import { PersonTags } from './components/person-tags'
 import { PersonIdentity } from './person-identity'
@@ -50,12 +56,9 @@ export function PersonEditor({
   events,
   eventsFailed,
   onDirtyChange,
-  onSave,
   onCreated,
-  onDelete,
+  onDeleted,
   onCancelAdd,
-  onSaveTag,
-  onDeleteTag,
 }: {
   person?: ManagerPerson
   people: ManagerPerson[]
@@ -63,19 +66,17 @@ export function PersonEditor({
   events: ManagerEvent[]
   eventsFailed: boolean
   onDirtyChange: (dirty: boolean) => void
-  onSave: (input: PersonInput) => Promise<string | undefined>
   onCreated: (id: string) => void
-  onDelete: () => Promise<void>
+  onDeleted: () => void
   onCancelAdd: () => void
-  onSaveTag: (input: TagMappingInput) => unknown
-  onDeleteTag: (tag: string) => unknown
 }) {
   const saved = draftFor(person)
   const [draft, setDraft] = React.useState(saved)
   const [revision, setRevision] = React.useState(0)
   const [tab, setTab] = React.useState<Tab>('badge')
-  const [saving, setSaving] = React.useState(false)
   const [confirmingRemove, setConfirmingRemove] = React.useState(false)
+  const savePerson = useSavePerson()
+  const deletePerson = useDeletePerson()
 
   const dirty =
     draft.name !== saved.name ||
@@ -88,12 +89,12 @@ export function PersonEditor({
   React.useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange])
   React.useEffect(() => () => onDirtyChange(false), [onDirtyChange])
 
-  async function save() {
+  function save() {
     if (!named) return
-    setSaving(true)
-    const id = await onSave({ ...draft, id: person?.id, name: draft.name.trim() })
-    setSaving(false)
-    if (!person && id) onCreated(id)
+    savePerson.mutate(
+      { ...draft, id: person?.id, name: draft.name.trim() },
+      { onSuccess: (id) => !person && onCreated(id) },
+    )
   }
 
   function cancel() {
@@ -141,6 +142,13 @@ export function PersonEditor({
         tabs={TABS.map((entry) => ({ ...entry, disabled: !person && entry.id !== 'badge' }))}
       />
 
+      {savePerson.error && (
+        <ErrorMessage label="Couldn't save person" message={savePerson.error.message} />
+      )}
+      {deletePerson.error && (
+        <ErrorMessage label="Couldn't remove person" message={deletePerson.error.message} />
+      )}
+
       {tab === 'badge' && (
         <div
           id="person-settings-badge-panel"
@@ -161,7 +169,16 @@ export function PersonEditor({
               (confirmingRemove ? (
                 <div className="flex flex-wrap items-center gap-2 text-hm-caption text-hm-ink-2">
                   <span>Remove {person.name} and their tags?</span>
-                  <Button type="button" variant="text" onClick={onDelete}>
+                  <Button
+                    type="button"
+                    variant="text"
+                    disabled={deletePerson.isPending}
+                    onClick={() =>
+                      deletePerson.mutate(person.id, {
+                        onSuccess: onDeleted,
+                      })
+                    }
+                  >
                     Confirm
                   </Button>
                   <Button type="button" variant="text" onClick={() => setConfirmingRemove(false)}>
@@ -193,7 +210,7 @@ export function PersonEditor({
               <Button
                 type="button"
                 variant="outline"
-                disabled={saving || (!dirty && Boolean(person))}
+                disabled={savePerson.isPending || (!dirty && Boolean(person))}
                 onClick={cancel}
               >
                 Cancel
@@ -201,11 +218,11 @@ export function PersonEditor({
               <Button
                 type="button"
                 variant="solid"
-                disabled={!dirty || !named || saving}
+                disabled={!dirty || !named || savePerson.isPending}
                 onClick={save}
               >
                 <Check aria-hidden="true" />
-                {saving ? 'Saving…' : 'Save changes'}
+                {savePerson.isPending ? 'Saving…' : 'Save changes'}
               </Button>
             </div>
           </div>
@@ -232,13 +249,7 @@ export function PersonEditor({
           role="tabpanel"
           aria-labelledby="person-settings-tags-tab"
         >
-          <PersonTags
-            personId={person.id}
-            personName={person.name}
-            tagMappings={tagMappings}
-            onSave={onSaveTag}
-            onDelete={onDeleteTag}
-          />
+          <PersonTags personId={person.id} personName={person.name} tagMappings={tagMappings} />
         </div>
       )}
 

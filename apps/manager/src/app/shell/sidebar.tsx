@@ -1,14 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, NavLink } from 'react-router-dom'
-import { useAppData } from '@/app-data'
+import { householdQueries } from '@/features/household'
 import { systemQueries } from '@/features/system'
 import { BrandMark } from './brand-mark'
 import { sections } from './sections'
 
 export function Sidebar() {
-  const { settings } = useAppData()
+  const household = useQuery(householdQueries.settings())
   const health = useQuery(systemQueries.health())
-  const peopleCount = settings?.people.length
+  const peopleCount = household.data?.people.length
 
   return (
     <aside className="flex shrink-0 flex-col gap-4 md:w-[264px] md:gap-10 md:px-[18px] md:pb-[22px] md:pt-[30px]">

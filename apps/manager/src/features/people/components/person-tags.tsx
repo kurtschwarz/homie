@@ -1,6 +1,7 @@
 import { Button } from '@homie/ui/components/button'
 import * as React from 'react'
-import type { TagMapping, TagMappingInput } from '@/lib/use-settings'
+import { type TagMapping, useDeleteTagMapping, useSaveTagMapping } from '@/features/household'
+import { ErrorMessage } from '@/shared/ui/error-message'
 
 /**
  * The tags that give events one person's badge, with a field to add more.
@@ -18,8 +19,6 @@ export function PersonTags({
   personId,
   personName,
   tagMappings,
-  onSave,
-  onDelete,
 }: {
   /** The person the tags belong to. New tags are saved against this id. */
   personId: string
@@ -30,16 +29,10 @@ export function PersonTags({
    * `PERSON` mappings that point at `personId` and ignores the rest.
    */
   tagMappings: TagMapping[]
-  /**
-   * Called with the trimmed text when the user adds a tag. The field clears
-   * at once without waiting for the result, so a rejected save shows in the
-   * page's error message rather than here.
-   */
-  onSave: (input: TagMappingInput) => unknown
-  /** Called with a mapping's `tag` (its normalised key, not its label) when the user removes it. */
-  onDelete: (tag: string) => unknown
 }) {
   const [newTag, setNewTag] = React.useState('')
+  const saveTag = useSaveTagMapping()
+  const deleteTag = useDeleteTagMapping()
   const tags = tagMappings.filter(
     (mapping) => mapping.kind === 'PERSON' && mapping.person?.id === personId,
   )
@@ -53,8 +46,7 @@ export function PersonTags({
       const owner = existing.person?.name ?? 'Show on Homie'
       if (!window.confirm(`Move “${existing.label}” from ${owner} to ${personName}?`)) return
     }
-    onSave({ tag, kind: 'PERSON', personId })
-    setNewTag('')
+    saveTag.mutate({ tag, kind: 'PERSON', personId }, { onSuccess: () => setNewTag('') })
   }
 
   return (
@@ -63,6 +55,10 @@ export function PersonTags({
       <p className="mb-3 mt-2 max-w-[360px] text-hm-body text-hm-ink-2">
         Shared calendar events that mention one of these show with {personName}’s badge too.
       </p>
+      {saveTag.error && <ErrorMessage label="Couldn't add tag" message={saveTag.error.message} />}
+      {deleteTag.error && (
+        <ErrorMessage label="Couldn't remove tag" message={deleteTag.error.message} />
+      )}
       <div className="mb-3 flex min-h-9 flex-wrap gap-2">
         {tags.map((mapping) => (
           <span
@@ -73,7 +69,8 @@ export function PersonTags({
             <button
               type="button"
               aria-label={`Remove ${mapping.label}`}
-              onClick={() => onDelete(mapping.tag)}
+              disabled={deleteTag.isPending}
+              onClick={() => deleteTag.mutate(mapping.tag)}
               className="border-0 bg-transparent p-0 text-hm-ink-3"
             >
               ×
@@ -89,7 +86,7 @@ export function PersonTags({
           aria-label="Tag or word"
           className="min-w-0 flex-1 rounded-hm-control border border-hm-line bg-hm-surface px-3 py-2 text-hm-body text-hm-ink"
         />
-        <Button type="submit" variant="text" disabled={!newTag.trim()}>
+        <Button type="submit" variant="text" disabled={!newTag.trim() || saveTag.isPending}>
           Add
         </Button>
       </form>

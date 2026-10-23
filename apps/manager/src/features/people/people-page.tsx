@@ -1,9 +1,8 @@
 import * as React from 'react'
-
-import { useAppData } from '../../app-data'
-import { SettingsGate } from '../../components/settings-gate'
-import { useEvents } from '../../lib/use-events'
-import { Page } from '../../shell/page'
+import { Page } from '@/app/shell/page'
+import { useAppData } from '@/app-data'
+import { SettingsGate } from '@/components/settings-gate'
+import { useEvents } from '@/lib/use-events'
 import { PersonList } from './components/person-list'
 import { PersonEditor } from './person-editor'
 

@@ -4,9 +4,9 @@ import { Callout } from '@homie/ui/components/callout'
 import { HomieAnimation } from '@homie/ui/components/homie-animation'
 import { Lock } from 'lucide-react'
 import * as React from 'react'
-import { CodeInput } from '../../components/code-input'
-import { ErrorMessage } from '../../components/error-message'
-import { Field } from '../../components/field'
+import { CodeInput } from '@/shared/ui/code-input'
+import { ErrorMessage } from '@/shared/ui/error-message'
+import { Field } from '@/shared/ui/field'
 import { SetupStep } from './setup-step'
 
 export function SetupPage({

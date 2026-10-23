@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
-import { useAppData } from '../app-data'
-import type { Settings } from '../lib/use-settings'
-import { ErrorMessage } from './error-message'
+import { useAppData } from '@/app-data'
+import type { Settings } from '@/lib/use-settings'
+import { ErrorMessage } from '@/shared/ui/error-message'
 
 /**
  * Renders its child only once settings have loaded. A failed save - or a

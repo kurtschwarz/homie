@@ -1,7 +1,7 @@
 import { Button } from '@homie/ui/components/button'
 import * as React from 'react'
-import { ErrorMessage } from '../components/error-message'
-import { Field } from '../components/field'
+import { ErrorMessage } from '@/shared/ui/error-message'
+import { Field } from '@/shared/ui/field'
 import { AuthCard } from './auth-card'
 
 export function LoginPage({

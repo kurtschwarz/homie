@@ -1,6 +1,6 @@
 import * as React from 'react'
-import type { User } from './lib/use-session'
-import { useSettings } from './lib/use-settings'
+import type { User } from '@/lib/use-session'
+import { useSettings } from '@/lib/use-settings'
 
 type AppData = ReturnType<typeof useSettings> & {
   user: User | null

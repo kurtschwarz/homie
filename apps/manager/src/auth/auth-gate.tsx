@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
-import { ErrorMessage } from '../components/error-message'
-import { SetupPage } from '../features/setup/setup-page'
-import { type User, useSession } from '../lib/use-session'
+import { SetupPage } from '@/features/setup/setup-page'
+import { type User, useSession } from '@/lib/use-session'
+import { ErrorMessage } from '@/shared/ui/error-message'
 import { LoginPage } from './login-page'
 
 /**

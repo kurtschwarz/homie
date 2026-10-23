@@ -1,6 +1,6 @@
 import type { Swatch } from '@homie/ui/lib/people'
 
-import { type ManagerEvent, onDay, weekDays } from '../../../lib/use-events'
+import { type ManagerEvent, onDay, weekDays } from '@/lib/use-events'
 
 /**
  * One-letter weekday labels, indexed by `Date.getDay()`, so the first entry is

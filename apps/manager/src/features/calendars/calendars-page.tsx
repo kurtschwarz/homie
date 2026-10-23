@@ -1,7 +1,7 @@
 import { Button } from '@homie/ui/components/button'
-import { useAppData } from '../../app-data'
-import { SettingsGate } from '../../components/settings-gate'
-import { Page } from '../../shell/page'
+import { Page } from '@/app/shell/page'
+import { useAppData } from '@/app-data'
+import { SettingsGate } from '@/components/settings-gate'
 import { TagMappingSection } from './tag-mapping-section'
 
 export function CalendarsPage() {

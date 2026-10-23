@@ -1,6 +1,6 @@
 import { Link, NavLink } from 'react-router-dom'
-import { useAppData } from '../app-data'
-import { useHealth } from '../lib/use-health'
+import { useAppData } from '@/app-data'
+import { useHealth } from '@/lib/use-health'
 import { BrandMark } from './brand-mark'
 import { sections } from './sections'
 

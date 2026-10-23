@@ -4,14 +4,9 @@ import { DEFAULT_SWATCH, type Swatch } from '@homie/ui/lib/people'
 import { formatTime, shortDayLabel } from '@homie/ui/lib/time'
 import { Check } from 'lucide-react'
 import * as React from 'react'
-import { Tabs } from '../../components/tabs'
-import { eventsFor, type ManagerEvent } from '../../lib/use-events'
-import type {
-  ManagerPerson,
-  PersonInput,
-  TagMapping,
-  TagMappingInput,
-} from '../../lib/use-settings'
+import { eventsFor, type ManagerEvent } from '@/lib/use-events'
+import type { ManagerPerson, PersonInput, TagMapping, TagMappingInput } from '@/lib/use-settings'
+import { Tabs } from '@/shared/ui/tabs'
 import { PersonTags } from './components/person-tags'
 import { PersonIdentity } from './person-identity'
 

@@ -1,6 +1,6 @@
 import { SWATCHES } from '@homie/ui/lib/people'
-import { FormSection } from '../../components/form-section'
-import type { ManagerPerson } from '../../lib/use-settings'
+import type { ManagerPerson } from '@/lib/use-settings'
+import { FormSection } from '@/shared/ui/form-section'
 import { EmojiPicker } from './components/emoji-picker'
 import type { PersonDraft } from './person-editor'
 

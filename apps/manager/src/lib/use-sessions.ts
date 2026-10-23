@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { graphql } from './graphql'
+import { graphql } from '@/shared/lib/graphql'
 
 export type ActiveSession = {
   id: string

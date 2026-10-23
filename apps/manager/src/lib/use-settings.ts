@@ -1,7 +1,7 @@
 import type { Swatch } from '@homie/ui/lib/people'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback } from 'react'
-import { graphql } from './graphql'
+import { graphql } from '@/shared/lib/graphql'
 
 export type ManagerPerson = {
   id: string

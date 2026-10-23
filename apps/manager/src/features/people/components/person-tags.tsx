@@ -1,6 +1,6 @@
 import { Button } from '@homie/ui/components/button'
 import * as React from 'react'
-import type { TagMapping, TagMappingInput } from '../../../lib/use-settings'
+import type { TagMapping, TagMappingInput } from '@/lib/use-settings'
 
 /**
  * The tags that give events one person's badge, with a field to add more.

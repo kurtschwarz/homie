@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { graphql } from './graphql'
+import { graphql } from '@/shared/lib/graphql'
 
 export type HealthStatus = 'OK' | 'SETUP_REQUIRED'
 

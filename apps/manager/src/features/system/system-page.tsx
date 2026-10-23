@@ -1,9 +1,9 @@
 import { Button } from '@homie/ui/components/button'
-import { useAppData } from '../../app-data'
-import { ErrorMessage } from '../../components/error-message'
-import { useHealth } from '../../lib/use-health'
-import { useSessions } from '../../lib/use-sessions'
-import { Page } from '../../shell/page'
+import { Page } from '@/app/shell/page'
+import { useAppData } from '@/app-data'
+import { useHealth } from '@/lib/use-health'
+import { useSessions } from '@/lib/use-sessions'
+import { ErrorMessage } from '@/shared/ui/error-message'
 
 /** Deliberately independent of settings: this is the page that stays usable when the API is unreachable. */
 export function SystemPage() {

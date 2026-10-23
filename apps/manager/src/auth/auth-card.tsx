@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { BrandMark } from '../shell/brand-mark'
+import { BrandMark } from '@/app/shell/brand-mark'
 
 /** The centered card setup and login share: there is no sidebar yet to sit beside. */
 export function AuthCard({

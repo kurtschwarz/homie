@@ -1,6 +1,6 @@
 import { Button } from '@homie/ui/components/button'
 import * as React from 'react'
-import type { ManagerPerson, TagKind, TagMapping } from '../../lib/use-settings'
+import type { ManagerPerson, TagKind, TagMapping } from '@/lib/use-settings'
 
 export function TagMappingSection({
   tagMappings,

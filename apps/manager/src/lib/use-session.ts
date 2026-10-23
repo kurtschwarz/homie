@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback } from 'react'
-import { graphql } from './graphql'
+import { graphql } from '@/shared/lib/graphql'
 import type { HealthStatus } from './use-health'
 
 export type User = { id: string; username: string; role: 'ADMIN' }

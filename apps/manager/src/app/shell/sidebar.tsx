@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, NavLink } from 'react-router-dom'
+import { calendarQueries } from '@/features/calendars'
 import { peopleQueries } from '@/features/people'
 import { systemQueries } from '@/features/system'
 import { BrandMark } from '@/shared/ui/brand-mark'
@@ -7,8 +8,12 @@ import { sections } from './sections'
 
 export function Sidebar() {
   const people = useQuery(peopleQueries.list())
+  const calendars = useQuery(calendarQueries.list())
   const health = useQuery(systemQueries.health())
   const peopleCount = people.data?.length
+  const visibleCalendarCount = calendars.data?.calendars.filter(
+    (calendar) => calendar.visible,
+  ).length
 
   return (
     <aside className="flex shrink-0 flex-col gap-4 md:w-[264px] md:gap-10 md:px-[18px] md:pb-[22px] md:pt-[30px]">
@@ -44,6 +49,11 @@ export function Sidebar() {
                 {label === 'People' && peopleCount !== undefined && (
                   <span className="grid min-w-7 place-items-center rounded-lg bg-hm-accent px-2 text-xs font-semibold leading-6 text-hm-on-accent">
                     {peopleCount}
+                  </span>
+                )}
+                {label === 'Calendars' && visibleCalendarCount !== undefined && (
+                  <span className="grid min-w-7 place-items-center rounded-lg bg-hm-accent px-2 text-xs font-semibold leading-6 text-hm-on-accent">
+                    {visibleCalendarCount}
                   </span>
                 )}
               </>

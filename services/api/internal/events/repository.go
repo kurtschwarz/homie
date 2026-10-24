@@ -62,6 +62,7 @@ type Repository interface {
 	UpsertTagMapping(context.Context, TagMapping) error
 	DeleteTagMapping(context.Context, uuid.UUID, string) error
 	ListWindow(context.Context, time.Time, time.Time) ([]Event, error)
+	CountStartingByCalendar(context.Context, time.Time, time.Time) (map[uuid.UUID]int, error)
 	DistinctCategories(context.Context, uuid.UUID) ([]string, error)
 	ReplaceWindow(context.Context, uuid.UUID, time.Time, time.Time, []Event) error
 }
@@ -271,6 +272,31 @@ func (r *SQLiteRepository) ListWindow(ctx context.Context, from, to time.Time) (
 		result = append(result, event)
 	}
 	return result, nil
+}
+
+// CountStartingByCalendar counts events whose start falls in [from, to),
+// including events from calendars hidden from the display.
+func (r *SQLiteRepository) CountStartingByCalendar(ctx context.Context, from, to time.Time) (map[uuid.UUID]int, error) {
+	var rows []struct {
+		CalendarID []byte `db:"calendar_id"`
+		Count      int    `db:"event_count"`
+	}
+	if err := r.db.SelectContext(ctx, &rows, `
+		SELECT calendar_id, COUNT(*) AS event_count
+		FROM events
+		WHERE start_at >= ? AND start_at < ?
+		GROUP BY calendar_id`, from.Unix(), to.Unix()); err != nil {
+		return nil, err
+	}
+	counts := make(map[uuid.UUID]int, len(rows))
+	for _, row := range rows {
+		id, err := uuid.FromBytes(row.CalendarID)
+		if err != nil {
+			return nil, fmt.Errorf("decode calendar id for event count: %w", err)
+		}
+		counts[id] = row.Count
+	}
+	return counts, nil
 }
 
 // DistinctCategories returns every normalised tag seen across stored events.

@@ -52,6 +52,7 @@ type ComplexityRoot struct {
 
 	Calendar struct {
 		AccountID    func(childComplexity int) int
+		EventCount   func(childComplexity int) int
 		ID           func(childComplexity int) int
 		LastError    func(childComplexity int) int
 		LastSyncedAt func(childComplexity int) int
@@ -336,6 +337,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Calendar.AccountID(childComplexity), true
+	case "Calendar.eventCount":
+		if e.ComplexityRoot.Calendar.EventCount == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Calendar.EventCount(childComplexity), true
 	case "Calendar.id":
 		if e.ComplexityRoot.Calendar.ID == nil {
 			break
@@ -1296,6 +1303,8 @@ type Calendar {
   visible: Boolean!
   lastSyncedAt: Int
   lastError: String!
+  "Events starting in the next seven days, including events on hidden calendars."
+  eventCount: Int!
 }
 
 input CalDAVConnectionInput {
@@ -1660,6 +1669,8 @@ func (ec *executionContext) childFields_Calendar(ctx context.Context, field grap
 		return ec.fieldContext_Calendar_lastSyncedAt(ctx, field)
 	case "lastError":
 		return ec.fieldContext_Calendar_lastError(ctx, field)
+	case "eventCount":
+		return ec.fieldContext_Calendar_eventCount(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type Calendar", field.Name)
 }
@@ -2834,6 +2845,29 @@ func (ec *executionContext) _Calendar_lastError(ctx context.Context, field graph
 }
 func (ec *executionContext) fieldContext_Calendar_lastError(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("Calendar", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _Calendar_eventCount(ctx context.Context, field graphql.CollectedField, obj *model.Calendar) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Calendar_eventCount(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.EventCount, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Calendar_eventCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Calendar", field, false, false, errors.New("field of type Int does not have child fields"))
 }
 
 func (ec *executionContext) _CalendarAccount_id(ctx context.Context, field graphql.CollectedField, obj *model.CalendarAccount) (ret graphql.Marshaler) {
@@ -7882,6 +7916,11 @@ func (ec *executionContext) _Calendar(ctx context.Context, sel ast.SelectionSet,
 			}
 		case "lastError":
 			out.Values[i] = ec._Calendar_lastError(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "eventCount":
+			out.Values[i] = ec._Calendar_eventCount(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

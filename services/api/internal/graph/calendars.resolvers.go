@@ -98,7 +98,7 @@ func (r *mutationResolver) DiscoverCalendars(ctx context.Context, accountID stri
 	if err != nil {
 		return nil, err
 	}
-	return calendarsToModel(rows), nil
+	return r.Resolver.calendarsWithCounts(ctx, rows)
 }
 
 // UpdateCalendarVisibility is the resolver for the updateCalendarVisibility field.
@@ -166,5 +166,5 @@ func (r *queryResolver) Calendars(ctx context.Context, accountID *string) ([]mod
 	if err != nil {
 		return nil, err
 	}
-	return calendarsToModel(rows), nil
+	return r.Resolver.calendarsWithCounts(ctx, rows)
 }

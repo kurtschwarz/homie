@@ -8,9 +8,12 @@
 package caldav
 
 import (
+	"bytes"
 	"context"
+	"encoding/xml"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -46,9 +49,11 @@ type Config struct {
 
 // Client issues REPORT requests against one CalDAV calendar collection.
 type Client struct {
-	inner    *gocaldav.Client
-	path     string
-	location *time.Location
+	inner      *gocaldav.Client
+	path       string
+	location   *time.Location
+	httpClient webdav.HTTPClient
+	rootURL    string
 }
 
 // Occurrence is one concrete calendar instance, already expanded server-side.
@@ -105,7 +110,7 @@ func New(config Config) (*Client, error) {
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
 	}
-	return &Client{inner: inner, path: path, location: location}, nil
+	return &Client{inner: inner, path: path, location: location, httpClient: authed, rootURL: rawURL}, nil
 }
 
 // Calendar identifies one VEVENT-capable collection beneath a calendar home.
@@ -113,7 +118,17 @@ type Calendar struct{ Path, Name string }
 
 // FindCalendars discovers event calendars beneath the configured home.
 func (c *Client) FindCalendars(ctx context.Context) ([]Calendar, error) {
-	rows, err := c.inner.FindCalendars(ctx, c.path)
+	// CalDAV servers commonly expose a discovery root rather than the
+	// account-specific calendar home. Resolve the authenticated principal and
+	// its calendar-home-set before listing collections. Keep accepting a direct
+	// calendar-home URL by falling back when either discovery property is absent.
+	home := c.path
+	if principal, err := c.findCurrentUserPrincipal(ctx); err == nil {
+		if discovered, err := c.inner.FindCalendarHomeSet(ctx, principal); err == nil && discovered != "" {
+			home = discovered
+		}
+	}
+	rows, err := c.inner.FindCalendars(ctx, home)
 	if err != nil {
 		if strings.HasPrefix(err.Error(), fmt.Sprintf("%d ", http.StatusUnauthorized)) {
 			return nil, ErrUnauthorized
@@ -134,6 +149,52 @@ func (c *Client) FindCalendars(ctx context.Context) ([]Calendar, error) {
 		}
 	}
 	return result, nil
+}
+
+// findCurrentUserPrincipal preserves the discovery root's trailing slash.
+// go-webdav resolves an empty path by cleaning that slash away, while servers
+// such as Fastmail treat /dav and /dav/ as different resources.
+func (c *Client) findCurrentUserPrincipal(ctx context.Context) (string, error) {
+	body := []byte(`<?xml version="1.0" encoding="utf-8"?><d:propfind xmlns:d="DAV:"><d:prop><d:current-user-principal/></d:prop></d:propfind>`)
+	req, err := http.NewRequestWithContext(ctx, "PROPFIND", c.rootURL, bytes.NewReader(body))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/xml; charset=utf-8")
+	req.Header.Set("Depth", "0")
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusMultiStatus {
+		_, _ = io.Copy(io.Discard, resp.Body)
+		return "", fmt.Errorf("principal discovery: %s", resp.Status)
+	}
+	decoder := xml.NewDecoder(resp.Body)
+	for {
+		token, err := decoder.Token()
+		if errors.Is(err, io.EOF) {
+			return "", errors.New("principal discovery: current-user-principal is missing")
+		}
+		if err != nil {
+			return "", err
+		}
+		start, ok := token.(xml.StartElement)
+		if !ok || start.Name.Local != "current-user-principal" {
+			continue
+		}
+		var property struct {
+			Href string `xml:"href"`
+		}
+		if err := decoder.DecodeElement(&property, &start); err != nil {
+			return "", err
+		}
+		if property.Href == "" {
+			return "", errors.New("principal discovery: href is missing")
+		}
+		return property.Href, nil
+	}
 }
 
 // Report fetches every VEVENT instance overlapping [from, to), expanded

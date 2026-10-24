@@ -8,7 +8,6 @@ import { eventsFor, type ManagerEvent } from '@/features/events'
 import { ErrorMessage } from '@/shared/ui/error-message'
 import { Tabs } from '@/shared/ui/tabs'
 import { useDeletePerson, useSavePerson } from './api/people.mutations'
-import { PersonTags } from './components/person-tags'
 import { PersonIdentity } from './person-identity'
 import type { ManagerPerson } from './types'
 
@@ -19,12 +18,11 @@ export type PersonDraft = {
   isFamily: boolean
 }
 
-type Tab = 'badge' | 'calendars' | 'tags'
+type Tab = 'badge' | 'calendars'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'badge', label: 'Badge' },
   { id: 'calendars', label: 'Calendars' },
-  { id: 'tags', label: 'Tags and words' },
 ]
 
 function draftFor(person?: ManagerPerson): PersonDraft {
@@ -39,8 +37,7 @@ function draftFor(person?: ManagerPerson): PersonDraft {
 /**
  * The card for one person: who they are at the top, then a tab per thing you
  * can change about them. Badge edits are held locally until Save, so a
- * half-typed name never reaches the API; tags save as they are added because
- * each is its own mutation.
+ * half-typed name never reaches the API.
  *
  * Mounted under a key of the person's id, so selecting someone else reseeds
  * the draft rather than carrying the previous person's edits across.
@@ -231,19 +228,8 @@ export function PersonEditor({
           className="flex flex-col gap-2"
         >
           <p className="m-0 text-hm-body text-hm-ink-2">
-            Homie syncs one calendar today, so a calendar cannot belong to a person yet. Until it
-            can, claim someone’s events under <strong>Tags and words</strong>.
+            Calendar and tag mapping will be available here in a future update.
           </p>
-        </div>
-      )}
-
-      {tab === 'tags' && person && (
-        <div
-          id="person-settings-tags-panel"
-          role="tabpanel"
-          aria-labelledby="person-settings-tags-tab"
-        >
-          <PersonTags personId={person.id} personName={person.name} />
         </div>
       )}
 

@@ -1,3 +1,3 @@
-export { useSyncCalendar } from './api/calendars.mutations'
-export { calendarKeys, calendarQueries } from './api/calendars.queries'
+export { AddCalendarAccountPage } from './add-calendar-account-page'
+export { calendarQueries } from './api/calendars.queries'
 export { CalendarsPage } from './calendars-page'

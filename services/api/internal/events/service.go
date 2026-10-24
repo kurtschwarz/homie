@@ -110,6 +110,13 @@ func New(repo Repository) *Service {
 	return &Service{repo: repo, now: time.Now}
 }
 
+// UpcomingCalendarEventCounts returns the number of events beginning on each calendar in
+// the next seven days. Hidden calendars are deliberately included.
+func (s *Service) UpcomingCalendarEventCounts(ctx context.Context) (map[uuid.UUID]int, error) {
+	from := s.now()
+	return s.repo.CountStartingByCalendar(ctx, from, from.Add(7*24*time.Hour))
+}
+
 // Refresh fetches the configured sync window from CalDAV and replaces it.
 // The service stores everything the report returns, tagged or not; the tag
 // filter belongs to the read path in Displayable.

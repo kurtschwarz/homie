@@ -1,6 +1,7 @@
 package graph
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -99,4 +100,19 @@ func calendarsToModel(rows []calendars.Calendar) []model.Calendar {
 		result = append(result, calendarToModel(row))
 	}
 	return result
+}
+
+func (r *Resolver) calendarsWithCounts(ctx context.Context, rows []calendars.Calendar) ([]model.Calendar, error) {
+	result := calendarsToModel(rows)
+	if r.Events == nil {
+		return result, nil
+	}
+	counts, err := r.Events.UpcomingCalendarEventCounts(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for i := range result {
+		result[i].EventCount = counts[rows[i].ID]
+	}
+	return result, nil
 }

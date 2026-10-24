@@ -1,6 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AuthGate } from '@/features/auth'
-import { CalendarsPage } from '@/features/calendars'
+import { AddCalendarAccountPage, CalendarsPage } from '@/features/calendars'
 import { PeoplePage } from '@/features/people'
 import { SystemPage } from '@/features/system'
 import { PlaceholderPage } from '@/shared/ui/placeholder-page'
@@ -14,6 +14,8 @@ export function App() {
           <Route index element={<Navigate to="people" replace />} />
           <Route path="people" element={<PeoplePage />} />
           <Route path="calendars" element={<CalendarsPage />} />
+          <Route path="calendars/add" element={<AddCalendarAccountPage />} />
+          <Route path="calendars/:accountId/edit" element={<AddCalendarAccountPage />} />
           <Route
             path="weather"
             element={

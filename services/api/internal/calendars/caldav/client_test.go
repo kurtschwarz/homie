@@ -86,6 +86,50 @@ const discoveryFixture = `<?xml version="1.0" encoding="UTF-8"?>
   </d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response>
 </d:multistatus>`
 
+const principalFixture = `<?xml version="1.0" encoding="UTF-8"?>
+<d:multistatus xmlns:d="DAV:"><d:response><d:href>/dav/</d:href><d:propstat><d:prop>
+  <d:current-user-principal><d:href>/principals/me/</d:href></d:current-user-principal>
+</d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response></d:multistatus>`
+
+const calendarHomeFixture = `<?xml version="1.0" encoding="UTF-8"?>
+<d:multistatus xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav"><d:response><d:href>/principals/me/</d:href><d:propstat><d:prop>
+  <c:calendar-home-set><d:href>/home/</d:href></c:calendar-home-set>
+</d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response></d:multistatus>`
+
+func TestFindCalendarsDiscoversCalendarHome(t *testing.T) {
+	var paths []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		paths = append(paths, r.URL.Path)
+		w.WriteHeader(http.StatusMultiStatus)
+		switch r.URL.Path {
+		case "/dav/":
+			_, _ = w.Write([]byte(principalFixture))
+		case "/principals/me/":
+			_, _ = w.Write([]byte(calendarHomeFixture))
+		case "/home/":
+			_, _ = w.Write([]byte(discoveryFixture))
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	}))
+	defer server.Close()
+	client, err := New(Config{URL: server.URL + "/dav/", User: "me", Password: "secret", HTTPClient: server.Client()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	calendars, err := client.FindCalendars(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(calendars) != 1 || calendars[0].Name != "Family" {
+		t.Fatalf("unexpected calendars: %+v", calendars)
+	}
+	want := []string{"/dav/", "/principals/me/", "/home/"}
+	if strings.Join(paths, ",") != strings.Join(want, ",") {
+		t.Fatalf("discovery paths=%v, want %v", paths, want)
+	}
+}
+
 func TestFindCalendarsReturnsEventCollections(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "PROPFIND" {

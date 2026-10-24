@@ -29,6 +29,8 @@ type Calendar {
   visible: Boolean!
   lastSyncedAt: Int
   lastError: String!
+  "Events starting in the next seven days, including events on hidden calendars."
+  eventCount: Int!
 }
 
 input CalDAVConnectionInput {

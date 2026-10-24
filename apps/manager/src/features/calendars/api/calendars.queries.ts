@@ -3,14 +3,13 @@ import { calendarsApi } from './calendars.api'
 
 export const calendarKeys = {
   all: ['calendars'] as const,
-  tags: () => [...calendarKeys.all, 'tags'] as const,
+  list: () => [...calendarKeys.all, 'list'] as const,
 }
 
 export const calendarQueries = {
-  /** Tags seen on synced calendars, mapped or not. */
-  tags: () =>
+  list: () =>
     queryOptions({
-      queryKey: calendarKeys.tags(),
-      queryFn: calendarsApi.listTags,
+      queryKey: calendarKeys.list(),
+      queryFn: calendarsApi.list,
     }),
 }

@@ -51,6 +51,30 @@ func TestUpsertPersonRoundTrip(t *testing.T) {
 	}
 }
 
+func TestCountStartingByCalendarIncludesHiddenCalendars(t *testing.T) {
+	db := openDB(t)
+	repo := events.NewSQLiteRepository(db)
+	ctx := context.Background()
+	start := time.Unix(2_000_000_000, 0)
+	event := events.Event{
+		ID: uuid.New(), CalendarID: repositoryTestCalendarID, UID: "hidden-event",
+		Summary: "Hidden", Start: start.Add(time.Hour), End: start.Add(2 * time.Hour),
+	}
+	if err := repo.ReplaceWindow(ctx, repositoryTestCalendarID, start, start.Add(24*time.Hour), []events.Event{event}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`UPDATE calendars SET visible=0 WHERE id=?`, repositoryTestCalendarID[:]); err != nil {
+		t.Fatal(err)
+	}
+	counts, err := repo.CountStartingByCalendar(ctx, start, start.Add(7*24*time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := counts[repositoryTestCalendarID]; got != 1 {
+		t.Fatalf("count=%d, want 1", got)
+	}
+}
+
 func TestPeopleFamilyIsUnique(t *testing.T) {
 	db := openDB(t)
 	repo := events.NewSQLiteRepository(db)

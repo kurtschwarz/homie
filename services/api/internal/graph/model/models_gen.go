@@ -47,6 +47,8 @@ type Calendar struct {
 	Visible      bool   `json:"visible"`
 	LastSyncedAt *int   `json:"lastSyncedAt,omitempty"`
 	LastError    string `json:"lastError"`
+	// Events starting in the next seven days, including events on hidden calendars.
+	EventCount int `json:"eventCount"`
 }
 
 type CalendarAccount struct {

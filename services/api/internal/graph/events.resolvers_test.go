@@ -43,8 +43,8 @@ func TestEventsQueriesReturnEmptyWhenNotConfigured(t *testing.T) {
 	if got, err := resolver.People(ctx); err != nil || len(got) != 0 {
 		t.Fatalf("people: got=%+v err=%v", got, err)
 	}
-	if got, err := resolver.TagMappings(ctx, testCalendarID); err != nil || len(got) != 0 {
-		t.Fatalf("tagMappings: got=%+v err=%v", got, err)
+	if got, err := resolver.CalendarAssociations(ctx, nil, nil); err != nil || len(got) != 0 {
+		t.Fatalf("calendarAssociations: got=%+v err=%v", got, err)
 	}
 	if got, err := resolver.CalendarTags(ctx, testCalendarID); err != nil || len(got) != 0 {
 		t.Fatalf("calendarTags: got=%+v err=%v", got, err)
@@ -72,9 +72,10 @@ func TestSavePersonResolverCreateUpdateAndRejectsUnknownSwatch(t *testing.T) {
 	}
 }
 
-func TestSaveTagMappingResolverNormalisesAndRejectsMissingPerson(t *testing.T) {
+func TestCalendarAssociationResolversCreateUpdateQueryAndDelete(t *testing.T) {
 	_, service := newEventsRepoAndService(t)
-	resolver := &mutationResolver{Resolver: &Resolver{Events: service}}
+	mutation := &mutationResolver{Resolver: &Resolver{Events: service}}
+	query := &queryResolver{Resolver: &Resolver{Events: service}}
 	ctx := context.Background()
 
 	person, err := service.SavePerson(ctx, events.Person{Name: "Elina", Swatch: "clay"})
@@ -83,13 +84,41 @@ func TestSaveTagMappingResolverNormalisesAndRejectsMissingPerson(t *testing.T) {
 	}
 	personID := person.ID.String()
 
-	mapping, err := resolver.SaveTagMapping(ctx, model.TagMappingInput{CalendarID: testCalendarID, Tag: " Elina ", Kind: model.TagKindPerson, PersonID: &personID})
-	if err != nil || mapping.Tag != "elina" || mapping.Label != "Elina" || mapping.Person == nil || mapping.Person.ID != personID {
-		t.Fatalf("save mapping: got=%+v err=%v", mapping, err)
+	created, err := mutation.CreateCalendarAssociation(ctx, model.CreateCalendarAssociationInput{
+		CalendarID: testCalendarID, PersonID: personID, Scope: model.AssociationScopeMatched, Terms: []string{" #Elina ", "Ellie"},
+	})
+	if err != nil || created.Person == nil || created.Person.ID != personID || created.Scope != model.AssociationScopeMatched ||
+		len(created.Terms) != 2 || created.Terms[0] != "#Elina" || created.Terms[1] != "Ellie" {
+		t.Fatalf("create: got=%+v err=%v", created, err)
+	}
+	if _, err := mutation.CreateCalendarAssociation(ctx, model.CreateCalendarAssociationInput{CalendarID: testCalendarID, PersonID: personID, Scope: model.AssociationScopeAll}); err != events.ErrAssociationExists {
+		t.Fatalf("expected ErrAssociationExists, got %v", err)
 	}
 
-	if _, err := resolver.SaveTagMapping(ctx, model.TagMappingInput{CalendarID: testCalendarID, Tag: "homie", Kind: model.TagKindPerson}); err != events.ErrPersonMappingNeedsPerson {
-		t.Fatalf("expected ErrPersonMappingNeedsPerson, got %v", err)
+	all := model.AssociationScopeAll
+	updated, err := mutation.UpdateCalendarAssociation(ctx, model.UpdateCalendarAssociationInput{CalendarID: testCalendarID, PersonID: personID, Scope: &all})
+	if err != nil || updated.Scope != model.AssociationScopeAll || len(updated.Terms) != 2 {
+		t.Fatalf("update must keep the terms when none are given: got=%+v err=%v", updated, err)
+	}
+	if _, err := mutation.UpdateCalendarAssociation(ctx, model.UpdateCalendarAssociationInput{CalendarID: testCalendarID, PersonID: uuid.NewString()}); err != events.ErrAssociationNotFound {
+		t.Fatalf("expected ErrAssociationNotFound, got %v", err)
+	}
+
+	calendar := testCalendarID
+	listed, err := query.CalendarAssociations(ctx, &calendar, &personID)
+	if err != nil || len(listed) != 1 {
+		t.Fatalf("query: got=%+v err=%v", listed, err)
+	}
+	other := uuid.NewString()
+	if listed, err = query.CalendarAssociations(ctx, nil, &other); err != nil || len(listed) != 0 {
+		t.Fatalf("a person filter must exclude other people: got=%+v err=%v", listed, err)
+	}
+
+	if ok, err := mutation.DeleteCalendarAssociation(ctx, testCalendarID, personID); err != nil || !ok {
+		t.Fatalf("delete: ok=%v err=%v", ok, err)
+	}
+	if listed, err = query.CalendarAssociations(ctx, nil, nil); err != nil || len(listed) != 0 {
+		t.Fatalf("expected no associations after delete: got=%+v err=%v", listed, err)
 	}
 }
 
@@ -105,7 +134,7 @@ func TestEventsResolverOrdersByStart(t *testing.T) {
 	if _, err := service.SavePerson(ctx, events.Person{ID: personID, Name: "Elina", Swatch: "clay"}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := service.SaveTagMapping(ctx, "elina", events.TagKindPerson, &personID); err != nil {
+	if _, err := service.CreateAssociation(ctx, uuid.MustParse(testCalendarID), personID, events.ScopeMatched, []string{"#elina"}); err != nil {
 		t.Fatal(err)
 	}
 

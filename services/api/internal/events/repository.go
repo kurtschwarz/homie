@@ -20,22 +20,39 @@ type Person struct {
 	IsFamily bool
 }
 
-// TagKind distinguishes a calendar tag that names a person from one that
-// merely brings an event onto the kiosk.
-type TagKind string
+// AssociationScope says how much of a calendar belongs to a person.
+type AssociationScope string
 
 const (
-	TagKindPerson  TagKind = "person"
-	TagKindInclude TagKind = "include"
+	// ScopeAll claims every event on the calendar. Terms are kept but ignored.
+	ScopeAll AssociationScope = "all"
+	// ScopeMatched claims only events that match one of the terms.
+	ScopeMatched AssociationScope = "matched"
 )
 
-// TagMapping connects a normalised calendar tag to what it means.
-type TagMapping struct {
+// TermKind is how a term is compared with an event.
+type TermKind string
+
+const (
+	// TermTag matches a calendar category.
+	TermTag TermKind = "tag"
+	// TermWord matches a whole word in the event title.
+	TermWord TermKind = "word"
+)
+
+// AssociationTerm is one thing an event can mention to belong to a person.
+type AssociationTerm struct {
+	Kind  TermKind
+	Term  string // normalised: trimmed, casefolded, without a leading #
+	Label string // as the user typed it
+}
+
+// Association ties one person to one calendar.
+type Association struct {
 	CalendarID uuid.UUID
-	Tag        string // normalised: trimmed, casefolded
-	Label      string // as the user typed it
-	Kind       TagKind
-	PersonID   *uuid.UUID // nil when Kind == TagKindInclude
+	PersonID   uuid.UUID
+	Scope      AssociationScope
+	Terms      []AssociationTerm
 }
 
 // Event is one concrete calendar occurrence.
@@ -52,15 +69,16 @@ type Event struct {
 	Categories   []string // normalised
 }
 
-// Repository persists people, tag mappings and synced calendar occurrences.
+// Repository persists people, calendar associations and synced calendar occurrences.
 type Repository interface {
 	ListPeople(context.Context) ([]Person, error)
 	UpsertPerson(context.Context, Person) error
 	SetFamily(context.Context, uuid.UUID) error
 	DeletePerson(context.Context, uuid.UUID) error
-	ListTagMappings(context.Context, uuid.UUID) ([]TagMapping, error)
-	UpsertTagMapping(context.Context, TagMapping) error
-	DeleteTagMapping(context.Context, uuid.UUID, string) error
+	ListAssociations(context.Context) ([]Association, error)
+	InsertAssociation(context.Context, Association) error
+	UpdateAssociation(context.Context, Association) error
+	DeleteAssociation(context.Context, uuid.UUID, uuid.UUID) error
 	ListWindow(context.Context, time.Time, time.Time) ([]Event, error)
 	CountStartingByCalendar(context.Context, time.Time, time.Time) (map[uuid.UUID]int, error)
 	DistinctCategories(context.Context, uuid.UUID) ([]string, error)
@@ -149,74 +167,142 @@ func (r *SQLiteRepository) SetFamily(ctx context.Context, id uuid.UUID) error {
 	return tx.Commit()
 }
 
-// DeletePerson removes a person. ON DELETE CASCADE drops their tag mappings.
+// DeletePerson removes a person. ON DELETE CASCADE drops their associations.
 func (r *SQLiteRepository) DeletePerson(ctx context.Context, id uuid.UUID) error {
 	_, err := r.db.ExecContext(ctx, `DELETE FROM people WHERE id = ?`, id[:])
 	return err
 }
 
-type tagMappingRow struct {
-	CalendarID []byte  `db:"calendar_id"`
-	Tag        string  `db:"tag"`
-	Label      string  `db:"label"`
-	Kind       string  `db:"kind"`
-	PersonID   *[]byte `db:"person_id"`
+type associationRow struct {
+	CalendarID []byte `db:"calendar_id"`
+	PersonID   []byte `db:"person_id"`
+	Scope      string `db:"scope"`
 }
 
-func (row tagMappingRow) mapping() (TagMapping, error) {
-	calendarID, err := uuid.FromBytes(row.CalendarID)
-	if err != nil {
-		return TagMapping{}, fmt.Errorf("decode calendar id for tag %q: %w", row.Tag, err)
-	}
-	mapping := TagMapping{CalendarID: calendarID, Tag: row.Tag, Label: row.Label, Kind: TagKind(row.Kind)}
-	if row.PersonID != nil {
-		id, err := uuid.FromBytes(*row.PersonID)
-		if err != nil {
-			return TagMapping{}, fmt.Errorf("decode person id for tag %q: %w", row.Tag, err)
-		}
-		mapping.PersonID = &id
-	}
-	return mapping, nil
+type associationTermRow struct {
+	CalendarID []byte `db:"calendar_id"`
+	PersonID   []byte `db:"person_id"`
+	Kind       string `db:"kind"`
+	Term       string `db:"term"`
+	Label      string `db:"label"`
 }
 
-// ListTagMappings returns every stored tag mapping.
-func (r *SQLiteRepository) ListTagMappings(ctx context.Context, calendarID uuid.UUID) ([]TagMapping, error) {
-	var rows []tagMappingRow
-	if err := r.db.SelectContext(ctx, &rows, `SELECT calendar_id, tag, label, kind, person_id FROM tag_mappings WHERE calendar_id=? ORDER BY tag`, calendarID[:]); err != nil {
+type associationKey struct {
+	calendarID uuid.UUID
+	personID   uuid.UUID
+}
+
+// ListAssociations returns every association with its terms, ordered by
+// calendar, person and term so results are stable.
+func (r *SQLiteRepository) ListAssociations(ctx context.Context) ([]Association, error) {
+	var rows []associationRow
+	if err := r.db.SelectContext(ctx, &rows, `SELECT calendar_id, person_id, scope FROM calendar_associations ORDER BY calendar_id, person_id`); err != nil {
 		return nil, err
 	}
-	mappings := make([]TagMapping, 0, len(rows))
+	var termRows []associationTermRow
+	if err := r.db.SelectContext(ctx, &termRows, `SELECT calendar_id, person_id, kind, term, label FROM calendar_association_terms ORDER BY calendar_id, person_id, kind, term`); err != nil {
+		return nil, err
+	}
+	associations := make([]Association, 0, len(rows))
+	index := make(map[associationKey]int, len(rows))
 	for _, row := range rows {
-		mapping, err := row.mapping()
+		calendarID, err := uuid.FromBytes(row.CalendarID)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("decode calendar id for association: %w", err)
 		}
-		mappings = append(mappings, mapping)
+		personID, err := uuid.FromBytes(row.PersonID)
+		if err != nil {
+			return nil, fmt.Errorf("decode person id for association: %w", err)
+		}
+		index[associationKey{calendarID, personID}] = len(associations)
+		associations = append(associations, Association{CalendarID: calendarID, PersonID: personID, Scope: AssociationScope(row.Scope)})
 	}
-	return mappings, nil
+	for _, row := range termRows {
+		calendarID, err := uuid.FromBytes(row.CalendarID)
+		if err != nil {
+			return nil, fmt.Errorf("decode calendar id for association term: %w", err)
+		}
+		personID, err := uuid.FromBytes(row.PersonID)
+		if err != nil {
+			return nil, fmt.Errorf("decode person id for association term: %w", err)
+		}
+		i, ok := index[associationKey{calendarID, personID}]
+		if !ok {
+			continue
+		}
+		associations[i].Terms = append(associations[i].Terms, AssociationTerm{Kind: TermKind(row.Kind), Term: row.Term, Label: row.Label})
+	}
+	return associations, nil
 }
 
-// UpsertTagMapping inserts or updates a tag mapping. The caller normalises Tag.
-func (r *SQLiteRepository) UpsertTagMapping(ctx context.Context, mapping TagMapping) error {
-	var personID *[]byte
-	if mapping.PersonID != nil {
-		b := (*mapping.PersonID)[:]
-		personID = &b
+// InsertAssociation stores a new association and its terms. It returns
+// ErrAssociationExists when the calendar and person are already associated.
+func (r *SQLiteRepository) InsertAssociation(ctx context.Context, association Association) error {
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return err
 	}
-	row := tagMappingRow{CalendarID: mapping.CalendarID[:], Tag: mapping.Tag, Label: mapping.Label, Kind: string(mapping.Kind), PersonID: personID}
-	_, err := r.db.NamedExecContext(ctx, `
-		INSERT INTO tag_mappings (calendar_id, tag, label, kind, person_id)
-		VALUES (:calendar_id, :tag, :label, :kind, :person_id)
-		ON CONFLICT(calendar_id, tag) DO UPDATE SET
-			label = excluded.label,
-			kind = excluded.kind,
-			person_id = excluded.person_id`, row)
-	return err
+	defer func() { _ = tx.Rollback() }()
+	var exists bool
+	if err := tx.GetContext(ctx, &exists, `SELECT EXISTS (SELECT 1 FROM calendar_associations WHERE calendar_id=? AND person_id=?)`, association.CalendarID[:], association.PersonID[:]); err != nil {
+		return err
+	}
+	if exists {
+		return ErrAssociationExists
+	}
+	if _, err := tx.ExecContext(ctx, `INSERT INTO calendar_associations (calendar_id, person_id, scope) VALUES (?, ?, ?)`, association.CalendarID[:], association.PersonID[:], string(association.Scope)); err != nil {
+		return err
+	}
+	if err := insertTerms(ctx, tx, association); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
-// DeleteTagMapping removes a tag mapping by its normalised tag.
-func (r *SQLiteRepository) DeleteTagMapping(ctx context.Context, calendarID uuid.UUID, tag string) error {
-	_, err := r.db.ExecContext(ctx, `DELETE FROM tag_mappings WHERE calendar_id=? AND tag=?`, calendarID[:], tag)
+// UpdateAssociation replaces an association's scope and terms. It returns
+// ErrAssociationNotFound when the calendar and person are not associated.
+func (r *SQLiteRepository) UpdateAssociation(ctx context.Context, association Association) error {
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	result, err := tx.ExecContext(ctx, `UPDATE calendar_associations SET scope=? WHERE calendar_id=? AND person_id=?`, string(association.Scope), association.CalendarID[:], association.PersonID[:])
+	if err != nil {
+		return err
+	}
+	changed, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if changed == 0 {
+		return ErrAssociationNotFound
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM calendar_association_terms WHERE calendar_id=? AND person_id=?`, association.CalendarID[:], association.PersonID[:]); err != nil {
+		return err
+	}
+	if err := insertTerms(ctx, tx, association); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func insertTerms(ctx context.Context, tx *sqlx.Tx, association Association) error {
+	for _, term := range association.Terms {
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO calendar_association_terms (calendar_id, person_id, kind, term, label)
+			VALUES (?, ?, ?, ?, ?)
+			ON CONFLICT(calendar_id, person_id, kind, term) DO UPDATE SET label = excluded.label`,
+			association.CalendarID[:], association.PersonID[:], string(term.Kind), term.Term, term.Label); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// DeleteAssociation removes an association; its terms cascade with it.
+func (r *SQLiteRepository) DeleteAssociation(ctx context.Context, calendarID, personID uuid.UUID) error {
+	_, err := r.db.ExecContext(ctx, `DELETE FROM calendar_associations WHERE calendar_id=? AND person_id=?`, calendarID[:], personID[:])
 	return err
 }
 

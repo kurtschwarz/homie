@@ -2,6 +2,7 @@ package events_test
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"path/filepath"
@@ -125,7 +126,7 @@ func TestSetFamilyMovesTheFlag(t *testing.T) {
 	}
 }
 
-func TestDeletePersonCascadesTagMappings(t *testing.T) {
+func TestDeletePersonCascadesAssociations(t *testing.T) {
 	db := openDB(t)
 	repo := events.NewSQLiteRepository(db)
 	ctx := context.Background()
@@ -133,30 +134,78 @@ func TestDeletePersonCascadesTagMappings(t *testing.T) {
 	if err := repo.UpsertPerson(ctx, events.Person{ID: id, Name: "Elina", Swatch: "clay"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := repo.UpsertTagMapping(ctx, events.TagMapping{CalendarID: repositoryTestCalendarID, Tag: "elina", Label: "Elina", Kind: events.TagKindPerson, PersonID: &id}); err != nil {
+	association := events.Association{CalendarID: repositoryTestCalendarID, PersonID: id, Scope: events.ScopeMatched, Terms: events.ParseTerms([]string{"#elina"})}
+	if err := repo.InsertAssociation(ctx, association); err != nil {
 		t.Fatal(err)
 	}
 	if err := repo.DeletePerson(ctx, id); err != nil {
 		t.Fatal(err)
 	}
-	mappings, err := repo.ListTagMappings(ctx, repositoryTestCalendarID)
-	if err != nil || len(mappings) != 0 {
-		t.Fatalf("expected mappings to cascade away, got %+v err=%v", mappings, err)
+	associations, err := repo.ListAssociations(ctx)
+	if err != nil || len(associations) != 0 {
+		t.Fatalf("expected associations to cascade away, got %+v err=%v", associations, err)
+	}
+	var terms int
+	if err := db.GetContext(ctx, &terms, `SELECT COUNT(*) FROM calendar_association_terms`); err != nil || terms != 0 {
+		t.Fatalf("expected terms to cascade away, got %d err=%v", terms, err)
 	}
 }
 
-func TestTagMappingsRejectInconsistentKindAndPerson(t *testing.T) {
+func TestAssociationsRoundTripAndReplaceTerms(t *testing.T) {
+	db := openDB(t)
+	repo := events.NewSQLiteRepository(db)
+	ctx := context.Background()
+	id := uuid.MustParse("0192a780-0a00-7000-8000-000000000001")
+	if err := repo.UpsertPerson(ctx, events.Person{ID: id, Name: "Lana", Swatch: "clay"}); err != nil {
+		t.Fatal(err)
+	}
+	association := events.Association{CalendarID: repositoryTestCalendarID, PersonID: id, Scope: events.ScopeMatched, Terms: events.ParseTerms([]string{"#lana", "Lana"})}
+	if err := repo.InsertAssociation(ctx, association); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.InsertAssociation(ctx, association); !errors.Is(err, events.ErrAssociationExists) {
+		t.Fatalf("expected ErrAssociationExists, got %v", err)
+	}
+	got, err := repo.ListAssociations(ctx)
+	if err != nil || len(got) != 1 || len(got[0].Terms) != 2 {
+		t.Fatalf("round trip: got=%+v err=%v", got, err)
+	}
+	association.Scope = events.ScopeAll
+	association.Terms = events.ParseTerms([]string{"#swim"})
+	if err := repo.UpdateAssociation(ctx, association); err != nil {
+		t.Fatal(err)
+	}
+	got, err = repo.ListAssociations(ctx)
+	if err != nil || len(got) != 1 || got[0].Scope != events.ScopeAll || len(got[0].Terms) != 1 || got[0].Terms[0].Term != "swim" {
+		t.Fatalf("update: got=%+v err=%v", got, err)
+	}
+	missing := events.Association{CalendarID: repositoryTestCalendarID, PersonID: uuid.New(), Scope: events.ScopeAll}
+	if err := repo.UpdateAssociation(ctx, missing); !errors.Is(err, events.ErrAssociationNotFound) {
+		t.Fatalf("expected ErrAssociationNotFound, got %v", err)
+	}
+	if err := repo.DeleteAssociation(ctx, repositoryTestCalendarID, id); err != nil {
+		t.Fatal(err)
+	}
+	if got, err = repo.ListAssociations(ctx); err != nil || len(got) != 0 {
+		t.Fatalf("delete: got=%+v err=%v", got, err)
+	}
+}
+
+func TestAssociationsRejectUnknownScopeAndTermKind(t *testing.T) {
 	db := openDB(t)
 	ctx := context.Background()
 	id := uuid.MustParse("0192a780-0a00-7000-8000-000000000001")
 	if _, err := db.ExecContext(ctx, `INSERT INTO people (id,name,swatch,sort_order) VALUES (?, 'Test', 'clay', 0)`, id[:]); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := db.ExecContext(ctx, `INSERT INTO tag_mappings (calendar_id,tag,label,kind,person_id) VALUES (?, 'x', 'X', 'person', NULL)`, repositoryTestCalendarID[:]); err == nil {
-		t.Fatal("expected kind=person with no person_id to be rejected")
+	if _, err := db.ExecContext(ctx, `INSERT INTO calendar_associations (calendar_id,person_id,scope) VALUES (?, ?, 'some')`, repositoryTestCalendarID[:], id[:]); err == nil {
+		t.Fatal("expected an unknown scope to be rejected")
 	}
-	if _, err := db.ExecContext(ctx, `INSERT INTO tag_mappings (calendar_id,tag,label,kind,person_id) VALUES (?, 'x', 'X', 'include', ?)`, repositoryTestCalendarID[:], id[:]); err == nil {
-		t.Fatal("expected kind=include with a person_id to be rejected")
+	if _, err := db.ExecContext(ctx, `INSERT INTO calendar_associations (calendar_id,person_id,scope) VALUES (?, ?, 'matched')`, repositoryTestCalendarID[:], id[:]); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `INSERT INTO calendar_association_terms (calendar_id,person_id,kind,term,label) VALUES (?, ?, 'regex', 'x', 'X')`, repositoryTestCalendarID[:], id[:]); err == nil {
+		t.Fatal("expected an unknown term kind to be rejected")
 	}
 }
 
@@ -317,13 +366,17 @@ func TestCalendarDataIsIsolated(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	person := uuid.MustParse("0192a780-0a00-7000-8000-000000000001")
+	if err := repo.UpsertPerson(ctx, events.Person{ID: person, Name: "Family", Swatch: "clay"}); err != nil {
+		t.Fatal(err)
+	}
 	base := time.Unix(1_760_000_000, 0)
 	for _, id := range []uuid.UUID{one, two} {
 		event := events.Event{ID: uuid.New(), CalendarID: id, UID: "shared-uid", Summary: id.String(), Start: base, End: base.Add(time.Hour)}
 		if err := repo.ReplaceWindow(ctx, id, base, base.Add(2*time.Hour), []events.Event{event}); err != nil {
 			t.Fatal(err)
 		}
-		if err := repo.UpsertTagMapping(ctx, events.TagMapping{CalendarID: id, Tag: "family", Label: "Family", Kind: events.TagKindInclude}); err != nil {
+		if err := repo.InsertAssociation(ctx, events.Association{CalendarID: id, PersonID: person, Scope: events.ScopeAll}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -338,10 +391,8 @@ func TestCalendarDataIsIsolated(t *testing.T) {
 	if err != nil || len(got) != 1 || got[0].CalendarID != two {
 		t.Fatalf("calendar replace crossed sources: got=%+v err=%v", got, err)
 	}
-	for _, id := range []uuid.UUID{one, two} {
-		mappings, err := repo.ListTagMappings(ctx, id)
-		if err != nil || len(mappings) != 1 || mappings[0].CalendarID != id {
-			t.Fatalf("mappings for %s: got=%+v err=%v", id, mappings, err)
-		}
+	associations, err := repo.ListAssociations(ctx)
+	if err != nil || len(associations) != 2 {
+		t.Fatalf("associations must survive another calendar's replace: got=%+v err=%v", associations, err)
 	}
 }

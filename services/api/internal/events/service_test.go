@@ -104,6 +104,35 @@ func (s stubWriter) Put(_ context.Context, occ caldav.Occurrence) error {
 	return nil
 }
 
+func associate(t *testing.T, repo events.Repository, personID uuid.UUID, scope events.AssociationScope, labels ...string) {
+	t.Helper()
+	association := events.Association{CalendarID: repositoryTestCalendarID, PersonID: personID, Scope: scope, Terms: events.ParseTerms(labels)}
+	if err := repo.InsertAssociation(context.Background(), association); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func seedPerson(t *testing.T, repo events.Repository, name string, order int) uuid.UUID {
+	t.Helper()
+	id := uuid.New()
+	if err := repo.UpsertPerson(context.Background(), events.Person{ID: id, Name: name, Swatch: "clay", Order: order}); err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
+func seedTitledEvent(t *testing.T, repo events.Repository, title string, start time.Time, categories []string) {
+	t.Helper()
+	event := events.Event{ID: uuid.New(), UID: title, Summary: title, Start: start, End: start.Add(time.Hour), Categories: categories}
+	existing, err := repo.ListWindow(context.Background(), time.Unix(0, 0), time.Now().AddDate(100, 0, 0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.ReplaceWindow(context.Background(), repositoryTestCalendarID, start.Add(-time.Minute), start.Add(2*time.Hour), append(existing, event)); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func seedEvent(t *testing.T, repo events.Repository, uid string, start time.Time, categories []string) {
 	t.Helper()
 	id, err := uuid.NewRandom()
@@ -160,12 +189,8 @@ func TestDisplayablePersonMapping(t *testing.T) {
 	if err := repo.UpsertPerson(ctx, events.Person{ID: lana, Name: "Lana", Swatch: "pine", Order: 0}); err != nil {
 		t.Fatal(err)
 	}
-	if err := repo.UpsertTagMapping(ctx, events.TagMapping{CalendarID: repositoryTestCalendarID, Tag: "elina", Label: "Elina", Kind: events.TagKindPerson, PersonID: &elina}); err != nil {
-		t.Fatal(err)
-	}
-	if err := repo.UpsertTagMapping(ctx, events.TagMapping{CalendarID: repositoryTestCalendarID, Tag: "lana", Label: "Lana", Kind: events.TagKindPerson, PersonID: &lana}); err != nil {
-		t.Fatal(err)
-	}
+	associate(t, repo, elina, events.ScopeMatched, "#elina")
+	associate(t, repo, lana, events.ScopeMatched, "#lana")
 
 	seedEvent(t, repo, "one-person", now.Add(time.Hour), []string{" Elina "})
 	got, err := service.Displayable(ctx, 21)
@@ -189,27 +214,18 @@ func TestDisplayablePersonMapping(t *testing.T) {
 	}
 }
 
-func TestDisplayableIncludeOnlyAttributesToFamily(t *testing.T) {
+func TestDisplayableAssociatedFamilyPerson(t *testing.T) {
 	db := openDB(t)
 	repo := events.NewSQLiteRepository(db)
 	service := events.New(repo)
 	ctx := context.Background()
-	now := time.Now()
 
-	family, err := uuid.NewRandom()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := repo.UpsertPerson(ctx, events.Person{ID: family, Name: "Family", Swatch: "slate"}); err != nil {
-		t.Fatal(err)
-	}
+	family := seedPerson(t, repo, "Family", 0)
 	if err := repo.SetFamily(ctx, family); err != nil {
 		t.Fatal(err)
 	}
-	if err := repo.UpsertTagMapping(ctx, events.TagMapping{CalendarID: repositoryTestCalendarID, Tag: "homie", Label: "Homie", Kind: events.TagKindInclude}); err != nil {
-		t.Fatal(err)
-	}
-	seedEvent(t, repo, "homie-event", now.Add(time.Hour), []string{"Homie"})
+	associate(t, repo, family, events.ScopeMatched, "#homie")
+	seedEvent(t, repo, "homie-event", time.Now().Add(time.Hour), []string{"Homie"})
 
 	got, err := service.Displayable(ctx, 21)
 	if err != nil || len(got) != 1 || len(got[0].People) != 1 || got[0].People[0].ID != family {
@@ -217,62 +233,117 @@ func TestDisplayableIncludeOnlyAttributesToFamily(t *testing.T) {
 	}
 }
 
-func TestDisplayableIncludeWithoutFamilyYieldsEmptyPeople(t *testing.T) {
+func TestDisplayableEventMatchingTwoAssociationsShowsBothPeople(t *testing.T) {
 	db := openDB(t)
 	repo := events.NewSQLiteRepository(db)
 	service := events.New(repo)
 	ctx := context.Background()
-	now := time.Now()
 
-	if err := repo.UpsertTagMapping(ctx, events.TagMapping{CalendarID: repositoryTestCalendarID, Tag: "homie", Label: "Homie", Kind: events.TagKindInclude}); err != nil {
-		t.Fatal(err)
-	}
-	seedEvent(t, repo, "homie-event", now.Add(time.Hour), []string{"Homie"})
+	elina := seedPerson(t, repo, "Elina", 1)
+	family := seedPerson(t, repo, "Family", 0)
+	associate(t, repo, elina, events.ScopeMatched, "#elina")
+	associate(t, repo, family, events.ScopeMatched, "#homie")
+	seedEvent(t, repo, "both", time.Now().Add(time.Hour), []string{"Elina", "Homie"})
 
 	got, err := service.Displayable(ctx, 21)
-	if err != nil || len(got) != 1 {
-		t.Fatalf("expected the event to still appear: got=%+v err=%v", got, err)
-	}
-	if len(got[0].People) != 0 {
-		t.Fatalf("expected empty people with no family row configured: %+v", got[0])
+	if err != nil || len(got) != 1 || len(got[0].People) != 2 || got[0].People[0].ID != family || got[0].People[1].ID != elina {
+		t.Fatalf("expected both people ordered by sort_order: got=%+v err=%v", got, err)
 	}
 }
 
-func TestDisplayablePersonAndIncludeKeepsOnlyPerson(t *testing.T) {
+func TestDisplayablePeopleCanShareATag(t *testing.T) {
+	db := openDB(t)
+	repo := events.NewSQLiteRepository(db)
+	service := events.New(repo)
+	ctx := context.Background()
+
+	first := seedPerson(t, repo, "First", 0)
+	second := seedPerson(t, repo, "Second", 1)
+	associate(t, repo, first, events.ScopeMatched, "#swim")
+	associate(t, repo, second, events.ScopeMatched, "#swim")
+	seedEvent(t, repo, "swim-meet", time.Now().Add(time.Hour), []string{"swim"})
+
+	got, err := service.Displayable(ctx, 21)
+	if err != nil || len(got) != 1 || len(got[0].People) != 2 {
+		t.Fatalf("expected both people on the shared tag: got=%+v err=%v", got, err)
+	}
+}
+
+func TestDisplayableWordTermMatchesWholeWordsInTitle(t *testing.T) {
 	db := openDB(t)
 	repo := events.NewSQLiteRepository(db)
 	service := events.New(repo)
 	ctx := context.Background()
 	now := time.Now()
 
-	elina, err := uuid.NewRandom()
-	if err != nil {
-		t.Fatal(err)
-	}
-	family, err := uuid.NewRandom()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := repo.UpsertPerson(ctx, events.Person{ID: elina, Name: "Elina", Swatch: "clay"}); err != nil {
-		t.Fatal(err)
-	}
-	if err := repo.UpsertPerson(ctx, events.Person{ID: family, Name: "Family", Swatch: "slate"}); err != nil {
-		t.Fatal(err)
-	}
-	if err := repo.SetFamily(ctx, family); err != nil {
-		t.Fatal(err)
-	}
-	if err := repo.UpsertTagMapping(ctx, events.TagMapping{CalendarID: repositoryTestCalendarID, Tag: "elina", Label: "Elina", Kind: events.TagKindPerson, PersonID: &elina}); err != nil {
-		t.Fatal(err)
-	}
-	if err := repo.UpsertTagMapping(ctx, events.TagMapping{CalendarID: repositoryTestCalendarID, Tag: "homie", Label: "Homie", Kind: events.TagKindInclude}); err != nil {
-		t.Fatal(err)
-	}
-	seedEvent(t, repo, "both", now.Add(time.Hour), []string{"Elina", "Homie"})
+	lana := seedPerson(t, repo, "Lana", 0)
+	associate(t, repo, lana, events.ScopeMatched, "Lana")
+	seedTitledEvent(t, repo, "Lana's swim lesson", now.Add(time.Hour), nil)
+	seedTitledEvent(t, repo, "Flight to Atlanta", now.Add(3*time.Hour), nil)
+	seedTitledEvent(t, repo, "LANA dentist", now.Add(5*time.Hour), nil)
 
 	got, err := service.Displayable(ctx, 21)
-	if err != nil || len(got) != 1 || len(got[0].People) != 1 || got[0].People[0].ID != elina {
-		t.Fatalf("expected only the person, not the family: got=%+v err=%v", got, err)
+	if err != nil {
+		t.Fatal(err)
+	}
+	titles := map[string]bool{}
+	for _, event := range got {
+		titles[event.Summary] = true
+	}
+	if len(got) != 2 || !titles["Lana's swim lesson"] || !titles["LANA dentist"] || titles["Flight to Atlanta"] {
+		t.Fatalf("expected whole-word title matches only: got=%+v", got)
+	}
+}
+
+func TestDisplayableAllScopeClaimsEveryEventAndKeepsTermsDormant(t *testing.T) {
+	db := openDB(t)
+	repo := events.NewSQLiteRepository(db)
+	service := events.New(repo)
+	ctx := context.Background()
+
+	lana := seedPerson(t, repo, "Lana", 0)
+	associate(t, repo, lana, events.ScopeMatched, "#lana")
+	seedEvent(t, repo, "unrelated", time.Now().Add(time.Hour), nil)
+
+	got, err := service.Displayable(ctx, 21)
+	if err != nil || len(got) != 0 {
+		t.Fatalf("matched scope must not claim an unrelated event: got=%+v err=%v", got, err)
+	}
+
+	all := events.ScopeAll
+	if _, err := service.UpdateAssociation(ctx, repositoryTestCalendarID, lana, &all, nil); err != nil {
+		t.Fatal(err)
+	}
+	got, err = service.Displayable(ctx, 21)
+	if err != nil || len(got) != 1 || got[0].People[0].ID != lana {
+		t.Fatalf("all scope must claim every event: got=%+v err=%v", got, err)
+	}
+
+	associations, err := repo.ListAssociations(ctx)
+	if err != nil || len(associations) != 1 || len(associations[0].Terms) != 1 || associations[0].Terms[0].Term != "lana" {
+		t.Fatalf("switching scope must leave the terms alone: got=%+v err=%v", associations, err)
+	}
+}
+
+func TestDisplayableIgnoresAssociationsOnOtherCalendars(t *testing.T) {
+	db := openDB(t)
+	repo := events.NewSQLiteRepository(db)
+	service := events.New(repo)
+	ctx := context.Background()
+
+	other := uuid.MustParse("00000000-0000-7000-8000-000000000021")
+	if _, err := db.ExecContext(ctx, `INSERT INTO calendars (id,account_id,provider_ref,name,visible) VALUES (?, ?, '/other/', 'Other', 1)`, other[:], repositoryTestCalendarID[:]); err != nil {
+		t.Fatal(err)
+	}
+	lana := seedPerson(t, repo, "Lana", 0)
+	if err := repo.InsertAssociation(ctx, events.Association{CalendarID: other, PersonID: lana, Scope: events.ScopeAll}); err != nil {
+		t.Fatal(err)
+	}
+	seedEvent(t, repo, "on-the-test-calendar", time.Now().Add(time.Hour), []string{"lana"})
+
+	got, err := service.Displayable(ctx, 21)
+	if err != nil || len(got) != 0 {
+		t.Fatalf("an association is scoped to its own calendar: got=%+v err=%v", got, err)
 	}
 }
 
@@ -290,9 +361,7 @@ func TestDisplayableDaysBoundsTheWindow(t *testing.T) {
 	if err := repo.UpsertPerson(ctx, events.Person{ID: elina, Name: "Elina", Swatch: "clay"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := repo.UpsertTagMapping(ctx, events.TagMapping{CalendarID: repositoryTestCalendarID, Tag: "elina", Label: "Elina", Kind: events.TagKindPerson, PersonID: &elina}); err != nil {
-		t.Fatal(err)
-	}
+	associate(t, repo, elina, events.ScopeMatched, "#elina")
 	seedEvent(t, repo, "far", now.AddDate(0, 0, 30), []string{"Elina"})
 
 	got, err := service.Displayable(ctx, 21)
@@ -360,34 +429,58 @@ func TestSavePersonMovesFamilyFlag(t *testing.T) {
 	}
 }
 
-func TestSaveTagMappingNormalisesAndPreservesLabel(t *testing.T) {
-	db := openDB(t)
-	repo := events.NewSQLiteRepository(db)
-	service := events.New(repo)
-	ctx := context.Background()
-	elina, err := uuid.NewRandom()
-	if err != nil {
-		t.Fatal(err)
+func TestParseTermsInfersKindAndNormalises(t *testing.T) {
+	got := events.ParseTerms([]string{" #Lana ", "Lana", "lana", "#lana", "  ", "#"})
+	want := []events.AssociationTerm{
+		{Kind: events.TermTag, Term: "lana", Label: "#Lana"},
+		{Kind: events.TermWord, Term: "lana", Label: "Lana"},
 	}
-	if err := repo.UpsertPerson(ctx, events.Person{ID: elina, Name: "Elina", Swatch: "clay"}); err != nil {
-		t.Fatal(err)
+	if len(got) != len(want) {
+		t.Fatalf("expected %+v, got %+v", want, got)
 	}
-	mapping, err := service.SaveTagMapping(ctx, " Elina ", events.TagKindPerson, &elina)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if mapping.Tag != "elina" || mapping.Label != "Elina" {
-		t.Fatalf("expected normalised tag and preserved label: %+v", mapping)
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("term %d: expected %+v, got %+v", i, want[i], got[i])
+		}
 	}
 }
 
-func TestSaveTagMappingPersonKindRequiresPersonID(t *testing.T) {
+func TestCreateAssociationRejectsDuplicatesAndUpdateRejectsMissing(t *testing.T) {
 	db := openDB(t)
 	repo := events.NewSQLiteRepository(db)
 	service := events.New(repo)
 	ctx := context.Background()
-	if _, err := service.SaveTagMapping(ctx, "elina", events.TagKindPerson, nil); err != events.ErrPersonMappingNeedsPerson {
-		t.Fatalf("expected ErrPersonMappingNeedsPerson, got %v", err)
+	lana := seedPerson(t, repo, "Lana", 0)
+
+	created, err := service.CreateAssociation(ctx, repositoryTestCalendarID, lana, "", []string{"#Lana"})
+	if err != nil || created.Scope != events.ScopeMatched || len(created.Terms) != 1 || created.Terms[0].Term != "lana" || created.Terms[0].Label != "#Lana" {
+		t.Fatalf("expected a matched association with a normalised tag and preserved label: got=%+v err=%v", created, err)
+	}
+	if _, err := service.CreateAssociation(ctx, repositoryTestCalendarID, lana, events.ScopeAll, nil); !errors.Is(err, events.ErrAssociationExists) {
+		t.Fatalf("expected ErrAssociationExists, got %v", err)
+	}
+	if _, err := service.UpdateAssociation(ctx, repositoryTestCalendarID, uuid.New(), nil, nil); !errors.Is(err, events.ErrAssociationNotFound) {
+		t.Fatalf("expected ErrAssociationNotFound, got %v", err)
+	}
+}
+
+func TestUpdateAssociationReplacesTermsOnlyWhenGiven(t *testing.T) {
+	db := openDB(t)
+	repo := events.NewSQLiteRepository(db)
+	service := events.New(repo)
+	ctx := context.Background()
+	lana := seedPerson(t, repo, "Lana", 0)
+	associate(t, repo, lana, events.ScopeMatched, "#lana", "Lana")
+
+	replaced := []string{"#swim"}
+	got, err := service.UpdateAssociation(ctx, repositoryTestCalendarID, lana, nil, &replaced)
+	if err != nil || got.Scope != events.ScopeMatched || len(got.Terms) != 1 || got.Terms[0].Term != "swim" {
+		t.Fatalf("expected the terms replaced and the scope kept: got=%+v err=%v", got, err)
+	}
+	cleared := []string{}
+	got, err = service.UpdateAssociation(ctx, repositoryTestCalendarID, lana, nil, &cleared)
+	if err != nil || len(got.Terms) != 0 {
+		t.Fatalf("expected an empty list to clear the terms: got=%+v err=%v", got, err)
 	}
 }
 
@@ -535,12 +628,13 @@ func TestCreateEventRoundTripsThroughRefresh(t *testing.T) {
 		t.Fatalf("expected the event attributed to Lana, got %+v", got.People)
 	}
 
-	mappings, err := repo.ListTagMappings(ctx, repositoryTestCalendarID)
+	associations, err := repo.ListAssociations(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(mappings) != 1 || mappings[0].Tag != "lana" || mappings[0].PersonID == nil || *mappings[0].PersonID != personID {
-		t.Fatalf("expected a lana->Lana tag mapping to be created, got %+v", mappings)
+	if len(associations) != 1 || associations[0].PersonID != personID || associations[0].Scope != events.ScopeMatched ||
+		len(associations[0].Terms) != 1 || associations[0].Terms[0].Kind != events.TermTag || associations[0].Terms[0].Term != "lana" {
+		t.Fatalf("expected a matched association with a lana tag to be created, got %+v", associations)
 	}
 
 	stored, err := repo.ListWindow(ctx, start, end.Add(time.Second))
@@ -559,9 +653,7 @@ func TestCreateEventReusesAnExistingPersonTag(t *testing.T) {
 	if err := repo.UpsertPerson(ctx, events.Person{ID: personID, Name: "Lana", Swatch: "sky"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := repo.UpsertTagMapping(ctx, events.TagMapping{CalendarID: repositoryTestCalendarID, Tag: "lana-nickname", Label: "Lana Nickname", Kind: events.TagKindPerson, PersonID: &personID}); err != nil {
-		t.Fatal(err)
-	}
+	associate(t, repo, personID, events.ScopeMatched, "#lana-nickname")
 	var occurrences []caldav.Occurrence
 	service.Client = stubWriter{occurrences: &occurrences}
 
@@ -570,39 +662,28 @@ func TestCreateEventReusesAnExistingPersonTag(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	mappings, err := repo.ListTagMappings(ctx, repositoryTestCalendarID)
-	if err != nil || len(mappings) != 1 {
-		t.Fatalf("expected the existing mapping to be reused, not a second one created: got=%+v err=%v", mappings, err)
+	associations, err := repo.ListAssociations(ctx)
+	if err != nil || len(associations) != 1 || len(associations[0].Terms) != 1 {
+		t.Fatalf("expected the existing tag to be reused, not a second term added: got=%+v err=%v", associations, err)
 	}
 }
 
-func TestCreateEventRejectsATagAlreadyTakenBySomeoneElse(t *testing.T) {
+func TestCreateEventSharesATagAlreadyUsedBySomeoneElse(t *testing.T) {
 	repo, service := newEventsService(t)
 	ctx := context.Background()
-	lanaID, err := uuid.NewRandom()
-	if err != nil {
-		t.Fatal(err)
-	}
-	elinaID, err := uuid.NewRandom()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := repo.UpsertPerson(ctx, events.Person{ID: lanaID, Name: "Lana", Swatch: "sky"}); err != nil {
-		t.Fatal(err)
-	}
-	if err := repo.UpsertPerson(ctx, events.Person{ID: elinaID, Name: "Elina", Swatch: "amber"}); err != nil {
-		t.Fatal(err)
-	}
-	if err := repo.UpsertTagMapping(ctx, events.TagMapping{CalendarID: repositoryTestCalendarID, Tag: "lana", Label: "Lana", Kind: events.TagKindPerson, PersonID: &elinaID}); err != nil {
-		t.Fatal(err)
-	}
+	lana := seedPerson(t, repo, "Lana", 0)
+	elina := seedPerson(t, repo, "Elina", 1)
+	associate(t, repo, elina, events.ScopeMatched, "#lana")
 	var occurrences []caldav.Occurrence
 	service.Client = stubWriter{occurrences: &occurrences}
 
 	start := time.Now().Add(time.Hour)
-	_, err = service.CreateEvent(ctx, events.Draft{Summary: "Dentist", Start: start, End: start.Add(time.Hour), PersonIDs: []uuid.UUID{lanaID}})
-	if !errors.Is(err, events.ErrTagTaken) {
-		t.Fatalf("expected ErrTagTaken, got %v", err)
+	if _, err := service.CreateEvent(ctx, events.Draft{Summary: "Dentist", Start: start, End: start.Add(time.Hour), PersonIDs: []uuid.UUID{lana}}); err != nil {
+		t.Fatalf("a tag another person uses is shareable: %v", err)
+	}
+	associations, err := repo.ListAssociations(ctx)
+	if err != nil || len(associations) != 2 {
+		t.Fatalf("expected Lana to get her own association: got=%+v err=%v", associations, err)
 	}
 }
 

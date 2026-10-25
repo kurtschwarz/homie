@@ -17,17 +17,19 @@ type Event {
   people: [Person!]!
 }
 
-enum TagKind {
-  PERSON
-  INCLUDE
+enum AssociationScope {
+  "Every event on the calendar."
+  ALL
+  "Only events that mention one of the terms."
+  MATCHED
 }
 
-type TagMapping {
+type CalendarAssociation {
   calendarId: ID!
-  tag: String!
-  label: String!
-  kind: TagKind!
-  person: Person
+  person: Person!
+  scope: AssociationScope!
+  "As typed. A leading # marks a calendar tag; anything else matches words in the title."
+  terms: [String!]!
 }
 
 input PersonInput {
@@ -38,11 +40,21 @@ input PersonInput {
   isFamily: Boolean!
 }
 
-input TagMappingInput {
+input CreateCalendarAssociationInput {
   calendarId: ID!
-  tag: String!
-  kind: TagKind!
-  personId: ID
+  personId: ID!
+  scope: AssociationScope! = MATCHED
+  "As typed. A leading # marks a calendar tag; anything else matches words in the title."
+  terms: [String!]! = []
+}
+
+"Omitted fields keep their stored value."
+input UpdateCalendarAssociationInput {
+  calendarId: ID!
+  personId: ID!
+  scope: AssociationScope
+  "Replaces every term when given. As typed; a leading # marks a calendar tag."
+  terms: [String!]
 }
 
 input EventInput {
@@ -58,7 +70,7 @@ input EventInput {
 extend type Query {
   events(days: Int = 21): [Event!]! @protected(kinds: [USER, DISPLAY])
   people: [Person!]! @protected
-  tagMappings(calendarId: ID!): [TagMapping!]! @protected
+  calendarAssociations(calendarId: ID, personId: ID): [CalendarAssociation!]! @protected
   calendarTags(calendarId: ID!): [String!]! @protected
 }
 
@@ -66,8 +78,9 @@ extend type Mutation {
   createEvent(input: EventInput!): Event! @protected
   savePerson(input: PersonInput!): Person! @protected
   deletePerson(id: ID!): Boolean! @protected
-  saveTagMapping(input: TagMappingInput!): TagMapping! @protected
-  deleteTagMapping(calendarId: ID!, tag: String!): Boolean! @protected
+  createCalendarAssociation(input: CreateCalendarAssociationInput!): CalendarAssociation! @protected
+  updateCalendarAssociation(input: UpdateCalendarAssociationInput!): CalendarAssociation! @protected
+  deleteCalendarAssociation(calendarId: ID!, personId: ID!): Boolean! @protected
   """
   Syncs the calendar window from CalDAV and waits for it to finish. This runs
   the refresh inline rather than enqueuing the periodic job, whose uniqueness

@@ -61,6 +61,14 @@ type CalendarAccount struct {
 	WindowFutureSeconds    int                `json:"windowFutureSeconds"`
 }
 
+type CalendarAssociation struct {
+	CalendarID string           `json:"calendarId"`
+	Person     *Person          `json:"person"`
+	Scope      AssociationScope `json:"scope"`
+	// As typed. A leading # marks a calendar tag; anything else matches words in the title.
+	Terms []string `json:"terms"`
+}
+
 // Exactly one provider key. The provider is the key that is set.
 type CalendarConnectionInput struct {
 	Caldav *CalDAVConnectionInput `json:"caldav,omitempty"`
@@ -77,6 +85,14 @@ type CreateCalendarAccountInput struct {
 	RefreshIntervalSeconds int                      `json:"refreshIntervalSeconds"`
 	WindowPastSeconds      int                      `json:"windowPastSeconds"`
 	WindowFutureSeconds    int                      `json:"windowFutureSeconds"`
+}
+
+type CreateCalendarAssociationInput struct {
+	CalendarID string           `json:"calendarId"`
+	PersonID   string           `json:"personId"`
+	Scope      AssociationScope `json:"scope"`
+	// As typed. A leading # marks a calendar tag; anything else matches words in the title.
+	Terms []string `json:"terms"`
 }
 
 type Event struct {
@@ -186,21 +202,6 @@ type SessionInfo struct {
 	User *User `json:"user,omitempty"`
 }
 
-type TagMapping struct {
-	CalendarID string  `json:"calendarId"`
-	Tag        string  `json:"tag"`
-	Label      string  `json:"label"`
-	Kind       TagKind `json:"kind"`
-	Person     *Person `json:"person,omitempty"`
-}
-
-type TagMappingInput struct {
-	CalendarID string  `json:"calendarId"`
-	Tag        string  `json:"tag"`
-	Kind       TagKind `json:"kind"`
-	PersonID   *string `json:"personId,omitempty"`
-}
-
 // Checks a connection without saving it. Set id to test a stored account with its stored credentials, or connection to test a draft.
 type TestCalendarAccountInput struct {
 	ID         *string                  `json:"id,omitempty"`
@@ -235,6 +236,15 @@ type UpdateCalendarAccountInput struct {
 	WindowFutureSeconds    *int                           `json:"windowFutureSeconds,omitempty"`
 }
 
+// Omitted fields keep their stored value.
+type UpdateCalendarAssociationInput struct {
+	CalendarID string            `json:"calendarId"`
+	PersonID   string            `json:"personId"`
+	Scope      *AssociationScope `json:"scope,omitempty"`
+	// Replaces every term when given. As typed; a leading # marks a calendar tag.
+	Terms []string `json:"terms,omitempty"`
+}
+
 type UpdateCalendarConnectionInput struct {
 	Caldav *UpdateCalDAVConnectionInput `json:"caldav,omitempty"`
 }
@@ -251,6 +261,63 @@ type Weather struct {
 	Temperature   int              `json:"temperature"`
 	FetchedAt     int              `json:"fetchedAt"`
 	Stale         bool             `json:"stale"`
+}
+
+type AssociationScope string
+
+const (
+	// Every event on the calendar.
+	AssociationScopeAll AssociationScope = "ALL"
+	// Only events that mention one of the terms.
+	AssociationScopeMatched AssociationScope = "MATCHED"
+)
+
+var AllAssociationScope = []AssociationScope{
+	AssociationScopeAll,
+	AssociationScopeMatched,
+}
+
+func (e AssociationScope) IsValid() bool {
+	switch e {
+	case AssociationScopeAll, AssociationScopeMatched:
+		return true
+	}
+	return false
+}
+
+func (e AssociationScope) String() string {
+	return string(e)
+}
+
+func (e *AssociationScope) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = AssociationScope(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid AssociationScope", str)
+	}
+	return nil
+}
+
+func (e AssociationScope) MarshalGQL(w io.Writer) {
+	_, _ = fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *AssociationScope) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e AssociationScope) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
 }
 
 // Which credential a @protected root field accepts.
@@ -526,61 +593,6 @@ func (e *PhotoShowingSource) UnmarshalJSON(b []byte) error {
 }
 
 func (e PhotoShowingSource) MarshalJSON() ([]byte, error) {
-	var buf bytes.Buffer
-	e.MarshalGQL(&buf)
-	return buf.Bytes(), nil
-}
-
-type TagKind string
-
-const (
-	TagKindPerson  TagKind = "PERSON"
-	TagKindInclude TagKind = "INCLUDE"
-)
-
-var AllTagKind = []TagKind{
-	TagKindPerson,
-	TagKindInclude,
-}
-
-func (e TagKind) IsValid() bool {
-	switch e {
-	case TagKindPerson, TagKindInclude:
-		return true
-	}
-	return false
-}
-
-func (e TagKind) String() string {
-	return string(e)
-}
-
-func (e *TagKind) UnmarshalGQL(v any) error {
-	str, ok := v.(string)
-	if !ok {
-		return fmt.Errorf("enums must be strings")
-	}
-
-	*e = TagKind(str)
-	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid TagKind", str)
-	}
-	return nil
-}
-
-func (e TagKind) MarshalGQL(w io.Writer) {
-	_, _ = fmt.Fprint(w, strconv.Quote(e.String()))
-}
-
-func (e *TagKind) UnmarshalJSON(b []byte) error {
-	s, err := strconv.Unquote(string(b))
-	if err != nil {
-		return err
-	}
-	return e.UnmarshalGQL(s)
-}
-
-func (e TagKind) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

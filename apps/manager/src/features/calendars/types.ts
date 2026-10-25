@@ -33,3 +33,12 @@ export type CalendarAccountDraft = {
   password: string
   timezone: string
 }
+
+export type AssociationScope = 'ALL' | 'MATCHED'
+
+export type CalendarAssociation = {
+  calendarId: string
+  personId: string
+  scope: AssociationScope
+  terms: string[]
+}

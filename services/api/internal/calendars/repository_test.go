@@ -49,7 +49,14 @@ func TestDiscoveryPreservesCalendarSettingsAndAccountDeleteCascades(t *testing.T
 	if _, err := db.ExecContext(ctx, `INSERT INTO events (id,calendar_id,uid,summary,start_at,end_at,all_day,synced_at) VALUES (?,?,'event','Event',0,1,0,0)`, eventID[:], calendarID[:]); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := db.ExecContext(ctx, `INSERT INTO tag_mappings (calendar_id,tag,label,kind) VALUES (?,'family','Family','include')`, calendarID[:]); err != nil {
+	personID := uuid.New()
+	if _, err := db.ExecContext(ctx, `INSERT INTO people (id,name,swatch,sort_order) VALUES (?,'Family','clay',0)`, personID[:]); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `INSERT INTO calendar_associations (calendar_id,person_id,scope) VALUES (?,?,'matched')`, calendarID[:], personID[:]); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `INSERT INTO calendar_association_terms (calendar_id,person_id,kind,term,label) VALUES (?,?,'tag','family','Family')`, calendarID[:], personID[:]); err != nil {
 		t.Fatal(err)
 	}
 	if err := repo.DeleteAccount(ctx, accountID); err != nil {
@@ -59,7 +66,7 @@ func TestDiscoveryPreservesCalendarSettingsAndAccountDeleteCascades(t *testing.T
 	if err != nil || len(rows) != 0 {
 		t.Fatalf("account delete did not cascade: rows=%+v err=%v", rows, err)
 	}
-	for _, table := range []string{"events", "tag_mappings"} {
+	for _, table := range []string{"events", "calendar_associations", "calendar_association_terms"} {
 		var count int
 		if err := db.GetContext(ctx, &count, `SELECT count(*) FROM `+table); err != nil || count != 0 {
 			t.Fatalf("%s did not cascade: count=%d err=%v", table, count, err)

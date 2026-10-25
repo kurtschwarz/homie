@@ -8,6 +8,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 	"github.com/kurtschwarz/homie/services/api/internal/calendars"
@@ -32,18 +34,16 @@ var Swatches = map[string]struct{}{
 // ErrUnknownSwatch is returned by savePerson for a swatch outside the palette.
 var ErrUnknownSwatch = errors.New("unknown swatch")
 
-// ErrPersonMappingNeedsPerson is returned when a PERSON tag mapping has no person.
-var ErrPersonMappingNeedsPerson = errors.New("a person tag mapping requires a person id")
+// ErrAssociationExists is returned when a person is already associated with a calendar.
+var ErrAssociationExists = errors.New("events: person is already associated with this calendar")
+
+// ErrAssociationNotFound is returned when a person has no association with a calendar.
+var ErrAssociationNotFound = errors.New("events: person is not associated with this calendar")
 
 // DisplayEvent is an occurrence attributed to the people it is for.
 type DisplayEvent struct {
 	Event
 	People []Person
-}
-
-type mappingKey struct {
-	CalendarID uuid.UUID
-	Tag        string
 }
 
 // Fetcher is the portion of the CalDAV client used by Service.
@@ -69,11 +69,6 @@ type SourceProvider interface {
 // ErrEventsReadOnly is returned by CreateEvent when the configured CalDAV
 // client cannot write (typically: CalDAV is not configured at all).
 var ErrEventsReadOnly = errors.New("events: CalDAV client cannot create events")
-
-// ErrTagTaken is returned when a person has no PERSON tag mapping and their
-// normalised name collides with an existing mapping for someone else, or
-// with an INCLUDE mapping.
-var ErrTagTaken = errors.New("events: tag already mapped to something else")
 
 // ErrInvalidDraft is returned when a draft is missing a title or person, or
 // has an invalid time range.
@@ -361,9 +356,8 @@ func eventID(calendarID uuid.UUID, uid, recurrenceID string) uuid.UUID {
 	return uuid.NewSHA1(calendarID, []byte(uid+"\x00"+recurrenceID))
 }
 
-// tagsForPeople resolves each person to a PERSON tag, creating one from
-// their normalised name when they have none. It errors rather than steal a
-// tag already mapped to someone else.
+// tagsForPeople resolves each person to a calendar tag, creating an
+// association with one from their normalised name when they have none.
 func (s *Service) tagsForPeople(ctx context.Context, personIDs []uuid.UUID) ([]string, error) {
 	return s.tagsForPeopleInCalendar(ctx, legacyCalendarID, personIDs)
 }
@@ -385,18 +379,14 @@ func (s *Service) tagsForPeopleInCalendar(ctx context.Context, calendarID uuid.U
 			return nil, fmt.Errorf("events: person %s does not exist", personID)
 		}
 	}
-	mappings, err := s.repo.ListTagMappings(ctx, calendarID)
+	associations, err := s.repo.ListAssociations(ctx)
 	if err != nil {
 		return nil, err
 	}
-	mappingByTag := make(map[string]TagMapping, len(mappings))
-	tagByPerson := make(map[uuid.UUID]string, len(mappings))
-	for _, m := range mappings {
-		mappingByTag[m.Tag] = m
-		if m.Kind == TagKindPerson && m.PersonID != nil {
-			if _, ok := tagByPerson[*m.PersonID]; !ok {
-				tagByPerson[*m.PersonID] = m.Tag
-			}
+	byPerson := make(map[uuid.UUID]Association)
+	for _, association := range associations {
+		if association.CalendarID == calendarID {
+			byPerson[association.PersonID] = association
 		}
 	}
 
@@ -407,27 +397,35 @@ func (s *Service) tagsForPeopleInCalendar(ctx context.Context, calendarID uuid.U
 			continue
 		}
 		seenPeople[personID] = struct{}{}
-		if tag, ok := tagByPerson[personID]; ok {
+		association, associated := byPerson[personID]
+		if tag := firstTag(association); tag != "" {
 			tags = append(tags, tag)
 			continue
 		}
-		person, ok := peopleByID[personID]
-		if !ok {
-			continue // validated above
+		person := peopleByID[personID]
+		term := AssociationTerm{Kind: TermTag, Term: normalizeTag(person.Name), Label: person.Name}
+		if associated {
+			association.Terms = append(association.Terms, term)
+			err = s.repo.UpdateAssociation(ctx, association)
+		} else {
+			association = Association{CalendarID: calendarID, PersonID: personID, Scope: ScopeMatched, Terms: []AssociationTerm{term}}
+			err = s.repo.InsertAssociation(ctx, association)
 		}
-		tag := normalizeTag(person.Name)
-		if existing, ok := mappingByTag[tag]; ok && (existing.Kind != TagKindPerson || existing.PersonID == nil || *existing.PersonID != personID) {
-			return nil, fmt.Errorf("%w: %q", ErrTagTaken, tag)
-		}
-		mapping := TagMapping{CalendarID: calendarID, Tag: tag, Label: person.Name, Kind: TagKindPerson, PersonID: &personID}
-		if err := s.repo.UpsertTagMapping(ctx, mapping); err != nil {
+		if err != nil {
 			return nil, err
 		}
-		mappingByTag[tag] = mapping
-		tagByPerson[personID] = tag
-		tags = append(tags, tag)
+		tags = append(tags, term.Term)
 	}
 	return tags, nil
+}
+
+func firstTag(association Association) string {
+	for _, term := range association.Terms {
+		if term.Kind == TermTag {
+			return term.Term
+		}
+	}
+	return ""
 }
 
 func (s *Service) peopleForIDs(ctx context.Context, personIDs []uuid.UUID) []Person {
@@ -464,8 +462,8 @@ func (s *Service) logger() *slog.Logger {
 	return slog.Default()
 }
 
-// Displayable returns events in the next `days` days that qualify for the
-// kiosk: at least one PERSON tag or at least one INCLUDE tag.
+// Displayable returns events in the next `days` days that belong to at least
+// one person through a calendar association.
 func (s *Service) Displayable(ctx context.Context, days int) ([]DisplayEvent, error) {
 	from := s.now()
 	to := from.AddDate(0, 0, days)
@@ -478,61 +476,31 @@ func (s *Service) Displayable(ctx context.Context, days int) ([]DisplayEvent, er
 		return nil, err
 	}
 	peopleByID := make(map[uuid.UUID]Person, len(people))
-	var family *Person
 	for _, p := range people {
 		peopleByID[p.ID] = p
-		if p.IsFamily {
-			family = &p
-		}
 	}
-	mappingByCalendarTag := make(map[mappingKey]TagMapping)
-	calendarIDs := make(map[uuid.UUID]struct{})
-	for _, event := range events {
-		calendarIDs[event.CalendarID] = struct{}{}
+	associations, err := s.repo.ListAssociations(ctx)
+	if err != nil {
+		return nil, err
 	}
-	for calendarID := range calendarIDs {
-		mappings, err := s.repo.ListTagMappings(ctx, calendarID)
-		if err != nil {
-			return nil, err
-		}
-		for _, m := range mappings {
-			mappingByCalendarTag[mappingKey{CalendarID: m.CalendarID, Tag: m.Tag}] = m
-		}
+	byCalendar := make(map[uuid.UUID][]Association)
+	for _, association := range associations {
+		byCalendar[association.CalendarID] = append(byCalendar[association.CalendarID], association)
 	}
 
 	result := make([]DisplayEvent, 0, len(events))
 	for _, event := range events {
 		var matched []Person
-		include := false
-		seen := make(map[uuid.UUID]struct{})
-		for _, tag := range event.Categories {
-			mapping, ok := mappingByCalendarTag[mappingKey{CalendarID: event.CalendarID, Tag: normalizeTag(tag)}]
-			if !ok {
+		for _, association := range byCalendar[event.CalendarID] {
+			if !association.matches(event) {
 				continue
 			}
-			switch mapping.Kind {
-			case TagKindPerson:
-				if mapping.PersonID == nil {
-					continue
-				}
-				if _, dup := seen[*mapping.PersonID]; dup {
-					continue
-				}
-				person, ok := peopleByID[*mapping.PersonID]
-				if !ok {
-					continue
-				}
-				seen[*mapping.PersonID] = struct{}{}
+			if person, ok := peopleByID[association.PersonID]; ok {
 				matched = append(matched, person)
-			case TagKindInclude:
-				include = true
 			}
 		}
-		if len(matched) == 0 && !include {
+		if len(matched) == 0 {
 			continue
-		}
-		if len(matched) == 0 && include && family != nil {
-			matched = []Person{*family}
 		}
 		sort.Slice(matched, func(i, j int) bool { return matched[i].Order < matched[j].Order })
 		result = append(result, DisplayEvent{Event: event, People: matched})
@@ -543,13 +511,9 @@ func (s *Service) Displayable(ctx context.Context, days int) ([]DisplayEvent, er
 // ListPeople returns every stored person.
 func (s *Service) ListPeople(ctx context.Context) ([]Person, error) { return s.repo.ListPeople(ctx) }
 
-// ListTagMappings returns every stored tag mapping.
-func (s *Service) ListTagMappings(ctx context.Context) ([]TagMapping, error) {
-	return s.repo.ListTagMappings(ctx, legacyCalendarID)
-}
-
-func (s *Service) ListCalendarTagMappings(ctx context.Context, calendarID uuid.UUID) ([]TagMapping, error) {
-	return s.repo.ListTagMappings(ctx, calendarID)
+// ListAssociations returns every calendar association with its terms.
+func (s *Service) ListAssociations(ctx context.Context) ([]Association, error) {
+	return s.repo.ListAssociations(ctx)
 }
 
 // CalendarTags returns every distinct category seen in the synced window.
@@ -586,37 +550,138 @@ func (s *Service) SavePerson(ctx context.Context, person Person) (Person, error)
 	return person, nil
 }
 
-// DeletePerson removes a person; their tag mappings cascade with them.
+// DeletePerson removes a person; their associations cascade with them.
 func (s *Service) DeletePerson(ctx context.Context, id uuid.UUID) error {
 	return s.repo.DeletePerson(ctx, id)
 }
 
-// SaveTagMapping normalises the tag and stores the original spelling as Label.
-func (s *Service) SaveTagMapping(ctx context.Context, rawTag string, kind TagKind, personID *uuid.UUID) (TagMapping, error) {
-	return s.SaveCalendarTagMapping(ctx, legacyCalendarID, rawTag, kind, personID)
+// CreateAssociation associates a person with a calendar. Terms are labels as
+// typed; see ParseTerms. An empty scope means ScopeMatched.
+func (s *Service) CreateAssociation(ctx context.Context, calendarID, personID uuid.UUID, scope AssociationScope, labels []string) (Association, error) {
+	if scope == "" {
+		scope = ScopeMatched
+	}
+	association := Association{CalendarID: calendarID, PersonID: personID, Scope: scope, Terms: ParseTerms(labels)}
+	if err := s.repo.InsertAssociation(ctx, association); err != nil {
+		return Association{}, err
+	}
+	return association, nil
 }
 
-func (s *Service) SaveCalendarTagMapping(ctx context.Context, calendarID uuid.UUID, rawTag string, kind TagKind, personID *uuid.UUID) (TagMapping, error) {
-	if kind == TagKindPerson && personID == nil {
-		return TagMapping{}, ErrPersonMappingNeedsPerson
+// UpdateAssociation changes an association. A nil scope or nil labels keeps the
+// stored value, so switching scope never disturbs the terms.
+func (s *Service) UpdateAssociation(ctx context.Context, calendarID, personID uuid.UUID, scope *AssociationScope, labels *[]string) (Association, error) {
+	associations, err := s.repo.ListAssociations(ctx)
+	if err != nil {
+		return Association{}, err
 	}
-	if kind == TagKindInclude {
-		personID = nil
+	var association Association
+	found := false
+	for _, candidate := range associations {
+		if candidate.CalendarID == calendarID && candidate.PersonID == personID {
+			association, found = candidate, true
+			break
+		}
 	}
-	mapping := TagMapping{CalendarID: calendarID, Tag: normalizeTag(rawTag), Label: strings.TrimSpace(rawTag), Kind: kind, PersonID: personID}
-	if err := s.repo.UpsertTagMapping(ctx, mapping); err != nil {
-		return TagMapping{}, err
+	if !found {
+		return Association{}, ErrAssociationNotFound
 	}
-	return mapping, nil
+	if scope != nil {
+		association.Scope = *scope
+	}
+	if labels != nil {
+		association.Terms = ParseTerms(*labels)
+	}
+	if err := s.repo.UpdateAssociation(ctx, association); err != nil {
+		return Association{}, err
+	}
+	return association, nil
 }
 
-// DeleteTagMapping removes a mapping. The caller passes the raw tag; it is normalised here.
-func (s *Service) DeleteTagMapping(ctx context.Context, rawTag string) error {
-	return s.repo.DeleteTagMapping(ctx, legacyCalendarID, normalizeTag(rawTag))
+// DeleteAssociation removes a person's association with a calendar.
+func (s *Service) DeleteAssociation(ctx context.Context, calendarID, personID uuid.UUID) error {
+	return s.repo.DeleteAssociation(ctx, calendarID, personID)
 }
 
-func (s *Service) DeleteCalendarTagMapping(ctx context.Context, calendarID uuid.UUID, rawTag string) error {
-	return s.repo.DeleteTagMapping(ctx, calendarID, normalizeTag(rawTag))
+// ParseTerms turns labels as typed into terms. A leading # marks a calendar
+// tag; anything else is a word to look for in event titles. Blank labels and
+// repeats are dropped.
+func ParseTerms(labels []string) []AssociationTerm {
+	type key struct {
+		kind TermKind
+		term string
+	}
+	seen := make(map[key]struct{}, len(labels))
+	terms := make([]AssociationTerm, 0, len(labels))
+	for _, raw := range labels {
+		label := strings.TrimSpace(raw)
+		kind := TermWord
+		text := label
+		if strings.HasPrefix(label, "#") {
+			kind = TermTag
+			text = strings.TrimSpace(strings.TrimPrefix(label, "#"))
+		}
+		term := normalizeTag(text)
+		if term == "" {
+			continue
+		}
+		if _, duplicate := seen[key{kind, term}]; duplicate {
+			continue
+		}
+		seen[key{kind, term}] = struct{}{}
+		terms = append(terms, AssociationTerm{Kind: kind, Term: term, Label: label})
+	}
+	return terms
+}
+
+func (a Association) matches(event Event) bool {
+	if a.Scope == ScopeAll {
+		return true
+	}
+	for _, term := range a.Terms {
+		switch term.Kind {
+		case TermTag:
+			for _, category := range event.Categories {
+				if normalizeTag(category) == term.Term {
+					return true
+				}
+			}
+		case TermWord:
+			if containsWord(event.Summary, term.Term) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// containsWord reports whether word appears in text bounded by non-letters,
+// so "lana" matches "Lana's swim" but not "Atlanta".
+func containsWord(text, word string) bool {
+	if word == "" {
+		return false
+	}
+	text = strings.ToLower(text)
+	for start := 0; start < len(text); {
+		i := strings.Index(text[start:], word)
+		if i < 0 {
+			return false
+		}
+		i += start
+		end := i + len(word)
+		before, _ := utf8.DecodeLastRuneInString(text[:i])
+		after, _ := utf8.DecodeRuneInString(text[end:])
+		if (i == 0 || !isWordRune(before)) && (end == len(text) || !isWordRune(after)) {
+			return true
+		}
+		_, size := utf8.DecodeRuneInString(text[i:])
+		start = i + size
+	}
+	return false
+}
+
+func isWordRune(r rune) bool {
+	return unicode.IsLetter(r) || unicode.IsDigit(r)
 }
 
 func normalizeTag(tag string) string {

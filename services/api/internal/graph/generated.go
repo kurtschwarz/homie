@@ -72,6 +72,13 @@ type ComplexityRoot struct {
 		WindowPastSeconds      func(childComplexity int) int
 	}
 
+	CalendarAssociation struct {
+		CalendarID func(childComplexity int) int
+		Person     func(childComplexity int) int
+		Scope      func(childComplexity int) int
+		Terms      func(childComplexity int) int
+	}
+
 	Coordinate struct {
 		Latitude  func(childComplexity int) int
 		Longitude func(childComplexity int) int
@@ -102,30 +109,31 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		AddTimerMinute           func(childComplexity int) int
-		CancelTimer              func(childComplexity int) int
-		CreateCalendarAccount    func(childComplexity int, input model.CreateCalendarAccountInput) int
-		CreateEvent              func(childComplexity int, input model.EventInput) int
-		DeleteCalendarAccount    func(childComplexity int, id string) int
-		DeletePerson             func(childComplexity int, id string) int
-		DeleteTagMapping         func(childComplexity int, calendarID string, tag string) int
-		DiscoverCalendars        func(childComplexity int, accountID string) int
-		Login                    func(childComplexity int, username string, password string) int
-		Logout                   func(childComplexity int) int
-		PauseTimer               func(childComplexity int) int
-		RefreshCalendar          func(childComplexity int, id string) int
-		RefreshEvents            func(childComplexity int) int
-		ResumeTimer              func(childComplexity int) int
-		RevokeSession            func(childComplexity int, id string) int
-		SavePerson               func(childComplexity int, input model.PersonInput) int
-		SaveTagMapping           func(childComplexity int, input model.TagMappingInput) int
-		Setup                    func(childComplexity int, code string, username string, password string) int
-		StartTimer               func(childComplexity int, title string, emoji string, durationSeconds int) int
-		TestCalendarAccount      func(childComplexity int, input model.TestCalendarAccountInput) int
-		TrackPhotoShowing        func(childComplexity int, source model.PhotoShowingSource) int
-		UpdateCalendarAccount    func(childComplexity int, input model.UpdateCalendarAccountInput) int
-		UpdateCalendarVisibility func(childComplexity int, id string, visible bool) int
-		UploadPhoto              func(childComplexity int, input model.PhotoUploadInput, file graphql.Upload) int
+		AddTimerMinute            func(childComplexity int) int
+		CancelTimer               func(childComplexity int) int
+		CreateCalendarAccount     func(childComplexity int, input model.CreateCalendarAccountInput) int
+		CreateCalendarAssociation func(childComplexity int, input model.CreateCalendarAssociationInput) int
+		CreateEvent               func(childComplexity int, input model.EventInput) int
+		DeleteCalendarAccount     func(childComplexity int, id string) int
+		DeleteCalendarAssociation func(childComplexity int, calendarID string, personID string) int
+		DeletePerson              func(childComplexity int, id string) int
+		DiscoverCalendars         func(childComplexity int, accountID string) int
+		Login                     func(childComplexity int, username string, password string) int
+		Logout                    func(childComplexity int) int
+		PauseTimer                func(childComplexity int) int
+		RefreshCalendar           func(childComplexity int, id string) int
+		RefreshEvents             func(childComplexity int) int
+		ResumeTimer               func(childComplexity int) int
+		RevokeSession             func(childComplexity int, id string) int
+		SavePerson                func(childComplexity int, input model.PersonInput) int
+		Setup                     func(childComplexity int, code string, username string, password string) int
+		StartTimer                func(childComplexity int, title string, emoji string, durationSeconds int) int
+		TestCalendarAccount       func(childComplexity int, input model.TestCalendarAccountInput) int
+		TrackPhotoShowing         func(childComplexity int, source model.PhotoShowingSource) int
+		UpdateCalendarAccount     func(childComplexity int, input model.UpdateCalendarAccountInput) int
+		UpdateCalendarAssociation func(childComplexity int, input model.UpdateCalendarAssociationInput) int
+		UpdateCalendarVisibility  func(childComplexity int, id string, visible bool) int
+		UploadPhoto               func(childComplexity int, input model.PhotoUploadInput, file graphql.Upload) int
 	}
 
 	Person struct {
@@ -162,33 +170,25 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		CalendarAccounts    func(childComplexity int) int
-		CalendarTags        func(childComplexity int, calendarID string) int
-		Calendars           func(childComplexity int, accountID *string) int
-		Events              func(childComplexity int, days *int) int
-		Health              func(childComplexity int) int
-		People              func(childComplexity int) int
-		PhotoShowing        func(childComplexity int) int
-		PhotoShowingHistory func(childComplexity int, limit *int) int
-		Photos              func(childComplexity int, limit *int) int
-		Session             func(childComplexity int) int
-		Sessions            func(childComplexity int) int
-		SetupCode           func(childComplexity int) int
-		TagMappings         func(childComplexity int, calendarID string) int
-		Timer               func(childComplexity int) int
-		Weather             func(childComplexity int) int
+		CalendarAccounts     func(childComplexity int) int
+		CalendarAssociations func(childComplexity int, calendarID *string, personID *string) int
+		CalendarTags         func(childComplexity int, calendarID string) int
+		Calendars            func(childComplexity int, accountID *string) int
+		Events               func(childComplexity int, days *int) int
+		Health               func(childComplexity int) int
+		People               func(childComplexity int) int
+		PhotoShowing         func(childComplexity int) int
+		PhotoShowingHistory  func(childComplexity int, limit *int) int
+		Photos               func(childComplexity int, limit *int) int
+		Session              func(childComplexity int) int
+		Sessions             func(childComplexity int) int
+		SetupCode            func(childComplexity int) int
+		Timer                func(childComplexity int) int
+		Weather              func(childComplexity int) int
 	}
 
 	SessionInfo struct {
 		User func(childComplexity int) int
-	}
-
-	TagMapping struct {
-		CalendarID func(childComplexity int) int
-		Kind       func(childComplexity int) int
-		Label      func(childComplexity int) int
-		Person     func(childComplexity int) int
-		Tag        func(childComplexity int) int
 	}
 
 	Timer struct {
@@ -235,8 +235,9 @@ type MutationResolver interface {
 	CreateEvent(ctx context.Context, input model.EventInput) (*model.Event, error)
 	SavePerson(ctx context.Context, input model.PersonInput) (*model.Person, error)
 	DeletePerson(ctx context.Context, id string) (bool, error)
-	SaveTagMapping(ctx context.Context, input model.TagMappingInput) (*model.TagMapping, error)
-	DeleteTagMapping(ctx context.Context, calendarID string, tag string) (bool, error)
+	CreateCalendarAssociation(ctx context.Context, input model.CreateCalendarAssociationInput) (*model.CalendarAssociation, error)
+	UpdateCalendarAssociation(ctx context.Context, input model.UpdateCalendarAssociationInput) (*model.CalendarAssociation, error)
+	DeleteCalendarAssociation(ctx context.Context, calendarID string, personID string) (bool, error)
 	RefreshEvents(ctx context.Context) (bool, error)
 	StartTimer(ctx context.Context, title string, emoji string, durationSeconds int) (*model.Timer, error)
 	AddTimerMinute(ctx context.Context) (*model.Timer, error)
@@ -254,7 +255,7 @@ type QueryResolver interface {
 	Calendars(ctx context.Context, accountID *string) ([]model.Calendar, error)
 	Events(ctx context.Context, days *int) ([]model.Event, error)
 	People(ctx context.Context) ([]model.Person, error)
-	TagMappings(ctx context.Context, calendarID string) ([]model.TagMapping, error)
+	CalendarAssociations(ctx context.Context, calendarID *string, personID *string) ([]model.CalendarAssociation, error)
 	CalendarTags(ctx context.Context, calendarID string) ([]string, error)
 	Photos(ctx context.Context, limit *int) ([]model.Photo, error)
 	PhotoShowing(ctx context.Context) (*model.PhotoShowingState, error)
@@ -429,6 +430,31 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.CalendarAccount.WindowPastSeconds(childComplexity), true
 
+	case "CalendarAssociation.calendarId":
+		if e.ComplexityRoot.CalendarAssociation.CalendarID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.CalendarAssociation.CalendarID(childComplexity), true
+	case "CalendarAssociation.person":
+		if e.ComplexityRoot.CalendarAssociation.Person == nil {
+			break
+		}
+
+		return e.ComplexityRoot.CalendarAssociation.Person(childComplexity), true
+	case "CalendarAssociation.scope":
+		if e.ComplexityRoot.CalendarAssociation.Scope == nil {
+			break
+		}
+
+		return e.ComplexityRoot.CalendarAssociation.Scope(childComplexity), true
+	case "CalendarAssociation.terms":
+		if e.ComplexityRoot.CalendarAssociation.Terms == nil {
+			break
+		}
+
+		return e.ComplexityRoot.CalendarAssociation.Terms(childComplexity), true
+
 	case "Coordinate.latitude":
 		if e.ComplexityRoot.Coordinate.Latitude == nil {
 			break
@@ -558,6 +584,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.CreateCalendarAccount(childComplexity, args["input"].(model.CreateCalendarAccountInput)), true
+	case "Mutation.createCalendarAssociation":
+		if e.ComplexityRoot.Mutation.CreateCalendarAssociation == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_createCalendarAssociation_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.CreateCalendarAssociation(childComplexity, args["input"].(model.CreateCalendarAssociationInput)), true
 	case "Mutation.createEvent":
 		if e.ComplexityRoot.Mutation.CreateEvent == nil {
 			break
@@ -580,6 +617,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.DeleteCalendarAccount(childComplexity, args["id"].(string)), true
+	case "Mutation.deleteCalendarAssociation":
+		if e.ComplexityRoot.Mutation.DeleteCalendarAssociation == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deleteCalendarAssociation_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.DeleteCalendarAssociation(childComplexity, args["calendarId"].(string), args["personId"].(string)), true
 	case "Mutation.deletePerson":
 		if e.ComplexityRoot.Mutation.DeletePerson == nil {
 			break
@@ -591,17 +639,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.DeletePerson(childComplexity, args["id"].(string)), true
-	case "Mutation.deleteTagMapping":
-		if e.ComplexityRoot.Mutation.DeleteTagMapping == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_deleteTagMapping_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.ComplexityRoot.Mutation.DeleteTagMapping(childComplexity, args["calendarId"].(string), args["tag"].(string)), true
 	case "Mutation.discoverCalendars":
 		if e.ComplexityRoot.Mutation.DiscoverCalendars == nil {
 			break
@@ -681,17 +718,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.SavePerson(childComplexity, args["input"].(model.PersonInput)), true
-	case "Mutation.saveTagMapping":
-		if e.ComplexityRoot.Mutation.SaveTagMapping == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_saveTagMapping_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.ComplexityRoot.Mutation.SaveTagMapping(childComplexity, args["input"].(model.TagMappingInput)), true
 	case "Mutation.setup":
 		if e.ComplexityRoot.Mutation.Setup == nil {
 			break
@@ -747,6 +773,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.UpdateCalendarAccount(childComplexity, args["input"].(model.UpdateCalendarAccountInput)), true
+	case "Mutation.updateCalendarAssociation":
+		if e.ComplexityRoot.Mutation.UpdateCalendarAssociation == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateCalendarAssociation_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.UpdateCalendarAssociation(childComplexity, args["input"].(model.UpdateCalendarAssociationInput)), true
 	case "Mutation.updateCalendarVisibility":
 		if e.ComplexityRoot.Mutation.UpdateCalendarVisibility == nil {
 			break
@@ -906,6 +943,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.CalendarAccounts(childComplexity), true
+	case "Query.calendarAssociations":
+		if e.ComplexityRoot.Query.CalendarAssociations == nil {
+			break
+		}
+
+		args, err := ec.field_Query_calendarAssociations_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Query.CalendarAssociations(childComplexity, args["calendarId"].(*string), args["personId"].(*string)), true
 	case "Query.calendarTags":
 		if e.ComplexityRoot.Query.CalendarTags == nil {
 			break
@@ -998,17 +1046,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.SetupCode(childComplexity), true
-	case "Query.tagMappings":
-		if e.ComplexityRoot.Query.TagMappings == nil {
-			break
-		}
-
-		args, err := ec.field_Query_tagMappings_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.ComplexityRoot.Query.TagMappings(childComplexity, args["calendarId"].(string)), true
 	case "Query.timer":
 		if e.ComplexityRoot.Query.Timer == nil {
 			break
@@ -1028,37 +1065,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.SessionInfo.User(childComplexity), true
-
-	case "TagMapping.calendarId":
-		if e.ComplexityRoot.TagMapping.CalendarID == nil {
-			break
-		}
-
-		return e.ComplexityRoot.TagMapping.CalendarID(childComplexity), true
-	case "TagMapping.kind":
-		if e.ComplexityRoot.TagMapping.Kind == nil {
-			break
-		}
-
-		return e.ComplexityRoot.TagMapping.Kind(childComplexity), true
-	case "TagMapping.label":
-		if e.ComplexityRoot.TagMapping.Label == nil {
-			break
-		}
-
-		return e.ComplexityRoot.TagMapping.Label(childComplexity), true
-	case "TagMapping.person":
-		if e.ComplexityRoot.TagMapping.Person == nil {
-			break
-		}
-
-		return e.ComplexityRoot.TagMapping.Person(childComplexity), true
-	case "TagMapping.tag":
-		if e.ComplexityRoot.TagMapping.Tag == nil {
-			break
-		}
-
-		return e.ComplexityRoot.TagMapping.Tag(childComplexity), true
 
 	case "Timer.durationSeconds":
 		if e.ComplexityRoot.Timer.DurationSeconds == nil {
@@ -1158,14 +1164,15 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputCalDAVConnectionInput,
 		ec.unmarshalInputCalendarConnectionInput,
 		ec.unmarshalInputCreateCalendarAccountInput,
+		ec.unmarshalInputCreateCalendarAssociationInput,
 		ec.unmarshalInputEventInput,
 		ec.unmarshalInputFocalRegionInput,
 		ec.unmarshalInputPersonInput,
 		ec.unmarshalInputPhotoUploadInput,
-		ec.unmarshalInputTagMappingInput,
 		ec.unmarshalInputTestCalendarAccountInput,
 		ec.unmarshalInputUpdateCalDAVConnectionInput,
 		ec.unmarshalInputUpdateCalendarAccountInput,
+		ec.unmarshalInputUpdateCalendarAssociationInput,
 		ec.unmarshalInputUpdateCalendarConnectionInput,
 	)
 	first := true
@@ -1431,17 +1438,19 @@ type Event {
   people: [Person!]!
 }
 
-enum TagKind {
-  PERSON
-  INCLUDE
+enum AssociationScope {
+  "Every event on the calendar."
+  ALL
+  "Only events that mention one of the terms."
+  MATCHED
 }
 
-type TagMapping {
+type CalendarAssociation {
   calendarId: ID!
-  tag: String!
-  label: String!
-  kind: TagKind!
-  person: Person
+  person: Person!
+  scope: AssociationScope!
+  "As typed. A leading # marks a calendar tag; anything else matches words in the title."
+  terms: [String!]!
 }
 
 input PersonInput {
@@ -1452,11 +1461,21 @@ input PersonInput {
   isFamily: Boolean!
 }
 
-input TagMappingInput {
+input CreateCalendarAssociationInput {
   calendarId: ID!
-  tag: String!
-  kind: TagKind!
-  personId: ID
+  personId: ID!
+  scope: AssociationScope! = MATCHED
+  "As typed. A leading # marks a calendar tag; anything else matches words in the title."
+  terms: [String!]! = []
+}
+
+"Omitted fields keep their stored value."
+input UpdateCalendarAssociationInput {
+  calendarId: ID!
+  personId: ID!
+  scope: AssociationScope
+  "Replaces every term when given. As typed; a leading # marks a calendar tag."
+  terms: [String!]
 }
 
 input EventInput {
@@ -1472,7 +1491,7 @@ input EventInput {
 extend type Query {
   events(days: Int = 21): [Event!]! @protected(kinds: [USER, DISPLAY])
   people: [Person!]! @protected
-  tagMappings(calendarId: ID!): [TagMapping!]! @protected
+  calendarAssociations(calendarId: ID, personId: ID): [CalendarAssociation!]! @protected
   calendarTags(calendarId: ID!): [String!]! @protected
 }
 
@@ -1480,8 +1499,9 @@ extend type Mutation {
   createEvent(input: EventInput!): Event! @protected
   savePerson(input: PersonInput!): Person! @protected
   deletePerson(id: ID!): Boolean! @protected
-  saveTagMapping(input: TagMappingInput!): TagMapping! @protected
-  deleteTagMapping(calendarId: ID!, tag: String!): Boolean! @protected
+  createCalendarAssociation(input: CreateCalendarAssociationInput!): CalendarAssociation! @protected
+  updateCalendarAssociation(input: UpdateCalendarAssociationInput!): CalendarAssociation! @protected
+  deleteCalendarAssociation(calendarId: ID!, personId: ID!): Boolean! @protected
   """
   Syncs the calendar window from CalDAV and waits for it to finish. This runs
   the refresh inline rather than enqueuing the periodic job, whose uniqueness
@@ -1695,6 +1715,20 @@ func (ec *executionContext) childFields_CalendarAccount(ctx context.Context, fie
 	return nil, fmt.Errorf("no field named %q was found under type CalendarAccount", field.Name)
 }
 
+func (ec *executionContext) childFields_CalendarAssociation(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "calendarId":
+		return ec.fieldContext_CalendarAssociation_calendarId(ctx, field)
+	case "person":
+		return ec.fieldContext_CalendarAssociation_person(ctx, field)
+	case "scope":
+		return ec.fieldContext_CalendarAssociation_scope(ctx, field)
+	case "terms":
+		return ec.fieldContext_CalendarAssociation_terms(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type CalendarAssociation", field.Name)
+}
+
 func (ec *executionContext) childFields_Coordinate(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "latitude":
@@ -1825,22 +1859,6 @@ func (ec *executionContext) childFields_SessionInfo(ctx context.Context, field g
 		return ec.fieldContext_SessionInfo_user(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type SessionInfo", field.Name)
-}
-
-func (ec *executionContext) childFields_TagMapping(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-	switch field.Name {
-	case "calendarId":
-		return ec.fieldContext_TagMapping_calendarId(ctx, field)
-	case "tag":
-		return ec.fieldContext_TagMapping_tag(ctx, field)
-	case "label":
-		return ec.fieldContext_TagMapping_label(ctx, field)
-	case "kind":
-		return ec.fieldContext_TagMapping_kind(ctx, field)
-	case "person":
-		return ec.fieldContext_TagMapping_person(ctx, field)
-	}
-	return nil, fmt.Errorf("no field named %q was found under type TagMapping", field.Name)
 }
 
 func (ec *executionContext) childFields_Timer(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -2019,6 +2037,20 @@ func (ec *executionContext) field_Mutation_createCalendarAccount_args(ctx contex
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_createCalendarAssociation_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.CreateCalendarAssociationInput, error) {
+			return ec.unmarshalNCreateCalendarAssociationInput2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐCreateCalendarAssociationInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_createEvent_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -2047,6 +2079,28 @@ func (ec *executionContext) field_Mutation_deleteCalendarAccount_args(ctx contex
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_deleteCalendarAssociation_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "calendarId",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["calendarId"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "personId",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["personId"] = arg1
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_deletePerson_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -2058,28 +2112,6 @@ func (ec *executionContext) field_Mutation_deletePerson_args(ctx context.Context
 		return nil, err
 	}
 	args["id"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_Mutation_deleteTagMapping_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "calendarId",
-		func(ctx context.Context, v any) (string, error) {
-			return ec.unmarshalNID2string(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["calendarId"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "tag",
-		func(ctx context.Context, v any) (string, error) {
-			return ec.unmarshalNString2string(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["tag"] = arg1
 	return args, nil
 }
 
@@ -2153,20 +2185,6 @@ func (ec *executionContext) field_Mutation_savePerson_args(ctx context.Context, 
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
 		func(ctx context.Context, v any) (model.PersonInput, error) {
 			return ec.unmarshalNPersonInput2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPersonInput(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["input"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_Mutation_saveTagMapping_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
-		func(ctx context.Context, v any) (model.TagMappingInput, error) {
-			return ec.unmarshalNTagMappingInput2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐTagMappingInput(ctx, v)
 		})
 	if err != nil {
 		return nil, err
@@ -2277,6 +2295,20 @@ func (ec *executionContext) field_Mutation_updateCalendarAccount_args(ctx contex
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_updateCalendarAssociation_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.UpdateCalendarAssociationInput, error) {
+			return ec.unmarshalNUpdateCalendarAssociationInput2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐUpdateCalendarAssociationInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_updateCalendarVisibility_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -2332,6 +2364,28 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 		return nil, err
 	}
 	args["name"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_calendarAssociations_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "calendarId",
+		func(ctx context.Context, v any) (*string, error) {
+			return ec.unmarshalOID2ᚖstring(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["calendarId"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "personId",
+		func(ctx context.Context, v any) (*string, error) {
+			return ec.unmarshalOID2ᚖstring(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["personId"] = arg1
 	return args, nil
 }
 
@@ -2402,20 +2456,6 @@ func (ec *executionContext) field_Query_photos_args(ctx context.Context, rawArgs
 		return nil, err
 	}
 	args["limit"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_Query_tagMappings_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "calendarId",
-		func(ctx context.Context, v any) (string, error) {
-			return ec.unmarshalNID2string(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["calendarId"] = arg0
 	return args, nil
 }
 
@@ -3029,6 +3069,107 @@ func (ec *executionContext) _CalendarAccount_windowFutureSeconds(ctx context.Con
 }
 func (ec *executionContext) fieldContext_CalendarAccount_windowFutureSeconds(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("CalendarAccount", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _CalendarAssociation_calendarId(ctx context.Context, field graphql.CollectedField, obj *model.CalendarAssociation) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_CalendarAssociation_calendarId(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.CalendarID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNID2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_CalendarAssociation_calendarId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("CalendarAssociation", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _CalendarAssociation_person(ctx context.Context, field graphql.CollectedField, obj *model.CalendarAssociation) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_CalendarAssociation_person(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Person, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Person) graphql.Marshaler {
+			return ec.marshalNPerson2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPerson(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_CalendarAssociation_person(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CalendarAssociation",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Person(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CalendarAssociation_scope(ctx context.Context, field graphql.CollectedField, obj *model.CalendarAssociation) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_CalendarAssociation_scope(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Scope, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v model.AssociationScope) graphql.Marshaler {
+			return ec.marshalNAssociationScope2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐAssociationScope(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_CalendarAssociation_scope(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("CalendarAssociation", field, false, false, errors.New("field of type AssociationScope does not have child fields"))
+}
+
+func (ec *executionContext) _CalendarAssociation_terms(ctx context.Context, field graphql.CollectedField, obj *model.CalendarAssociation) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_CalendarAssociation_terms(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Terms, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []string) graphql.Marshaler {
+			return ec.marshalNString2ᚕstringᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_CalendarAssociation_terms(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("CalendarAssociation", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
 func (ec *executionContext) _Coordinate_latitude(ctx context.Context, field graphql.CollectedField, obj *model.Coordinate) (ret graphql.Marshaler) {
@@ -4070,34 +4211,34 @@ func (ec *executionContext) fieldContext_Mutation_deletePerson(ctx context.Conte
 	return fc, nil
 }
 
-func (ec *executionContext) _Mutation_saveTagMapping(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+func (ec *executionContext) _Mutation_createCalendarAssociation(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
 		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Mutation_saveTagMapping(ctx, field)
+			return ec.fieldContext_Mutation_createCalendarAssociation(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Mutation().SaveTagMapping(ctx, fc.Args["input"].(model.TagMappingInput))
+			return ec.Resolvers.Mutation().CreateCalendarAssociation(ctx, fc.Args["input"].(model.CreateCalendarAssociationInput))
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *model.TagMapping) graphql.Marshaler {
-			return ec.marshalNTagMapping2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐTagMapping(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v *model.CalendarAssociation) graphql.Marshaler {
+			return ec.marshalNCalendarAssociation2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐCalendarAssociation(ctx, selections, v)
 		},
 		true,
 		true,
 	)
 }
-func (ec *executionContext) fieldContext_Mutation_saveTagMapping(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Mutation_createCalendarAssociation(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Mutation",
 		Field:      field,
 		IsMethod:   true,
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_TagMapping(ctx, field)
+			return ec.childFields_CalendarAssociation(ctx, field)
 		},
 	}
 	defer func() {
@@ -4107,24 +4248,68 @@ func (ec *executionContext) fieldContext_Mutation_saveTagMapping(ctx context.Con
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_saveTagMapping_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Mutation_createCalendarAssociation_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
 	return fc, nil
 }
 
-func (ec *executionContext) _Mutation_deleteTagMapping(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+func (ec *executionContext) _Mutation_updateCalendarAssociation(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
 		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Mutation_deleteTagMapping(ctx, field)
+			return ec.fieldContext_Mutation_updateCalendarAssociation(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Mutation().DeleteTagMapping(ctx, fc.Args["calendarId"].(string), fc.Args["tag"].(string))
+			return ec.Resolvers.Mutation().UpdateCalendarAssociation(ctx, fc.Args["input"].(model.UpdateCalendarAssociationInput))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.CalendarAssociation) graphql.Marshaler {
+			return ec.marshalNCalendarAssociation2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐCalendarAssociation(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_updateCalendarAssociation(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_CalendarAssociation(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_updateCalendarAssociation_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_deleteCalendarAssociation(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_deleteCalendarAssociation(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().DeleteCalendarAssociation(ctx, fc.Args["calendarId"].(string), fc.Args["personId"].(string))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
@@ -4134,7 +4319,7 @@ func (ec *executionContext) _Mutation_deleteTagMapping(ctx context.Context, fiel
 		true,
 	)
 }
-func (ec *executionContext) fieldContext_Mutation_deleteTagMapping(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Mutation_deleteCalendarAssociation(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Mutation",
 		Field:      field,
@@ -4151,7 +4336,7 @@ func (ec *executionContext) fieldContext_Mutation_deleteTagMapping(ctx context.C
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_deleteTagMapping_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Mutation_deleteCalendarAssociation_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -5196,34 +5381,34 @@ func (ec *executionContext) fieldContext_Query_people(_ context.Context, field g
 	return fc, nil
 }
 
-func (ec *executionContext) _Query_tagMappings(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+func (ec *executionContext) _Query_calendarAssociations(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
 		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Query_tagMappings(ctx, field)
+			return ec.fieldContext_Query_calendarAssociations(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Query().TagMappings(ctx, fc.Args["calendarId"].(string))
+			return ec.Resolvers.Query().CalendarAssociations(ctx, fc.Args["calendarId"].(*string), fc.Args["personId"].(*string))
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v []model.TagMapping) graphql.Marshaler {
-			return ec.marshalNTagMapping2ᚕgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐTagMappingᚄ(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v []model.CalendarAssociation) graphql.Marshaler {
+			return ec.marshalNCalendarAssociation2ᚕgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐCalendarAssociationᚄ(ctx, selections, v)
 		},
 		true,
 		true,
 	)
 }
-func (ec *executionContext) fieldContext_Query_tagMappings(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Query_calendarAssociations(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Query",
 		Field:      field,
 		IsMethod:   true,
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_TagMapping(ctx, field)
+			return ec.childFields_CalendarAssociation(ctx, field)
 		},
 	}
 	defer func() {
@@ -5233,7 +5418,7 @@ func (ec *executionContext) fieldContext_Query_tagMappings(ctx context.Context, 
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query_tagMappings_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Query_calendarAssociations_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -5562,130 +5747,6 @@ func (ec *executionContext) fieldContext_SessionInfo_user(_ context.Context, fie
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return ec.childFields_User(ctx, field)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _TagMapping_calendarId(ctx context.Context, field graphql.CollectedField, obj *model.TagMapping) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_TagMapping_calendarId(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.CalendarID, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
-			return ec.marshalNID2string(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_TagMapping_calendarId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("TagMapping", field, false, false, errors.New("field of type ID does not have child fields"))
-}
-
-func (ec *executionContext) _TagMapping_tag(ctx context.Context, field graphql.CollectedField, obj *model.TagMapping) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_TagMapping_tag(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.Tag, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
-			return ec.marshalNString2string(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_TagMapping_tag(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("TagMapping", field, false, false, errors.New("field of type String does not have child fields"))
-}
-
-func (ec *executionContext) _TagMapping_label(ctx context.Context, field graphql.CollectedField, obj *model.TagMapping) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_TagMapping_label(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.Label, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
-			return ec.marshalNString2string(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_TagMapping_label(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("TagMapping", field, false, false, errors.New("field of type String does not have child fields"))
-}
-
-func (ec *executionContext) _TagMapping_kind(ctx context.Context, field graphql.CollectedField, obj *model.TagMapping) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_TagMapping_kind(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.Kind, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v model.TagKind) graphql.Marshaler {
-			return ec.marshalNTagKind2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐTagKind(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_TagMapping_kind(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("TagMapping", field, false, false, errors.New("field of type TagKind does not have child fields"))
-}
-
-func (ec *executionContext) _TagMapping_person(ctx context.Context, field graphql.CollectedField, obj *model.TagMapping) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_TagMapping_person(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.Person, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *model.Person) graphql.Marshaler {
-			return ec.marshalOPerson2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPerson(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_TagMapping_person(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "TagMapping",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_Person(ctx, field)
 		},
 	}
 	return fc, nil
@@ -7225,6 +7286,64 @@ func (ec *executionContext) unmarshalInputCreateCalendarAccountInput(ctx context
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputCreateCalendarAssociationInput(ctx context.Context, obj any) (model.CreateCalendarAssociationInput, error) {
+	var it model.CreateCalendarAssociationInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	if _, present := asMap["scope"]; !present {
+		asMap["scope"] = "MATCHED"
+	}
+	if _, present := asMap["terms"]; !present {
+		asMap["terms"] = []any{}
+	}
+
+	fieldsInOrder := [...]string{"calendarId", "personId", "scope", "terms"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "calendarId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("calendarId"))
+			data, err := ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.CalendarID = data
+		case "personId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("personId"))
+			data, err := ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PersonID = data
+		case "scope":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("scope"))
+			data, err := ec.unmarshalNAssociationScope2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐAssociationScope(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Scope = data
+		case "terms":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("terms"))
+			data, err := ec.unmarshalNString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Terms = data
+		}
+	}
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputEventInput(ctx context.Context, obj any) (model.EventInput, error) {
 	var it model.EventInput
 	if obj == nil {
@@ -7499,57 +7618,6 @@ func (ec *executionContext) unmarshalInputPhotoUploadInput(ctx context.Context, 
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputTagMappingInput(ctx context.Context, obj any) (model.TagMappingInput, error) {
-	var it model.TagMappingInput
-	if obj == nil {
-		return it, nil
-	}
-
-	asMap := map[string]any{}
-	for k, v := range obj.(map[string]any) {
-		asMap[k] = v
-	}
-
-	fieldsInOrder := [...]string{"calendarId", "tag", "kind", "personId"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "calendarId":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("calendarId"))
-			data, err := ec.unmarshalNID2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CalendarID = data
-		case "tag":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("tag"))
-			data, err := ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Tag = data
-		case "kind":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("kind"))
-			data, err := ec.unmarshalNTagKind2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐTagKind(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Kind = data
-		case "personId":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("personId"))
-			data, err := ec.unmarshalOID2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.PersonID = data
-		}
-	}
-	return it, nil
-}
-
 func (ec *executionContext) unmarshalInputTestCalendarAccountInput(ctx context.Context, obj any) (model.TestCalendarAccountInput, error) {
 	var it model.TestCalendarAccountInput
 	if obj == nil {
@@ -7698,6 +7766,57 @@ func (ec *executionContext) unmarshalInputUpdateCalendarAccountInput(ctx context
 				return it, err
 			}
 			it.WindowFutureSeconds = data
+		}
+	}
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputUpdateCalendarAssociationInput(ctx context.Context, obj any) (model.UpdateCalendarAssociationInput, error) {
+	var it model.UpdateCalendarAssociationInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"calendarId", "personId", "scope", "terms"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "calendarId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("calendarId"))
+			data, err := ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.CalendarID = data
+		case "personId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("personId"))
+			data, err := ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PersonID = data
+		case "scope":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("scope"))
+			data, err := ec.unmarshalOAssociationScope2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐAssociationScope(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Scope = data
+		case "terms":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("terms"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Terms = data
 		}
 	}
 	return it, nil
@@ -7989,6 +8108,59 @@ func (ec *executionContext) _CalendarAccount(ctx context.Context, sel ast.Select
 			}
 		case "windowFutureSeconds":
 			out.Values[i] = ec._CalendarAccount_windowFutureSeconds(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferLabelToView), math.MaxInt32)))
+
+	ec.ProcessDeferredGroup(graphql.DeferredGroup{
+		Defers:   deferLabelToView,
+		Path:     graphql.GetPath(ctx),
+		FieldSet: deferredFieldSet,
+		Context:  ctx,
+	})
+
+	return out
+}
+
+var calendarAssociationImplementors = []string{"CalendarAssociation"}
+
+func (ec *executionContext) _CalendarAssociation(ctx context.Context, sel ast.SelectionSet, obj *model.CalendarAssociation) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, calendarAssociationImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferredFieldSet := graphql.NewFieldSet(nil)
+	deferLabelToView := make(map[string]*graphql.FieldSetView)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("CalendarAssociation")
+		case "calendarId":
+			out.Values[i] = ec._CalendarAssociation_calendarId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "person":
+			out.Values[i] = ec._CalendarAssociation_person(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "scope":
+			out.Values[i] = ec._CalendarAssociation_scope(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "terms":
+			out.Values[i] = ec._CalendarAssociation_terms(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -8355,16 +8527,23 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "saveTagMapping":
+		case "createCalendarAssociation":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_saveTagMapping(ctx, field)
+				return ec._Mutation_createCalendarAssociation(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "deleteTagMapping":
+		case "updateCalendarAssociation":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_deleteTagMapping(ctx, field)
+				return ec._Mutation_updateCalendarAssociation(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "deleteCalendarAssociation":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_deleteCalendarAssociation(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -8872,7 +9051,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "tagMappings":
+		case "calendarAssociations":
 			field := field
 
 			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
@@ -8881,7 +9060,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._Query_tagMappings(ctx, field)
+				res = ec._Query_calendarAssociations(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -9075,64 +9254,6 @@ func (ec *executionContext) _SessionInfo(ctx context.Context, sel ast.SelectionS
 			out.Values[i] = graphql.MarshalString("SessionInfo")
 		case "user":
 			out.Values[i] = ec._SessionInfo_user(ctx, field, obj)
-			if out.Values[i] == graphql.RequiredNull {
-				out.Invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.Deferred, int32(min(len(deferLabelToView), math.MaxInt32)))
-
-	ec.ProcessDeferredGroup(graphql.DeferredGroup{
-		Defers:   deferLabelToView,
-		Path:     graphql.GetPath(ctx),
-		FieldSet: deferredFieldSet,
-		Context:  ctx,
-	})
-
-	return out
-}
-
-var tagMappingImplementors = []string{"TagMapping"}
-
-func (ec *executionContext) _TagMapping(ctx context.Context, sel ast.SelectionSet, obj *model.TagMapping) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, tagMappingImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferredFieldSet := graphql.NewFieldSet(nil)
-	deferLabelToView := make(map[string]*graphql.FieldSetView)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("TagMapping")
-		case "calendarId":
-			out.Values[i] = ec._TagMapping_calendarId(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "tag":
-			out.Values[i] = ec._TagMapping_tag(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "label":
-			out.Values[i] = ec._TagMapping_label(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "kind":
-			out.Values[i] = ec._TagMapping_kind(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "person":
-			out.Values[i] = ec._TagMapping_person(ctx, field, obj)
 			if out.Values[i] == graphql.RequiredNull {
 				out.Invalids++
 			}
@@ -9738,6 +9859,16 @@ func (ec *executionContext) marshalNActiveSession2ᚕgithubᚗcomᚋkurtschwarz�
 	return ret
 }
 
+func (ec *executionContext) unmarshalNAssociationScope2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐAssociationScope(ctx context.Context, v any) (model.AssociationScope, error) {
+	var res model.AssociationScope
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNAssociationScope2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐAssociationScope(ctx context.Context, sel ast.SelectionSet, v model.AssociationScope) graphql.Marshaler {
+	return v
+}
+
 func (ec *executionContext) unmarshalNAuthKind2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐAuthKind(ctx context.Context, v any) (model.AuthKind, error) {
 	var res model.AuthKind
 	err := res.UnmarshalGQL(v)
@@ -9864,6 +9995,36 @@ func (ec *executionContext) marshalNCalendarAccount2ᚖgithubᚗcomᚋkurtschwar
 	return ec._CalendarAccount(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNCalendarAssociation2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐCalendarAssociation(ctx context.Context, sel ast.SelectionSet, v model.CalendarAssociation) graphql.Marshaler {
+	return ec._CalendarAssociation(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNCalendarAssociation2ᚕgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐCalendarAssociationᚄ(ctx context.Context, sel ast.SelectionSet, v []model.CalendarAssociation) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNCalendarAssociation2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐCalendarAssociation(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNCalendarAssociation2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐCalendarAssociation(ctx context.Context, sel ast.SelectionSet, v *model.CalendarAssociation) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._CalendarAssociation(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNCalendarConnection2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐCalendarConnection(ctx context.Context, sel ast.SelectionSet, v model.CalendarConnection) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
@@ -9891,6 +10052,11 @@ func (ec *executionContext) marshalNCalendarProvider2githubᚗcomᚋkurtschwarz�
 
 func (ec *executionContext) unmarshalNCreateCalendarAccountInput2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐCreateCalendarAccountInput(ctx context.Context, v any) (model.CreateCalendarAccountInput, error) {
 	res, err := ec.unmarshalInputCreateCalendarAccountInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNCreateCalendarAssociationInput2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐCreateCalendarAssociationInput(ctx context.Context, v any) (model.CreateCalendarAssociationInput, error) {
+	res, err := ec.unmarshalInputCreateCalendarAssociationInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
@@ -10181,51 +10347,6 @@ func (ec *executionContext) marshalNString2ᚕstringᚄ(ctx context.Context, sel
 	return ret
 }
 
-func (ec *executionContext) unmarshalNTagKind2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐTagKind(ctx context.Context, v any) (model.TagKind, error) {
-	var res model.TagKind
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNTagKind2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐTagKind(ctx context.Context, sel ast.SelectionSet, v model.TagKind) graphql.Marshaler {
-	return v
-}
-
-func (ec *executionContext) marshalNTagMapping2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐTagMapping(ctx context.Context, sel ast.SelectionSet, v model.TagMapping) graphql.Marshaler {
-	return ec._TagMapping(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNTagMapping2ᚕgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐTagMappingᚄ(ctx context.Context, sel ast.SelectionSet, v []model.TagMapping) graphql.Marshaler {
-	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
-		fc := graphql.GetFieldContext(ctx)
-		fc.Result = &v[i]
-		return ec.marshalNTagMapping2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐTagMapping(ctx, sel, v[i])
-	})
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
-}
-
-func (ec *executionContext) marshalNTagMapping2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐTagMapping(ctx context.Context, sel ast.SelectionSet, v *model.TagMapping) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._TagMapping(ctx, sel, v)
-}
-
-func (ec *executionContext) unmarshalNTagMappingInput2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐTagMappingInput(ctx context.Context, v any) (model.TagMappingInput, error) {
-	res, err := ec.unmarshalInputTagMappingInput(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
 func (ec *executionContext) unmarshalNTestCalendarAccountInput2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐTestCalendarAccountInput(ctx context.Context, v any) (model.TestCalendarAccountInput, error) {
 	res, err := ec.unmarshalInputTestCalendarAccountInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -10243,6 +10364,11 @@ func (ec *executionContext) marshalNTimer2ᚖgithubᚗcomᚋkurtschwarzᚋhomie�
 
 func (ec *executionContext) unmarshalNUpdateCalendarAccountInput2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐUpdateCalendarAccountInput(ctx context.Context, v any) (model.UpdateCalendarAccountInput, error) {
 	res, err := ec.unmarshalInputUpdateCalendarAccountInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNUpdateCalendarAssociationInput2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐUpdateCalendarAssociationInput(ctx context.Context, v any) (model.UpdateCalendarAssociationInput, error) {
+	res, err := ec.unmarshalInputUpdateCalendarAssociationInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
@@ -10432,6 +10558,22 @@ func (ec *executionContext) marshalN__TypeKind2string(ctx context.Context, sel a
 	return res
 }
 
+func (ec *executionContext) unmarshalOAssociationScope2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐAssociationScope(ctx context.Context, v any) (*model.AssociationScope, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(model.AssociationScope)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOAssociationScope2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐAssociationScope(ctx context.Context, sel ast.SelectionSet, v *model.AssociationScope) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
+}
+
 func (ec *executionContext) unmarshalOAuthRole2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐAuthRole(ctx context.Context, v any) (*model.AuthRole, error) {
 	if v == nil {
 		return nil, nil
@@ -10569,13 +10711,6 @@ func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.Sele
 	return res
 }
 
-func (ec *executionContext) marshalOPerson2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPerson(ctx context.Context, sel ast.SelectionSet, v *model.Person) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return ec._Person(ctx, sel, v)
-}
-
 func (ec *executionContext) marshalOPhotoShowing2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPhotoShowing(ctx context.Context, sel ast.SelectionSet, v *model.PhotoShowing) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
@@ -10588,6 +10723,41 @@ func (ec *executionContext) marshalOSessionInfo2ᚖgithubᚗcomᚋkurtschwarzᚋ
 		return graphql.Null
 	}
 	return ec._SessionInfo(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOString2ᚕstringᚄ(ctx context.Context, v any) ([]string, error) {
+	if v == nil {
+		return nil, nil
+	}
+	vSlice := graphql.CoerceList(v)
+	var err error
+	res := make([]string, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNString2string(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalOString2ᚕstringᚄ(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNString2string(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalOString2ᚖstring(ctx context.Context, v any) (*string, error) {

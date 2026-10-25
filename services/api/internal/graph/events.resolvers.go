@@ -66,45 +66,57 @@ func (r *mutationResolver) DeletePerson(ctx context.Context, id string) (bool, e
 	return true, nil
 }
 
-// SaveTagMapping is the resolver for the saveTagMapping field.
-func (r *mutationResolver) SaveTagMapping(ctx context.Context, input model.TagMappingInput) (*model.TagMapping, error) {
+// CreateCalendarAssociation is the resolver for the createCalendarAssociation field.
+func (r *mutationResolver) CreateCalendarAssociation(ctx context.Context, input model.CreateCalendarAssociationInput) (*model.CalendarAssociation, error) {
 	if r.Resolver.Events == nil {
 		return nil, errEventsNotConfigured
 	}
-	var personID *uuid.UUID
-	if input.PersonID != nil {
-		id, err := uuid.Parse(*input.PersonID)
-		if err != nil {
-			return nil, err
-		}
-		personID = &id
-	}
-	calendarID, err := uuid.Parse(input.CalendarID)
+	calendarID, personID, err := parseAssociationIDs(input.CalendarID, input.PersonID)
 	if err != nil {
 		return nil, err
 	}
-	mapping, err := r.Resolver.Events.SaveCalendarTagMapping(ctx, calendarID, input.Tag, fromModelTagKind(input.Kind), personID)
+	association, err := r.Resolver.Events.CreateAssociation(ctx, calendarID, personID, fromModelScope(input.Scope), input.Terms)
 	if err != nil {
 		return nil, err
 	}
-	peopleByID, err := r.eventsPeopleByID(ctx)
-	if err != nil {
-		return nil, err
-	}
-	result := toModelTagMapping(mapping, peopleByID)
-	return &result, nil
+	return r.modelAssociation(ctx, association)
 }
 
-// DeleteTagMapping is the resolver for the deleteTagMapping field.
-func (r *mutationResolver) DeleteTagMapping(ctx context.Context, calendarID string, tag string) (bool, error) {
+// UpdateCalendarAssociation is the resolver for the updateCalendarAssociation field.
+func (r *mutationResolver) UpdateCalendarAssociation(ctx context.Context, input model.UpdateCalendarAssociationInput) (*model.CalendarAssociation, error) {
+	if r.Resolver.Events == nil {
+		return nil, errEventsNotConfigured
+	}
+	calendarID, personID, err := parseAssociationIDs(input.CalendarID, input.PersonID)
+	if err != nil {
+		return nil, err
+	}
+	var scope *events.AssociationScope
+	if input.Scope != nil {
+		converted := fromModelScope(*input.Scope)
+		scope = &converted
+	}
+	var terms *[]string
+	if input.Terms != nil {
+		terms = &input.Terms
+	}
+	association, err := r.Resolver.Events.UpdateAssociation(ctx, calendarID, personID, scope, terms)
+	if err != nil {
+		return nil, err
+	}
+	return r.modelAssociation(ctx, association)
+}
+
+// DeleteCalendarAssociation is the resolver for the deleteCalendarAssociation field.
+func (r *mutationResolver) DeleteCalendarAssociation(ctx context.Context, calendarID string, personID string) (bool, error) {
 	if r.Resolver.Events == nil {
 		return false, errEventsNotConfigured
 	}
-	id, err := uuid.Parse(calendarID)
+	calendar, person, err := parseAssociationIDs(calendarID, personID)
 	if err != nil {
 		return false, err
 	}
-	if err := r.Resolver.Events.DeleteCalendarTagMapping(ctx, id, tag); err != nil {
+	if err := r.Resolver.Events.DeleteAssociation(ctx, calendar, person); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -157,16 +169,27 @@ func (r *queryResolver) People(ctx context.Context) ([]model.Person, error) {
 	return result, nil
 }
 
-// TagMappings is the resolver for the tagMappings field.
-func (r *queryResolver) TagMappings(ctx context.Context, calendarID string) ([]model.TagMapping, error) {
+// CalendarAssociations is the resolver for the calendarAssociations field.
+func (r *queryResolver) CalendarAssociations(ctx context.Context, calendarID *string, personID *string) ([]model.CalendarAssociation, error) {
 	if r.Resolver.Events == nil {
-		return []model.TagMapping{}, nil
+		return []model.CalendarAssociation{}, nil
 	}
-	id, err := uuid.Parse(calendarID)
-	if err != nil {
-		return nil, err
+	var calendarFilter, personFilter uuid.UUID
+	if calendarID != nil {
+		id, err := uuid.Parse(*calendarID)
+		if err != nil {
+			return nil, err
+		}
+		calendarFilter = id
 	}
-	mappings, err := r.Resolver.Events.ListCalendarTagMappings(ctx, id)
+	if personID != nil {
+		id, err := uuid.Parse(*personID)
+		if err != nil {
+			return nil, err
+		}
+		personFilter = id
+	}
+	associations, err := r.Resolver.Events.ListAssociations(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -174,9 +197,17 @@ func (r *queryResolver) TagMappings(ctx context.Context, calendarID string) ([]m
 	if err != nil {
 		return nil, err
 	}
-	result := make([]model.TagMapping, 0, len(mappings))
-	for _, mapping := range mappings {
-		result = append(result, toModelTagMapping(mapping, peopleByID))
+	result := make([]model.CalendarAssociation, 0, len(associations))
+	for _, association := range associations {
+		if calendarFilter != uuid.Nil && association.CalendarID != calendarFilter {
+			continue
+		}
+		if personFilter != uuid.Nil && association.PersonID != personFilter {
+			continue
+		}
+		if converted, ok := toModelAssociation(association, peopleByID); ok {
+			result = append(result, converted)
+		}
 	}
 	return result, nil
 }

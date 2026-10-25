@@ -4,6 +4,7 @@ import { DEFAULT_SWATCH, type Swatch } from '@homie/ui/lib/people'
 import { formatTime, shortDayLabel } from '@homie/ui/lib/time'
 import { Check } from 'lucide-react'
 import * as React from 'react'
+import { PersonCalendars } from '@/features/calendars'
 import { eventsFor, type ManagerEvent } from '@/features/events'
 import { ErrorMessage } from '@/shared/ui/error-message'
 import { Tabs } from '@/shared/ui/tabs'
@@ -227,9 +228,7 @@ export function PersonEditor({
           aria-labelledby="person-settings-calendars-tab"
           className="flex flex-col gap-2"
         >
-          <p className="m-0 text-hm-body text-hm-ink-2">
-            Calendar and tag mapping will be available here in a future update.
-          </p>
+          {person && <PersonCalendars personId={person.id} personName={person.name} />}
         </div>
       )}
 

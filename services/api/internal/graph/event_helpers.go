@@ -74,27 +74,56 @@ func toModelEvent(event events.DisplayEvent) model.Event {
 	}
 }
 
-func toModelTagMapping(mapping events.TagMapping, peopleByID map[uuid.UUID]events.Person) model.TagMapping {
-	result := model.TagMapping{CalendarID: mapping.CalendarID.String(), Tag: mapping.Tag, Label: mapping.Label, Kind: toModelTagKind(mapping.Kind)}
-	if mapping.PersonID != nil {
-		if person, ok := peopleByID[*mapping.PersonID]; ok {
-			modelPerson := toModelPerson(person)
-			result.Person = &modelPerson
-		}
+func toModelAssociation(association events.Association, peopleByID map[uuid.UUID]events.Person) (model.CalendarAssociation, bool) {
+	person, ok := peopleByID[association.PersonID]
+	if !ok {
+		return model.CalendarAssociation{}, false
 	}
-	return result
+	modelPerson := toModelPerson(person)
+	terms := make([]string, 0, len(association.Terms))
+	for _, term := range association.Terms {
+		terms = append(terms, term.Label)
+	}
+	return model.CalendarAssociation{
+		CalendarID: association.CalendarID.String(), Person: &modelPerson,
+		Scope: toModelScope(association.Scope), Terms: terms,
+	}, true
 }
 
-func toModelTagKind(kind events.TagKind) model.TagKind {
-	if kind == events.TagKindInclude {
-		return model.TagKindInclude
+func toModelScope(scope events.AssociationScope) model.AssociationScope {
+	if scope == events.ScopeAll {
+		return model.AssociationScopeAll
 	}
-	return model.TagKindPerson
+	return model.AssociationScopeMatched
 }
 
-func fromModelTagKind(kind model.TagKind) events.TagKind {
-	if kind == model.TagKindInclude {
-		return events.TagKindInclude
+func fromModelScope(scope model.AssociationScope) events.AssociationScope {
+	if scope == model.AssociationScopeAll {
+		return events.ScopeAll
 	}
-	return events.TagKindPerson
+	return events.ScopeMatched
+}
+
+func parseAssociationIDs(calendarID, personID string) (uuid.UUID, uuid.UUID, error) {
+	calendar, err := uuid.Parse(calendarID)
+	if err != nil {
+		return uuid.Nil, uuid.Nil, err
+	}
+	person, err := uuid.Parse(personID)
+	if err != nil {
+		return uuid.Nil, uuid.Nil, err
+	}
+	return calendar, person, nil
+}
+
+func (r *Resolver) modelAssociation(ctx context.Context, association events.Association) (*model.CalendarAssociation, error) {
+	peopleByID, err := r.eventsPeopleByID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	result, ok := toModelAssociation(association, peopleByID)
+	if !ok {
+		return nil, errors.New("person does not exist")
+	}
+	return &result, nil
 }

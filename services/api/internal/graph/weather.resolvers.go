@@ -9,8 +9,153 @@ import (
 	"context"
 	"errors"
 
+	"github.com/google/uuid"
 	"github.com/kurtschwarz/homie/services/api/internal/graph/model"
+	"github.com/kurtschwarz/homie/services/api/internal/weather"
 )
+
+// CreateWeatherProvider is the resolver for the createWeatherProvider field.
+func (r *mutationResolver) CreateWeatherProvider(ctx context.Context, input model.CreateWeatherProviderInput) (*model.WeatherProvider, error) {
+	if r.Resolver.Weather == nil {
+		return nil, errWeatherNotConfigured
+	}
+	provider, err := weatherProviderFromCreateInput(input)
+	if err != nil {
+		return nil, err
+	}
+	created, err := r.Resolver.Weather.CreateProvider(ctx, provider)
+	if err != nil {
+		return nil, err
+	}
+	result := weatherProviderToModel(created)
+	return &result, nil
+}
+
+// UpdateWeatherProvider is the resolver for the updateWeatherProvider field.
+func (r *mutationResolver) UpdateWeatherProvider(ctx context.Context, input model.UpdateWeatherProviderInput) (*model.WeatherProvider, error) {
+	if r.Resolver.Weather == nil {
+		return nil, errWeatherNotConfigured
+	}
+	patch, err := weatherProviderPatchFromInput(input)
+	if err != nil {
+		return nil, err
+	}
+	updated, err := r.Resolver.Weather.UpdateProvider(ctx, patch)
+	if err != nil {
+		return nil, err
+	}
+	result := weatherProviderToModel(updated)
+	return &result, nil
+}
+
+// DeleteWeatherProvider is the resolver for the deleteWeatherProvider field.
+func (r *mutationResolver) DeleteWeatherProvider(ctx context.Context, id string) (bool, error) {
+	if r.Resolver.Weather == nil {
+		return false, errWeatherNotConfigured
+	}
+	providerID, err := uuid.Parse(id)
+	if err != nil {
+		return false, err
+	}
+	if err := r.Resolver.Weather.DeleteProvider(ctx, providerID); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// ActivateWeatherProvider is the resolver for the activateWeatherProvider field.
+func (r *mutationResolver) ActivateWeatherProvider(ctx context.Context, id string) (*model.WeatherProvider, error) {
+	if r.Resolver.Weather == nil {
+		return nil, errWeatherNotConfigured
+	}
+	providerID, err := uuid.Parse(id)
+	if err != nil {
+		return nil, err
+	}
+	if err := r.Resolver.Weather.ActivateProvider(ctx, providerID); err != nil {
+		return nil, err
+	}
+	providers, err := r.Resolver.Weather.ListProviders(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, provider := range providers {
+		if provider.ID == providerID {
+			result := weatherProviderToModel(provider)
+			return &result, nil
+		}
+	}
+	return nil, weather.ErrNotFound
+}
+
+// TestWeatherProvider is the resolver for the testWeatherProvider field.
+func (r *mutationResolver) TestWeatherProvider(ctx context.Context, input model.TestWeatherProviderInput) (bool, error) {
+	if r.Resolver.Weather == nil {
+		return false, errWeatherNotConfigured
+	}
+	switch {
+	case input.ID != nil:
+		providerID, err := uuid.Parse(*input.ID)
+		if err != nil {
+			return false, err
+		}
+		if err := r.Resolver.Weather.TestStoredProvider(ctx, providerID); err != nil {
+			return false, err
+		}
+	case input.Connection != nil && input.Connection.Weatherkit != nil:
+		if err := r.Resolver.Weather.TestDraftProvider(ctx, weatherKitFromInput(*input.Connection.Weatherkit)); err != nil {
+			return false, err
+		}
+	default:
+		return false, errConnectionProvider
+	}
+	return true, nil
+}
+
+// CreateWeatherLocation is the resolver for the createWeatherLocation field.
+func (r *mutationResolver) CreateWeatherLocation(ctx context.Context, input model.CreateWeatherLocationInput) (*model.WeatherLocation, error) {
+	if r.Resolver.Weather == nil {
+		return nil, errWeatherNotConfigured
+	}
+	created, err := r.Resolver.Weather.CreateLocation(ctx, weather.Location{Label: input.Label, Latitude: input.Latitude, Longitude: input.Longitude, Order: input.Order})
+	if err != nil {
+		return nil, err
+	}
+	result := weatherLocationToModel(created)
+	return &result, nil
+}
+
+// UpdateWeatherLocation is the resolver for the updateWeatherLocation field.
+func (r *mutationResolver) UpdateWeatherLocation(ctx context.Context, input model.UpdateWeatherLocationInput) (*model.WeatherLocation, error) {
+	if r.Resolver.Weather == nil {
+		return nil, errWeatherNotConfigured
+	}
+	locationID, err := uuid.Parse(input.ID)
+	if err != nil {
+		return nil, err
+	}
+	updated, err := r.Resolver.Weather.UpdateLocation(ctx, weather.LocationPatch{ID: locationID, Label: input.Label, Latitude: input.Latitude, Longitude: input.Longitude, Order: input.Order})
+	if err != nil {
+		return nil, err
+	}
+	result := weatherLocationToModel(updated)
+	return &result, nil
+}
+
+// DeleteWeatherLocation is the resolver for the deleteWeatherLocation field.
+func (r *mutationResolver) DeleteWeatherLocation(ctx context.Context, id string) (bool, error) {
+	if r.Resolver.Weather == nil {
+		return false, errWeatherNotConfigured
+	}
+	locationID, err := uuid.Parse(id)
+	if err != nil {
+		return false, err
+	}
+	if err := r.Resolver.Weather.DeleteLocation(ctx, locationID); err != nil {
+		return false, err
+	}
+	return true, nil
+}
 
 // Weather is the resolver for the weather field.
 func (r *queryResolver) Weather(ctx context.Context) (*model.Weather, error) {
@@ -28,4 +173,36 @@ func (r *queryResolver) Weather(ctx context.Context) (*model.Weather, error) {
 		FetchedAt:     int(current.FetchedAt.Unix()),
 		Stale:         current.Stale,
 	}, nil
+}
+
+// WeatherProviders is the resolver for the weatherProviders field.
+func (r *queryResolver) WeatherProviders(ctx context.Context) ([]model.WeatherProvider, error) {
+	if r.Resolver.Weather == nil {
+		return []model.WeatherProvider{}, nil
+	}
+	rows, err := r.Resolver.Weather.ListProviders(ctx)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]model.WeatherProvider, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, weatherProviderToModel(row))
+	}
+	return result, nil
+}
+
+// WeatherLocations is the resolver for the weatherLocations field.
+func (r *queryResolver) WeatherLocations(ctx context.Context) ([]model.WeatherLocation, error) {
+	if r.Resolver.Weather == nil {
+		return []model.WeatherLocation{}, nil
+	}
+	rows, err := r.Resolver.Weather.ListLocations(ctx)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]model.WeatherLocation, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, weatherLocationToModel(row))
+	}
+	return result, nil
 }

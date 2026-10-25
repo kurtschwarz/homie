@@ -13,9 +13,12 @@ import (
 
 const maxAttempts = 3
 
+// scanInterval is how often the worker checks whether the active provider is due.
+const scanInterval = time.Minute
+
 // Refresher is implemented by the weather service.
 type Refresher interface {
-	Refresh(context.Context) error
+	RefreshDue(context.Context) error
 }
 
 var _ Refresher = (*weather.Service)(nil)
@@ -29,7 +32,7 @@ func (RefreshArgs) InsertOpts() river.InsertOpts {
 	return river.InsertOpts{
 		MaxAttempts: maxAttempts,
 		UniqueOpts: river.UniqueOpts{
-			ByPeriod: weather.RefreshInterval,
+			ByPeriod: scanInterval,
 			ByState: []rivertype.JobState{
 				rivertype.JobStateAvailable,
 				rivertype.JobStatePending,
@@ -59,16 +62,16 @@ func (w *RefreshWorker) Timeout(*river.Job[RefreshArgs]) time.Duration { return 
 
 func (w *RefreshWorker) Work(ctx context.Context, _ *river.Job[RefreshArgs]) error {
 	if w.refresher == nil {
-		w.logger.DebugContext(ctx, "weather refresh skipped; WeatherKit is not configured")
+		w.logger.DebugContext(ctx, "weather refresh skipped; weather is not configured")
 		return nil
 	}
-	return w.refresher.Refresh(ctx)
+	return w.refresher.RefreshDue(ctx)
 }
 
-// PeriodicJob schedules a weather refresh every ten minutes and on startup.
+// PeriodicJob scans for a due weather refresh every minute and on startup.
 func PeriodicJob() *river.PeriodicJob {
 	return river.NewPeriodicJob(
-		river.PeriodicInterval(weather.RefreshInterval),
+		river.PeriodicInterval(scanInterval),
 		func() (river.JobArgs, *river.InsertOpts) { return RefreshArgs{}, nil },
 		&river.PeriodicJobOpts{RunOnStart: true},
 	)

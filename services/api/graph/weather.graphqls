@@ -17,3 +17,111 @@ type Weather {
 extend type Query {
   weather: Weather! @protected(kinds: [USER, DISPLAY])
 }
+
+enum WeatherProviderKind {
+  WEATHERKIT
+}
+
+type WeatherKitConnection {
+  teamId: String!
+  serviceId: String!
+  keyId: String!
+  hasPrivateKey: Boolean!
+}
+
+union WeatherProviderConnection = WeatherKitConnection
+
+type WeatherProvider {
+  id: ID!
+  kind: WeatherProviderKind!
+  "The provider the background refresh uses. Exactly one provider is active."
+  active: Boolean!
+  connection: WeatherProviderConnection!
+  refreshIntervalSeconds: Int!
+  lastAttemptedAt: Int
+  lastError: String!
+}
+
+type WeatherLocation {
+  id: ID!
+  label: String!
+  latitude: Float!
+  longitude: Float!
+  order: Int!
+}
+
+input WeatherKitConnectionInput {
+  teamId: String!
+  serviceId: String!
+  keyId: String!
+  "Write-only. The PEM contents of the .p8 file."
+  privateKey: String!
+}
+
+"Exactly one provider key. The provider is the key that is set."
+input WeatherProviderConnectionInput @oneOf {
+  weatherkit: WeatherKitConnectionInput
+}
+
+input CreateWeatherProviderInput {
+  connection: WeatherProviderConnectionInput!
+  refreshIntervalSeconds: Int! = 1800
+}
+
+"Omitted fields keep their stored value."
+input UpdateWeatherKitConnectionInput {
+  teamId: String
+  serviceId: String
+  keyId: String
+  "Write-only. Required when teamId, serviceId, or keyId changes."
+  privateKey: String
+}
+
+input UpdateWeatherProviderConnectionInput @oneOf {
+  weatherkit: UpdateWeatherKitConnectionInput
+}
+
+"Omitted fields keep their stored value. The connection key must match the provider's kind."
+input UpdateWeatherProviderInput {
+  id: ID!
+  connection: UpdateWeatherProviderConnectionInput
+  refreshIntervalSeconds: Int
+}
+
+"Checks a connection without saving it. Set id to test a stored provider with its stored credentials, or connection to test a draft."
+input TestWeatherProviderInput @oneOf {
+  id: ID
+  connection: WeatherProviderConnectionInput
+}
+
+input CreateWeatherLocationInput {
+  label: String!
+  latitude: Float!
+  longitude: Float!
+  order: Int! = 0
+}
+
+"Omitted fields keep their stored value."
+input UpdateWeatherLocationInput {
+  id: ID!
+  label: String
+  latitude: Float
+  longitude: Float
+  order: Int
+}
+
+extend type Query {
+  weatherProviders: [WeatherProvider!]! @protected
+  weatherLocations: [WeatherLocation!]! @protected
+}
+
+extend type Mutation {
+  createWeatherProvider(input: CreateWeatherProviderInput!): WeatherProvider! @protected
+  updateWeatherProvider(input: UpdateWeatherProviderInput!): WeatherProvider! @protected
+  deleteWeatherProvider(id: ID!): Boolean! @protected
+  activateWeatherProvider(id: ID!): WeatherProvider! @protected
+  testWeatherProvider(input: TestWeatherProviderInput!): Boolean! @protected
+  createWeatherLocation(input: CreateWeatherLocationInput!): WeatherLocation! @protected
+  updateWeatherLocation(input: UpdateWeatherLocationInput!): WeatherLocation! @protected
+  deleteWeatherLocation(id: ID!): Boolean! @protected
+}

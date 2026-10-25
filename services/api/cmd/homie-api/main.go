@@ -3,14 +3,11 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io/fs"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
-	"strconv"
 	"syscall"
 	"time"
 	_ "time/tzdata" // a minimal Raspberry Pi image may have no system zoneinfo
@@ -31,7 +28,6 @@ import (
 	"github.com/kurtschwarz/homie/services/api/internal/store"
 	"github.com/kurtschwarz/homie/services/api/internal/weather"
 	weatherjobs "github.com/kurtschwarz/homie/services/api/internal/weather/jobs"
-	"github.com/kurtschwarz/homie/services/api/internal/weather/weatherkit"
 	"github.com/riverqueue/river"
 )
 
@@ -47,15 +43,6 @@ func main() {
 	if err != nil {
 		logger.Error("open SQLite cache; weather will use memory only", "error", err)
 	}
-	var weatherRepository weather.Repository
-	if db != nil {
-		weatherRepository = weather.NewSQLiteRepository(db)
-	}
-	weatherService, err := configureWeather(weatherRepository, logger)
-	if err != nil {
-		logger.Error("configure WeatherKit; weather query will be unavailable", "error", err)
-	}
-
 	var photosService *photos.Service
 	var photoRotation *photos.RotationService
 	var photoRepository photos.Repository
@@ -73,6 +60,7 @@ func main() {
 	}
 	var eventsService *events.Service
 	var calendarsService *calendars.Service
+	var weatherService *weather.Service
 	if db != nil {
 		secretBox, err := secrets.Load(envOr("HOMIE_SECRET_KEY_PATH", secrets.DefaultKeyPath))
 		if err != nil {
@@ -83,6 +71,10 @@ func main() {
 		eventsService = events.New(events.NewSQLiteRepository(db))
 		eventsService.Calendars = calendarsService
 		eventsService.Logger = logger
+		weatherService, err = weather.New(weather.Config{Repository: weather.NewSQLiteRepository(db), Box: secretBox, Logger: logger})
+		if err != nil {
+			logger.Error("configure weather; weather will be unavailable", "error", err)
+		}
 	}
 
 	var refresher weatherjobs.Refresher
@@ -237,46 +229,6 @@ func main() {
 			logger.Error("close SQLite cache", "error", err)
 		}
 	}
-}
-
-func configureWeather(repository weather.Repository, logger *slog.Logger) (*weather.Service, error) {
-	teamID := os.Getenv("HOMIE_WEATHERKIT_TEAM_ID")
-	serviceID := os.Getenv("HOMIE_WEATHERKIT_SERVICE_ID")
-	keyID := os.Getenv("HOMIE_WEATHERKIT_KEY_ID")
-	keyPath := os.Getenv("HOMIE_WEATHERKIT_KEY_PATH")
-	latitude := os.Getenv("HOMIE_WEATHER_LAT")
-	longitude := os.Getenv("HOMIE_WEATHER_LON")
-	if teamID == "" && serviceID == "" && keyID == "" && keyPath == "" && latitude == "" && longitude == "" {
-		return nil, nil
-	}
-	if teamID == "" || serviceID == "" || keyID == "" || keyPath == "" || latitude == "" || longitude == "" {
-		return nil, errors.New("all HOMIE_WEATHERKIT_* and HOMIE_WEATHER_LAT/LON values are required")
-	}
-	if filepath.Clean(keyPath) != "/var/lib/homie/weatherkit.p8" {
-		return nil, errors.New("HOMIE_WEATHERKIT_KEY_PATH must be /var/lib/homie/weatherkit.p8")
-	}
-	lat, err := strconv.ParseFloat(latitude, 64)
-	if err != nil {
-		return nil, errors.New("HOMIE_WEATHER_LAT must be a decimal number")
-	}
-	lon, err := strconv.ParseFloat(longitude, 64)
-	if err != nil {
-		return nil, errors.New("HOMIE_WEATHER_LON must be a decimal number")
-	}
-	privateKey, err := os.ReadFile(keyPath)
-	if err != nil {
-		return nil, fmt.Errorf("read WeatherKit private key: %w", err)
-	}
-	client, err := weatherkit.New(weatherkit.Config{
-		TeamID: teamID, ServiceID: serviceID, KeyID: keyID, PrivateKey: privateKey,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return weather.New(weather.Config{
-		Client: client, Repository: repository,
-		Latitude: lat, Longitude: lon, Logger: logger,
-	})
 }
 
 // watchdogLoop pings systemd's WatchdogSec at roughly half its interval, as

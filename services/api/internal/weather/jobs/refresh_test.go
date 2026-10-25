@@ -8,13 +8,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kurtschwarz/homie/services/api/internal/weather"
 	"github.com/riverqueue/river"
 )
 
 type fakeRefresher struct{ err error }
 
-func (f fakeRefresher) Refresh(context.Context) error { return f.err }
+func (f fakeRefresher) RefreshDue(context.Context) error { return f.err }
 
 func TestRefreshWorkerDelegatesAndPropagatesError(t *testing.T) {
 	wantErr := errors.New("refresh failed")
@@ -34,9 +33,9 @@ func TestRefreshWorkerNoOpsWhenUnconfigured(t *testing.T) {
 	}
 }
 
-func TestRefreshArgsAndPeriodicJobUseRefreshInterval(t *testing.T) {
+func TestRefreshArgsAndPeriodicJobUseScanInterval(t *testing.T) {
 	opts := (RefreshArgs{}).InsertOpts()
-	if opts.MaxAttempts != maxAttempts || opts.UniqueOpts.ByPeriod != weather.RefreshInterval {
+	if opts.MaxAttempts != maxAttempts || opts.UniqueOpts.ByPeriod != scanInterval {
 		t.Fatalf("unexpected refresh options: %+v", opts)
 	}
 	if PeriodicJob() == nil {

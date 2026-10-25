@@ -13,6 +13,10 @@ type CalendarConnection interface {
 	IsCalendarConnection()
 }
 
+type WeatherProviderConnection interface {
+	IsWeatherProviderConnection()
+}
+
 // One browser session belonging to the signed-in user.
 type ActiveSession struct {
 	ID         string  `json:"id"`
@@ -93,6 +97,18 @@ type CreateCalendarAssociationInput struct {
 	Scope      AssociationScope `json:"scope"`
 	// As typed. A leading # marks a calendar tag; anything else matches words in the title.
 	Terms []string `json:"terms"`
+}
+
+type CreateWeatherLocationInput struct {
+	Label     string  `json:"label"`
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+	Order     int     `json:"order"`
+}
+
+type CreateWeatherProviderInput struct {
+	Connection             *WeatherProviderConnectionInput `json:"connection"`
+	RefreshIntervalSeconds int                             `json:"refreshIntervalSeconds"`
 }
 
 type Event struct {
@@ -208,6 +224,12 @@ type TestCalendarAccountInput struct {
 	Connection *CalendarConnectionInput `json:"connection,omitempty"`
 }
 
+// Checks a connection without saving it. Set id to test a stored provider with its stored credentials, or connection to test a draft.
+type TestWeatherProviderInput struct {
+	ID         *string                         `json:"id,omitempty"`
+	Connection *WeatherProviderConnectionInput `json:"connection,omitempty"`
+}
+
 type Timer struct {
 	Title            string `json:"title"`
 	Emoji            string `json:"emoji"`
@@ -249,6 +271,35 @@ type UpdateCalendarConnectionInput struct {
 	Caldav *UpdateCalDAVConnectionInput `json:"caldav,omitempty"`
 }
 
+// Omitted fields keep their stored value.
+type UpdateWeatherKitConnectionInput struct {
+	TeamID    *string `json:"teamId,omitempty"`
+	ServiceID *string `json:"serviceId,omitempty"`
+	KeyID     *string `json:"keyId,omitempty"`
+	// Write-only. Required when teamId, serviceId, or keyId changes.
+	PrivateKey *string `json:"privateKey,omitempty"`
+}
+
+// Omitted fields keep their stored value.
+type UpdateWeatherLocationInput struct {
+	ID        string   `json:"id"`
+	Label     *string  `json:"label,omitempty"`
+	Latitude  *float64 `json:"latitude,omitempty"`
+	Longitude *float64 `json:"longitude,omitempty"`
+	Order     *int     `json:"order,omitempty"`
+}
+
+type UpdateWeatherProviderConnectionInput struct {
+	Weatherkit *UpdateWeatherKitConnectionInput `json:"weatherkit,omitempty"`
+}
+
+// Omitted fields keep their stored value. The connection key must match the provider's kind.
+type UpdateWeatherProviderInput struct {
+	ID                     string                                `json:"id"`
+	Connection             *UpdateWeatherProviderConnectionInput `json:"connection,omitempty"`
+	RefreshIntervalSeconds *int                                  `json:"refreshIntervalSeconds,omitempty"`
+}
+
 type User struct {
 	ID       string   `json:"id"`
 	Username string   `json:"username"`
@@ -261,6 +312,47 @@ type Weather struct {
 	Temperature   int              `json:"temperature"`
 	FetchedAt     int              `json:"fetchedAt"`
 	Stale         bool             `json:"stale"`
+}
+
+type WeatherKitConnection struct {
+	TeamID        string `json:"teamId"`
+	ServiceID     string `json:"serviceId"`
+	KeyID         string `json:"keyId"`
+	HasPrivateKey bool   `json:"hasPrivateKey"`
+}
+
+func (WeatherKitConnection) IsWeatherProviderConnection() {}
+
+type WeatherKitConnectionInput struct {
+	TeamID    string `json:"teamId"`
+	ServiceID string `json:"serviceId"`
+	KeyID     string `json:"keyId"`
+	// Write-only. The PEM contents of the .p8 file.
+	PrivateKey string `json:"privateKey"`
+}
+
+type WeatherLocation struct {
+	ID        string  `json:"id"`
+	Label     string  `json:"label"`
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+	Order     int     `json:"order"`
+}
+
+type WeatherProvider struct {
+	ID   string              `json:"id"`
+	Kind WeatherProviderKind `json:"kind"`
+	// The provider the background refresh uses. Exactly one provider is active.
+	Active                 bool                      `json:"active"`
+	Connection             WeatherProviderConnection `json:"connection"`
+	RefreshIntervalSeconds int                       `json:"refreshIntervalSeconds"`
+	LastAttemptedAt        *int                      `json:"lastAttemptedAt,omitempty"`
+	LastError              string                    `json:"lastError"`
+}
+
+// Exactly one provider key. The provider is the key that is set.
+type WeatherProviderConnectionInput struct {
+	Weatherkit *WeatherKitConnectionInput `json:"weatherkit,omitempty"`
 }
 
 type AssociationScope string
@@ -654,6 +746,59 @@ func (e *WeatherCondition) UnmarshalJSON(b []byte) error {
 }
 
 func (e WeatherCondition) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type WeatherProviderKind string
+
+const (
+	WeatherProviderKindWeatherkit WeatherProviderKind = "WEATHERKIT"
+)
+
+var AllWeatherProviderKind = []WeatherProviderKind{
+	WeatherProviderKindWeatherkit,
+}
+
+func (e WeatherProviderKind) IsValid() bool {
+	switch e {
+	case WeatherProviderKindWeatherkit:
+		return true
+	}
+	return false
+}
+
+func (e WeatherProviderKind) String() string {
+	return string(e)
+}
+
+func (e *WeatherProviderKind) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = WeatherProviderKind(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid WeatherProviderKind", str)
+	}
+	return nil
+}
+
+func (e WeatherProviderKind) MarshalGQL(w io.Writer) {
+	_, _ = fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *WeatherProviderKind) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e WeatherProviderKind) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

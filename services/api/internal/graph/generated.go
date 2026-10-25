@@ -109,14 +109,19 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
+		ActivateWeatherProvider   func(childComplexity int, id string) int
 		AddTimerMinute            func(childComplexity int) int
 		CancelTimer               func(childComplexity int) int
 		CreateCalendarAccount     func(childComplexity int, input model.CreateCalendarAccountInput) int
 		CreateCalendarAssociation func(childComplexity int, input model.CreateCalendarAssociationInput) int
 		CreateEvent               func(childComplexity int, input model.EventInput) int
+		CreateWeatherLocation     func(childComplexity int, input model.CreateWeatherLocationInput) int
+		CreateWeatherProvider     func(childComplexity int, input model.CreateWeatherProviderInput) int
 		DeleteCalendarAccount     func(childComplexity int, id string) int
 		DeleteCalendarAssociation func(childComplexity int, calendarID string, personID string) int
 		DeletePerson              func(childComplexity int, id string) int
+		DeleteWeatherLocation     func(childComplexity int, id string) int
+		DeleteWeatherProvider     func(childComplexity int, id string) int
 		DiscoverCalendars         func(childComplexity int, accountID string) int
 		Login                     func(childComplexity int, username string, password string) int
 		Logout                    func(childComplexity int) int
@@ -130,10 +135,13 @@ type ComplexityRoot struct {
 		Setup                     func(childComplexity int, code string, username string, password string) int
 		StartTimer                func(childComplexity int, title string, emoji string, durationSeconds int) int
 		TestCalendarAccount       func(childComplexity int, input model.TestCalendarAccountInput) int
+		TestWeatherProvider       func(childComplexity int, input model.TestWeatherProviderInput) int
 		TrackPhotoShowing         func(childComplexity int, source model.PhotoShowingSource) int
 		UpdateCalendarAccount     func(childComplexity int, input model.UpdateCalendarAccountInput) int
 		UpdateCalendarAssociation func(childComplexity int, input model.UpdateCalendarAssociationInput) int
 		UpdateCalendarVisibility  func(childComplexity int, id string, visible bool) int
+		UpdateWeatherLocation     func(childComplexity int, input model.UpdateWeatherLocationInput) int
+		UpdateWeatherProvider     func(childComplexity int, input model.UpdateWeatherProviderInput) int
 		UploadPhoto               func(childComplexity int, input model.PhotoUploadInput, file graphql.Upload) int
 	}
 
@@ -186,6 +194,8 @@ type ComplexityRoot struct {
 		SetupCode            func(childComplexity int) int
 		Timer                func(childComplexity int) int
 		Weather              func(childComplexity int) int
+		WeatherLocations     func(childComplexity int) int
+		WeatherProviders     func(childComplexity int) int
 	}
 
 	SessionInfo struct {
@@ -213,6 +223,31 @@ type ComplexityRoot struct {
 		FetchedAt     func(childComplexity int) int
 		Stale         func(childComplexity int) int
 		Temperature   func(childComplexity int) int
+	}
+
+	WeatherKitConnection struct {
+		HasPrivateKey func(childComplexity int) int
+		KeyID         func(childComplexity int) int
+		ServiceID     func(childComplexity int) int
+		TeamID        func(childComplexity int) int
+	}
+
+	WeatherLocation struct {
+		ID        func(childComplexity int) int
+		Label     func(childComplexity int) int
+		Latitude  func(childComplexity int) int
+		Longitude func(childComplexity int) int
+		Order     func(childComplexity int) int
+	}
+
+	WeatherProvider struct {
+		Active                 func(childComplexity int) int
+		Connection             func(childComplexity int) int
+		ID                     func(childComplexity int) int
+		Kind                   func(childComplexity int) int
+		LastAttemptedAt        func(childComplexity int) int
+		LastError              func(childComplexity int) int
+		RefreshIntervalSeconds func(childComplexity int) int
 	}
 }
 
@@ -247,6 +282,14 @@ type MutationResolver interface {
 	ResumeTimer(ctx context.Context) (*model.Timer, error)
 	CancelTimer(ctx context.Context) (bool, error)
 	Setup(ctx context.Context, code string, username string, password string) (*model.User, error)
+	CreateWeatherProvider(ctx context.Context, input model.CreateWeatherProviderInput) (*model.WeatherProvider, error)
+	UpdateWeatherProvider(ctx context.Context, input model.UpdateWeatherProviderInput) (*model.WeatherProvider, error)
+	DeleteWeatherProvider(ctx context.Context, id string) (bool, error)
+	ActivateWeatherProvider(ctx context.Context, id string) (*model.WeatherProvider, error)
+	TestWeatherProvider(ctx context.Context, input model.TestWeatherProviderInput) (bool, error)
+	CreateWeatherLocation(ctx context.Context, input model.CreateWeatherLocationInput) (*model.WeatherLocation, error)
+	UpdateWeatherLocation(ctx context.Context, input model.UpdateWeatherLocationInput) (*model.WeatherLocation, error)
+	DeleteWeatherLocation(ctx context.Context, id string) (bool, error)
 }
 type QueryResolver interface {
 	Health(ctx context.Context) (*model.Health, error)
@@ -264,6 +307,8 @@ type QueryResolver interface {
 	PhotoShowingHistory(ctx context.Context, limit *int) ([]model.PhotoShowing, error)
 	SetupCode(ctx context.Context) (*string, error)
 	Weather(ctx context.Context) (*model.Weather, error)
+	WeatherProviders(ctx context.Context) ([]model.WeatherProvider, error)
+	WeatherLocations(ctx context.Context) ([]model.WeatherLocation, error)
 }
 
 // endregion ************************** generated!.gotpl **************************
@@ -563,6 +608,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.Health.Version(childComplexity), true
 
+	case "Mutation.activateWeatherProvider":
+		if e.ComplexityRoot.Mutation.ActivateWeatherProvider == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_activateWeatherProvider_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.ActivateWeatherProvider(childComplexity, args["id"].(string)), true
 	case "Mutation.addTimerMinute":
 		if e.ComplexityRoot.Mutation.AddTimerMinute == nil {
 			break
@@ -608,6 +664,28 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.CreateEvent(childComplexity, args["input"].(model.EventInput)), true
+	case "Mutation.createWeatherLocation":
+		if e.ComplexityRoot.Mutation.CreateWeatherLocation == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_createWeatherLocation_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.CreateWeatherLocation(childComplexity, args["input"].(model.CreateWeatherLocationInput)), true
+	case "Mutation.createWeatherProvider":
+		if e.ComplexityRoot.Mutation.CreateWeatherProvider == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_createWeatherProvider_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.CreateWeatherProvider(childComplexity, args["input"].(model.CreateWeatherProviderInput)), true
 	case "Mutation.deleteCalendarAccount":
 		if e.ComplexityRoot.Mutation.DeleteCalendarAccount == nil {
 			break
@@ -641,6 +719,28 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.DeletePerson(childComplexity, args["id"].(string)), true
+	case "Mutation.deleteWeatherLocation":
+		if e.ComplexityRoot.Mutation.DeleteWeatherLocation == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deleteWeatherLocation_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.DeleteWeatherLocation(childComplexity, args["id"].(string)), true
+	case "Mutation.deleteWeatherProvider":
+		if e.ComplexityRoot.Mutation.DeleteWeatherProvider == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deleteWeatherProvider_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.DeleteWeatherProvider(childComplexity, args["id"].(string)), true
 	case "Mutation.discoverCalendars":
 		if e.ComplexityRoot.Mutation.DiscoverCalendars == nil {
 			break
@@ -764,6 +864,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.TestCalendarAccount(childComplexity, args["input"].(model.TestCalendarAccountInput)), true
+	case "Mutation.testWeatherProvider":
+		if e.ComplexityRoot.Mutation.TestWeatherProvider == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_testWeatherProvider_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.TestWeatherProvider(childComplexity, args["input"].(model.TestWeatherProviderInput)), true
 	case "Mutation.trackPhotoShowing":
 		if e.ComplexityRoot.Mutation.TrackPhotoShowing == nil {
 			break
@@ -808,6 +919,28 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.UpdateCalendarVisibility(childComplexity, args["id"].(string), args["visible"].(bool)), true
+	case "Mutation.updateWeatherLocation":
+		if e.ComplexityRoot.Mutation.UpdateWeatherLocation == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateWeatherLocation_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.UpdateWeatherLocation(childComplexity, args["input"].(model.UpdateWeatherLocationInput)), true
+	case "Mutation.updateWeatherProvider":
+		if e.ComplexityRoot.Mutation.UpdateWeatherProvider == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateWeatherProvider_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.UpdateWeatherProvider(childComplexity, args["input"].(model.UpdateWeatherProviderInput)), true
 	case "Mutation.uploadPhoto":
 		if e.ComplexityRoot.Mutation.UploadPhoto == nil {
 			break
@@ -1071,6 +1204,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.Weather(childComplexity), true
+	case "Query.weatherLocations":
+		if e.ComplexityRoot.Query.WeatherLocations == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Query.WeatherLocations(childComplexity), true
+	case "Query.weatherProviders":
+		if e.ComplexityRoot.Query.WeatherProviders == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Query.WeatherProviders(childComplexity), true
 
 	case "SessionInfo.user":
 		if e.ComplexityRoot.SessionInfo.User == nil {
@@ -1166,6 +1311,105 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.Weather.Temperature(childComplexity), true
 
+	case "WeatherKitConnection.hasPrivateKey":
+		if e.ComplexityRoot.WeatherKitConnection.HasPrivateKey == nil {
+			break
+		}
+
+		return e.ComplexityRoot.WeatherKitConnection.HasPrivateKey(childComplexity), true
+	case "WeatherKitConnection.keyId":
+		if e.ComplexityRoot.WeatherKitConnection.KeyID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.WeatherKitConnection.KeyID(childComplexity), true
+	case "WeatherKitConnection.serviceId":
+		if e.ComplexityRoot.WeatherKitConnection.ServiceID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.WeatherKitConnection.ServiceID(childComplexity), true
+	case "WeatherKitConnection.teamId":
+		if e.ComplexityRoot.WeatherKitConnection.TeamID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.WeatherKitConnection.TeamID(childComplexity), true
+
+	case "WeatherLocation.id":
+		if e.ComplexityRoot.WeatherLocation.ID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.WeatherLocation.ID(childComplexity), true
+	case "WeatherLocation.label":
+		if e.ComplexityRoot.WeatherLocation.Label == nil {
+			break
+		}
+
+		return e.ComplexityRoot.WeatherLocation.Label(childComplexity), true
+	case "WeatherLocation.latitude":
+		if e.ComplexityRoot.WeatherLocation.Latitude == nil {
+			break
+		}
+
+		return e.ComplexityRoot.WeatherLocation.Latitude(childComplexity), true
+	case "WeatherLocation.longitude":
+		if e.ComplexityRoot.WeatherLocation.Longitude == nil {
+			break
+		}
+
+		return e.ComplexityRoot.WeatherLocation.Longitude(childComplexity), true
+	case "WeatherLocation.order":
+		if e.ComplexityRoot.WeatherLocation.Order == nil {
+			break
+		}
+
+		return e.ComplexityRoot.WeatherLocation.Order(childComplexity), true
+
+	case "WeatherProvider.active":
+		if e.ComplexityRoot.WeatherProvider.Active == nil {
+			break
+		}
+
+		return e.ComplexityRoot.WeatherProvider.Active(childComplexity), true
+	case "WeatherProvider.connection":
+		if e.ComplexityRoot.WeatherProvider.Connection == nil {
+			break
+		}
+
+		return e.ComplexityRoot.WeatherProvider.Connection(childComplexity), true
+	case "WeatherProvider.id":
+		if e.ComplexityRoot.WeatherProvider.ID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.WeatherProvider.ID(childComplexity), true
+	case "WeatherProvider.kind":
+		if e.ComplexityRoot.WeatherProvider.Kind == nil {
+			break
+		}
+
+		return e.ComplexityRoot.WeatherProvider.Kind(childComplexity), true
+	case "WeatherProvider.lastAttemptedAt":
+		if e.ComplexityRoot.WeatherProvider.LastAttemptedAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.WeatherProvider.LastAttemptedAt(childComplexity), true
+	case "WeatherProvider.lastError":
+		if e.ComplexityRoot.WeatherProvider.LastError == nil {
+			break
+		}
+
+		return e.ComplexityRoot.WeatherProvider.LastError(childComplexity), true
+	case "WeatherProvider.refreshIntervalSeconds":
+		if e.ComplexityRoot.WeatherProvider.RefreshIntervalSeconds == nil {
+			break
+		}
+
+		return e.ComplexityRoot.WeatherProvider.RefreshIntervalSeconds(childComplexity), true
+
 	}
 	return 0, false
 }
@@ -1178,15 +1422,24 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputCalendarConnectionInput,
 		ec.unmarshalInputCreateCalendarAccountInput,
 		ec.unmarshalInputCreateCalendarAssociationInput,
+		ec.unmarshalInputCreateWeatherLocationInput,
+		ec.unmarshalInputCreateWeatherProviderInput,
 		ec.unmarshalInputEventInput,
 		ec.unmarshalInputFocalRegionInput,
 		ec.unmarshalInputPersonInput,
 		ec.unmarshalInputPhotoUploadInput,
 		ec.unmarshalInputTestCalendarAccountInput,
+		ec.unmarshalInputTestWeatherProviderInput,
 		ec.unmarshalInputUpdateCalDAVConnectionInput,
 		ec.unmarshalInputUpdateCalendarAccountInput,
 		ec.unmarshalInputUpdateCalendarAssociationInput,
 		ec.unmarshalInputUpdateCalendarConnectionInput,
+		ec.unmarshalInputUpdateWeatherKitConnectionInput,
+		ec.unmarshalInputUpdateWeatherLocationInput,
+		ec.unmarshalInputUpdateWeatherProviderConnectionInput,
+		ec.unmarshalInputUpdateWeatherProviderInput,
+		ec.unmarshalInputWeatherKitConnectionInput,
+		ec.unmarshalInputWeatherProviderConnectionInput,
 	)
 	first := true
 
@@ -1662,6 +1915,114 @@ type Weather {
 extend type Query {
   weather: Weather! @protected(kinds: [USER, DISPLAY])
 }
+
+enum WeatherProviderKind {
+  WEATHERKIT
+}
+
+type WeatherKitConnection {
+  teamId: String!
+  serviceId: String!
+  keyId: String!
+  hasPrivateKey: Boolean!
+}
+
+union WeatherProviderConnection = WeatherKitConnection
+
+type WeatherProvider {
+  id: ID!
+  kind: WeatherProviderKind!
+  "The provider the background refresh uses. Exactly one provider is active."
+  active: Boolean!
+  connection: WeatherProviderConnection!
+  refreshIntervalSeconds: Int!
+  lastAttemptedAt: Int
+  lastError: String!
+}
+
+type WeatherLocation {
+  id: ID!
+  label: String!
+  latitude: Float!
+  longitude: Float!
+  order: Int!
+}
+
+input WeatherKitConnectionInput {
+  teamId: String!
+  serviceId: String!
+  keyId: String!
+  "Write-only. The PEM contents of the .p8 file."
+  privateKey: String!
+}
+
+"Exactly one provider key. The provider is the key that is set."
+input WeatherProviderConnectionInput @oneOf {
+  weatherkit: WeatherKitConnectionInput
+}
+
+input CreateWeatherProviderInput {
+  connection: WeatherProviderConnectionInput!
+  refreshIntervalSeconds: Int! = 1800
+}
+
+"Omitted fields keep their stored value."
+input UpdateWeatherKitConnectionInput {
+  teamId: String
+  serviceId: String
+  keyId: String
+  "Write-only. Required when teamId, serviceId, or keyId changes."
+  privateKey: String
+}
+
+input UpdateWeatherProviderConnectionInput @oneOf {
+  weatherkit: UpdateWeatherKitConnectionInput
+}
+
+"Omitted fields keep their stored value. The connection key must match the provider's kind."
+input UpdateWeatherProviderInput {
+  id: ID!
+  connection: UpdateWeatherProviderConnectionInput
+  refreshIntervalSeconds: Int
+}
+
+"Checks a connection without saving it. Set id to test a stored provider with its stored credentials, or connection to test a draft."
+input TestWeatherProviderInput @oneOf {
+  id: ID
+  connection: WeatherProviderConnectionInput
+}
+
+input CreateWeatherLocationInput {
+  label: String!
+  latitude: Float!
+  longitude: Float!
+  order: Int! = 0
+}
+
+"Omitted fields keep their stored value."
+input UpdateWeatherLocationInput {
+  id: ID!
+  label: String
+  latitude: Float
+  longitude: Float
+  order: Int
+}
+
+extend type Query {
+  weatherProviders: [WeatherProvider!]! @protected
+  weatherLocations: [WeatherLocation!]! @protected
+}
+
+extend type Mutation {
+  createWeatherProvider(input: CreateWeatherProviderInput!): WeatherProvider! @protected
+  updateWeatherProvider(input: UpdateWeatherProviderInput!): WeatherProvider! @protected
+  deleteWeatherProvider(id: ID!): Boolean! @protected
+  activateWeatherProvider(id: ID!): WeatherProvider! @protected
+  testWeatherProvider(input: TestWeatherProviderInput!): Boolean! @protected
+  createWeatherLocation(input: CreateWeatherLocationInput!): WeatherLocation! @protected
+  updateWeatherLocation(input: UpdateWeatherLocationInput!): WeatherLocation! @protected
+  deleteWeatherLocation(id: ID!): Boolean! @protected
+}
 `, BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)
@@ -1922,6 +2283,42 @@ func (ec *executionContext) childFields_Weather(ctx context.Context, field graph
 	return nil, fmt.Errorf("no field named %q was found under type Weather", field.Name)
 }
 
+func (ec *executionContext) childFields_WeatherLocation(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "id":
+		return ec.fieldContext_WeatherLocation_id(ctx, field)
+	case "label":
+		return ec.fieldContext_WeatherLocation_label(ctx, field)
+	case "latitude":
+		return ec.fieldContext_WeatherLocation_latitude(ctx, field)
+	case "longitude":
+		return ec.fieldContext_WeatherLocation_longitude(ctx, field)
+	case "order":
+		return ec.fieldContext_WeatherLocation_order(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type WeatherLocation", field.Name)
+}
+
+func (ec *executionContext) childFields_WeatherProvider(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "id":
+		return ec.fieldContext_WeatherProvider_id(ctx, field)
+	case "kind":
+		return ec.fieldContext_WeatherProvider_kind(ctx, field)
+	case "active":
+		return ec.fieldContext_WeatherProvider_active(ctx, field)
+	case "connection":
+		return ec.fieldContext_WeatherProvider_connection(ctx, field)
+	case "refreshIntervalSeconds":
+		return ec.fieldContext_WeatherProvider_refreshIntervalSeconds(ctx, field)
+	case "lastAttemptedAt":
+		return ec.fieldContext_WeatherProvider_lastAttemptedAt(ctx, field)
+	case "lastError":
+		return ec.fieldContext_WeatherProvider_lastError(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type WeatherProvider", field.Name)
+}
+
 func (ec *executionContext) childFields___Directive(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "name":
@@ -2038,6 +2435,20 @@ func (ec *executionContext) childFields___Type(ctx context.Context, field graphq
 
 // region    ***************************** args.gotpl *****************************
 
+func (ec *executionContext) field_Mutation_activateWeatherProvider_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_createCalendarAccount_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -2072,6 +2483,34 @@ func (ec *executionContext) field_Mutation_createEvent_args(ctx context.Context,
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
 		func(ctx context.Context, v any) (model.EventInput, error) {
 			return ec.unmarshalNEventInput2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐEventInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_createWeatherLocation_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.CreateWeatherLocationInput, error) {
+			return ec.unmarshalNCreateWeatherLocationInput2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐCreateWeatherLocationInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_createWeatherProvider_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.CreateWeatherProviderInput, error) {
+			return ec.unmarshalNCreateWeatherProviderInput2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐCreateWeatherProviderInput(ctx, v)
 		})
 	if err != nil {
 		return nil, err
@@ -2117,6 +2556,34 @@ func (ec *executionContext) field_Mutation_deleteCalendarAssociation_args(ctx co
 }
 
 func (ec *executionContext) field_Mutation_deletePerson_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_deleteWeatherLocation_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_deleteWeatherProvider_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
@@ -2296,6 +2763,20 @@ func (ec *executionContext) field_Mutation_testCalendarAccount_args(ctx context.
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_testWeatherProvider_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.TestWeatherProviderInput, error) {
+			return ec.unmarshalNTestWeatherProviderInput2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐTestWeatherProviderInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_trackPhotoShowing_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -2357,6 +2838,34 @@ func (ec *executionContext) field_Mutation_updateCalendarVisibility_args(ctx con
 		return nil, err
 	}
 	args["visible"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_updateWeatherLocation_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.UpdateWeatherLocationInput, error) {
+			return ec.unmarshalNUpdateWeatherLocationInput2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐUpdateWeatherLocationInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_updateWeatherProvider_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.UpdateWeatherProviderInput, error) {
+			return ec.unmarshalNUpdateWeatherProviderInput2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐUpdateWeatherProviderInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
 	return args, nil
 }
 
@@ -4646,6 +5155,358 @@ func (ec *executionContext) fieldContext_Mutation_setup(ctx context.Context, fie
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_createWeatherProvider(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_createWeatherProvider(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().CreateWeatherProvider(ctx, fc.Args["input"].(model.CreateWeatherProviderInput))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.WeatherProvider) graphql.Marshaler {
+			return ec.marshalNWeatherProvider2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐWeatherProvider(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_createWeatherProvider(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_WeatherProvider(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_createWeatherProvider_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_updateWeatherProvider(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_updateWeatherProvider(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().UpdateWeatherProvider(ctx, fc.Args["input"].(model.UpdateWeatherProviderInput))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.WeatherProvider) graphql.Marshaler {
+			return ec.marshalNWeatherProvider2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐWeatherProvider(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_updateWeatherProvider(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_WeatherProvider(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_updateWeatherProvider_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_deleteWeatherProvider(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_deleteWeatherProvider(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().DeleteWeatherProvider(ctx, fc.Args["id"].(string))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_deleteWeatherProvider(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_deleteWeatherProvider_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_activateWeatherProvider(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_activateWeatherProvider(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().ActivateWeatherProvider(ctx, fc.Args["id"].(string))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.WeatherProvider) graphql.Marshaler {
+			return ec.marshalNWeatherProvider2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐWeatherProvider(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_activateWeatherProvider(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_WeatherProvider(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_activateWeatherProvider_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_testWeatherProvider(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_testWeatherProvider(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().TestWeatherProvider(ctx, fc.Args["input"].(model.TestWeatherProviderInput))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_testWeatherProvider(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_testWeatherProvider_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_createWeatherLocation(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_createWeatherLocation(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().CreateWeatherLocation(ctx, fc.Args["input"].(model.CreateWeatherLocationInput))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.WeatherLocation) graphql.Marshaler {
+			return ec.marshalNWeatherLocation2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐWeatherLocation(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_createWeatherLocation(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_WeatherLocation(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_createWeatherLocation_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_updateWeatherLocation(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_updateWeatherLocation(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().UpdateWeatherLocation(ctx, fc.Args["input"].(model.UpdateWeatherLocationInput))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.WeatherLocation) graphql.Marshaler {
+			return ec.marshalNWeatherLocation2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐWeatherLocation(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_updateWeatherLocation(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_WeatherLocation(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_updateWeatherLocation_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_deleteWeatherLocation(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_deleteWeatherLocation(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().DeleteWeatherLocation(ctx, fc.Args["id"].(string))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_deleteWeatherLocation(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_deleteWeatherLocation_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Person_id(ctx context.Context, field graphql.CollectedField, obj *model.Person) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -5717,6 +6578,70 @@ func (ec *executionContext) fieldContext_Query_weather(_ context.Context, field 
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_weatherProviders(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_weatherProviders(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Query().WeatherProviders(ctx)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.WeatherProvider) graphql.Marshaler {
+			return ec.marshalNWeatherProvider2ᚕgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐWeatherProviderᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_weatherProviders(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_WeatherProvider(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_weatherLocations(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_weatherLocations(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Query().WeatherLocations(ctx)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.WeatherLocation) graphql.Marshaler {
+			return ec.marshalNWeatherLocation2ᚕgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐWeatherLocationᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_weatherLocations(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_WeatherLocation(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -6145,6 +7070,374 @@ func (ec *executionContext) _Weather_stale(ctx context.Context, field graphql.Co
 }
 func (ec *executionContext) fieldContext_Weather_stale(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("Weather", field, false, false, errors.New("field of type Boolean does not have child fields"))
+}
+
+func (ec *executionContext) _WeatherKitConnection_teamId(ctx context.Context, field graphql.CollectedField, obj *model.WeatherKitConnection) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_WeatherKitConnection_teamId(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.TeamID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_WeatherKitConnection_teamId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("WeatherKitConnection", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _WeatherKitConnection_serviceId(ctx context.Context, field graphql.CollectedField, obj *model.WeatherKitConnection) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_WeatherKitConnection_serviceId(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ServiceID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_WeatherKitConnection_serviceId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("WeatherKitConnection", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _WeatherKitConnection_keyId(ctx context.Context, field graphql.CollectedField, obj *model.WeatherKitConnection) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_WeatherKitConnection_keyId(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.KeyID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_WeatherKitConnection_keyId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("WeatherKitConnection", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _WeatherKitConnection_hasPrivateKey(ctx context.Context, field graphql.CollectedField, obj *model.WeatherKitConnection) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_WeatherKitConnection_hasPrivateKey(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.HasPrivateKey, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_WeatherKitConnection_hasPrivateKey(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("WeatherKitConnection", field, false, false, errors.New("field of type Boolean does not have child fields"))
+}
+
+func (ec *executionContext) _WeatherLocation_id(ctx context.Context, field graphql.CollectedField, obj *model.WeatherLocation) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_WeatherLocation_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNID2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_WeatherLocation_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("WeatherLocation", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _WeatherLocation_label(ctx context.Context, field graphql.CollectedField, obj *model.WeatherLocation) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_WeatherLocation_label(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Label, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_WeatherLocation_label(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("WeatherLocation", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _WeatherLocation_latitude(ctx context.Context, field graphql.CollectedField, obj *model.WeatherLocation) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_WeatherLocation_latitude(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Latitude, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v float64) graphql.Marshaler {
+			return ec.marshalNFloat2float64(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_WeatherLocation_latitude(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("WeatherLocation", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
+func (ec *executionContext) _WeatherLocation_longitude(ctx context.Context, field graphql.CollectedField, obj *model.WeatherLocation) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_WeatherLocation_longitude(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Longitude, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v float64) graphql.Marshaler {
+			return ec.marshalNFloat2float64(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_WeatherLocation_longitude(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("WeatherLocation", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
+func (ec *executionContext) _WeatherLocation_order(ctx context.Context, field graphql.CollectedField, obj *model.WeatherLocation) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_WeatherLocation_order(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Order, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_WeatherLocation_order(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("WeatherLocation", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _WeatherProvider_id(ctx context.Context, field graphql.CollectedField, obj *model.WeatherProvider) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_WeatherProvider_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNID2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_WeatherProvider_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("WeatherProvider", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _WeatherProvider_kind(ctx context.Context, field graphql.CollectedField, obj *model.WeatherProvider) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_WeatherProvider_kind(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Kind, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v model.WeatherProviderKind) graphql.Marshaler {
+			return ec.marshalNWeatherProviderKind2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐWeatherProviderKind(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_WeatherProvider_kind(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("WeatherProvider", field, false, false, errors.New("field of type WeatherProviderKind does not have child fields"))
+}
+
+func (ec *executionContext) _WeatherProvider_active(ctx context.Context, field graphql.CollectedField, obj *model.WeatherProvider) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_WeatherProvider_active(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Active, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_WeatherProvider_active(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("WeatherProvider", field, false, false, errors.New("field of type Boolean does not have child fields"))
+}
+
+func (ec *executionContext) _WeatherProvider_connection(ctx context.Context, field graphql.CollectedField, obj *model.WeatherProvider) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_WeatherProvider_connection(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Connection, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v model.WeatherProviderConnection) graphql.Marshaler {
+			return ec.marshalNWeatherProviderConnection2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐWeatherProviderConnection(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_WeatherProvider_connection(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("WeatherProvider", field, false, false, errors.New("field of type WeatherProviderConnection does not have child fields"))
+}
+
+func (ec *executionContext) _WeatherProvider_refreshIntervalSeconds(ctx context.Context, field graphql.CollectedField, obj *model.WeatherProvider) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_WeatherProvider_refreshIntervalSeconds(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.RefreshIntervalSeconds, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_WeatherProvider_refreshIntervalSeconds(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("WeatherProvider", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _WeatherProvider_lastAttemptedAt(ctx context.Context, field graphql.CollectedField, obj *model.WeatherProvider) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_WeatherProvider_lastAttemptedAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.LastAttemptedAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *int) graphql.Marshaler {
+			return ec.marshalOInt2ᚖint(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_WeatherProvider_lastAttemptedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("WeatherProvider", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _WeatherProvider_lastError(ctx context.Context, field graphql.CollectedField, obj *model.WeatherProvider) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_WeatherProvider_lastError(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.LastError, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_WeatherProvider_lastError(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("WeatherProvider", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
 func (ec *executionContext) ___Directive_name(ctx context.Context, field graphql.CollectedField, obj *introspection.Directive) (ret graphql.Marshaler) {
@@ -7417,6 +8710,102 @@ func (ec *executionContext) unmarshalInputCreateCalendarAssociationInput(ctx con
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputCreateWeatherLocationInput(ctx context.Context, obj any) (model.CreateWeatherLocationInput, error) {
+	var it model.CreateWeatherLocationInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	if _, present := asMap["order"]; !present {
+		asMap["order"] = 0
+	}
+
+	fieldsInOrder := [...]string{"label", "latitude", "longitude", "order"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "label":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("label"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Label = data
+		case "latitude":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("latitude"))
+			data, err := ec.unmarshalNFloat2float64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Latitude = data
+		case "longitude":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("longitude"))
+			data, err := ec.unmarshalNFloat2float64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Longitude = data
+		case "order":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("order"))
+			data, err := ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Order = data
+		}
+	}
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputCreateWeatherProviderInput(ctx context.Context, obj any) (model.CreateWeatherProviderInput, error) {
+	var it model.CreateWeatherProviderInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	if _, present := asMap["refreshIntervalSeconds"]; !present {
+		asMap["refreshIntervalSeconds"] = 1800
+	}
+
+	fieldsInOrder := [...]string{"connection", "refreshIntervalSeconds"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "connection":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("connection"))
+			data, err := ec.unmarshalNWeatherProviderConnectionInput2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐWeatherProviderConnectionInput(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Connection = data
+		case "refreshIntervalSeconds":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("refreshIntervalSeconds"))
+			data, err := ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.RefreshIntervalSeconds = data
+		}
+	}
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputEventInput(ctx context.Context, obj any) (model.EventInput, error) {
 	var it model.EventInput
 	if obj == nil {
@@ -7728,6 +9117,43 @@ func (ec *executionContext) unmarshalInputTestCalendarAccountInput(ctx context.C
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputTestWeatherProviderInput(ctx context.Context, obj any) (model.TestWeatherProviderInput, error) {
+	var it model.TestWeatherProviderInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"id", "connection"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "id":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+			data, err := ec.unmarshalOID2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ID = data
+		case "connection":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("connection"))
+			data, err := ec.unmarshalOWeatherProviderConnectionInput2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐWeatherProviderConnectionInput(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Connection = data
+		}
+	}
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputUpdateCalDAVConnectionInput(ctx context.Context, obj any) (model.UpdateCalDAVConnectionInput, error) {
 	var it model.UpdateCalDAVConnectionInput
 	if obj == nil {
@@ -7925,6 +9351,270 @@ func (ec *executionContext) unmarshalInputUpdateCalendarConnectionInput(ctx cont
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputUpdateWeatherKitConnectionInput(ctx context.Context, obj any) (model.UpdateWeatherKitConnectionInput, error) {
+	var it model.UpdateWeatherKitConnectionInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"teamId", "serviceId", "keyId", "privateKey"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "teamId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamId"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.TeamID = data
+		case "serviceId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("serviceId"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ServiceID = data
+		case "keyId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("keyId"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.KeyID = data
+		case "privateKey":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("privateKey"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PrivateKey = data
+		}
+	}
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputUpdateWeatherLocationInput(ctx context.Context, obj any) (model.UpdateWeatherLocationInput, error) {
+	var it model.UpdateWeatherLocationInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"id", "label", "latitude", "longitude", "order"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "id":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+			data, err := ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ID = data
+		case "label":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("label"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Label = data
+		case "latitude":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("latitude"))
+			data, err := ec.unmarshalOFloat2ᚖfloat64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Latitude = data
+		case "longitude":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("longitude"))
+			data, err := ec.unmarshalOFloat2ᚖfloat64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Longitude = data
+		case "order":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("order"))
+			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Order = data
+		}
+	}
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputUpdateWeatherProviderConnectionInput(ctx context.Context, obj any) (model.UpdateWeatherProviderConnectionInput, error) {
+	var it model.UpdateWeatherProviderConnectionInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"weatherkit"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "weatherkit":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("weatherkit"))
+			data, err := ec.unmarshalOUpdateWeatherKitConnectionInput2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐUpdateWeatherKitConnectionInput(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Weatherkit = data
+		}
+	}
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputUpdateWeatherProviderInput(ctx context.Context, obj any) (model.UpdateWeatherProviderInput, error) {
+	var it model.UpdateWeatherProviderInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"id", "connection", "refreshIntervalSeconds"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "id":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+			data, err := ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ID = data
+		case "connection":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("connection"))
+			data, err := ec.unmarshalOUpdateWeatherProviderConnectionInput2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐUpdateWeatherProviderConnectionInput(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Connection = data
+		case "refreshIntervalSeconds":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("refreshIntervalSeconds"))
+			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.RefreshIntervalSeconds = data
+		}
+	}
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputWeatherKitConnectionInput(ctx context.Context, obj any) (model.WeatherKitConnectionInput, error) {
+	var it model.WeatherKitConnectionInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"teamId", "serviceId", "keyId", "privateKey"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "teamId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("teamId"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.TeamID = data
+		case "serviceId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("serviceId"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ServiceID = data
+		case "keyId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("keyId"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.KeyID = data
+		case "privateKey":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("privateKey"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PrivateKey = data
+		}
+	}
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputWeatherProviderConnectionInput(ctx context.Context, obj any) (model.WeatherProviderConnectionInput, error) {
+	var it model.WeatherProviderConnectionInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"weatherkit"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "weatherkit":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("weatherkit"))
+			data, err := ec.unmarshalOWeatherKitConnectionInput2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐWeatherKitConnectionInput(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Weatherkit = data
+		}
+	}
+	return it, nil
+}
+
 // endregion **************************** input.gotpl *****************************
 
 // region    ************************** interface.gotpl ***************************
@@ -7945,6 +9635,26 @@ func (ec *executionContext) _CalendarConnection(ctx context.Context, sel ast.Sel
 			return typedObj
 		} else {
 			panic(fmt.Errorf("unexpected type %T; non-generated variants of CalendarConnection must implement graphql.Marshaler", obj))
+		}
+	}
+}
+
+func (ec *executionContext) _WeatherProviderConnection(ctx context.Context, sel ast.SelectionSet, obj model.WeatherProviderConnection) graphql.Marshaler {
+	switch obj := (obj).(type) {
+	case nil:
+		return graphql.Null
+	case model.WeatherKitConnection:
+		return ec._WeatherKitConnection(ctx, sel, &obj)
+	case *model.WeatherKitConnection:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._WeatherKitConnection(ctx, sel, obj)
+	default:
+		if typedObj, ok := obj.(graphql.Marshaler); ok {
+			return typedObj
+		} else {
+			panic(fmt.Errorf("unexpected type %T; non-generated variants of WeatherProviderConnection must implement graphql.Marshaler", obj))
 		}
 	}
 }
@@ -8677,6 +10387,62 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "createWeatherProvider":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_createWeatherProvider(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "updateWeatherProvider":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_updateWeatherProvider(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "deleteWeatherProvider":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_deleteWeatherProvider(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "activateWeatherProvider":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_activateWeatherProvider(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "testWeatherProvider":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_testWeatherProvider(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "createWeatherLocation":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_createWeatherLocation(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "updateWeatherLocation":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_updateWeatherLocation(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "deleteWeatherLocation":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_deleteWeatherLocation(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -9285,6 +11051,50 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "weatherProviders":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_weatherProviders(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "weatherLocations":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_weatherLocations(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "__type":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Query___type(ctx, field)
@@ -9503,6 +11313,185 @@ func (ec *executionContext) _Weather(ctx context.Context, sel ast.SelectionSet, 
 			}
 		case "stale":
 			out.Values[i] = ec._Weather_stale(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferLabelToView), math.MaxInt32)))
+
+	ec.ProcessDeferredGroup(graphql.DeferredGroup{
+		Defers:   deferLabelToView,
+		Path:     graphql.GetPath(ctx),
+		FieldSet: deferredFieldSet,
+		Context:  ctx,
+	})
+
+	return out
+}
+
+var weatherKitConnectionImplementors = []string{"WeatherKitConnection", "WeatherProviderConnection"}
+
+func (ec *executionContext) _WeatherKitConnection(ctx context.Context, sel ast.SelectionSet, obj *model.WeatherKitConnection) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, weatherKitConnectionImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferredFieldSet := graphql.NewFieldSet(nil)
+	deferLabelToView := make(map[string]*graphql.FieldSetView)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("WeatherKitConnection")
+		case "teamId":
+			out.Values[i] = ec._WeatherKitConnection_teamId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "serviceId":
+			out.Values[i] = ec._WeatherKitConnection_serviceId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "keyId":
+			out.Values[i] = ec._WeatherKitConnection_keyId(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "hasPrivateKey":
+			out.Values[i] = ec._WeatherKitConnection_hasPrivateKey(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferLabelToView), math.MaxInt32)))
+
+	ec.ProcessDeferredGroup(graphql.DeferredGroup{
+		Defers:   deferLabelToView,
+		Path:     graphql.GetPath(ctx),
+		FieldSet: deferredFieldSet,
+		Context:  ctx,
+	})
+
+	return out
+}
+
+var weatherLocationImplementors = []string{"WeatherLocation"}
+
+func (ec *executionContext) _WeatherLocation(ctx context.Context, sel ast.SelectionSet, obj *model.WeatherLocation) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, weatherLocationImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferredFieldSet := graphql.NewFieldSet(nil)
+	deferLabelToView := make(map[string]*graphql.FieldSetView)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("WeatherLocation")
+		case "id":
+			out.Values[i] = ec._WeatherLocation_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "label":
+			out.Values[i] = ec._WeatherLocation_label(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "latitude":
+			out.Values[i] = ec._WeatherLocation_latitude(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "longitude":
+			out.Values[i] = ec._WeatherLocation_longitude(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "order":
+			out.Values[i] = ec._WeatherLocation_order(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferLabelToView), math.MaxInt32)))
+
+	ec.ProcessDeferredGroup(graphql.DeferredGroup{
+		Defers:   deferLabelToView,
+		Path:     graphql.GetPath(ctx),
+		FieldSet: deferredFieldSet,
+		Context:  ctx,
+	})
+
+	return out
+}
+
+var weatherProviderImplementors = []string{"WeatherProvider"}
+
+func (ec *executionContext) _WeatherProvider(ctx context.Context, sel ast.SelectionSet, obj *model.WeatherProvider) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, weatherProviderImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferredFieldSet := graphql.NewFieldSet(nil)
+	deferLabelToView := make(map[string]*graphql.FieldSetView)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("WeatherProvider")
+		case "id":
+			out.Values[i] = ec._WeatherProvider_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "kind":
+			out.Values[i] = ec._WeatherProvider_kind(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "active":
+			out.Values[i] = ec._WeatherProvider_active(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "connection":
+			out.Values[i] = ec._WeatherProvider_connection(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "refreshIntervalSeconds":
+			out.Values[i] = ec._WeatherProvider_refreshIntervalSeconds(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "lastAttemptedAt":
+			out.Values[i] = ec._WeatherProvider_lastAttemptedAt(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		case "lastError":
+			out.Values[i] = ec._WeatherProvider_lastError(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -10140,6 +12129,16 @@ func (ec *executionContext) unmarshalNCreateCalendarAssociationInput2githubᚗco
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) unmarshalNCreateWeatherLocationInput2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐCreateWeatherLocationInput(ctx context.Context, v any) (model.CreateWeatherLocationInput, error) {
+	res, err := ec.unmarshalInputCreateWeatherLocationInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNCreateWeatherProviderInput2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐCreateWeatherProviderInput(ctx context.Context, v any) (model.CreateWeatherProviderInput, error) {
+	res, err := ec.unmarshalInputCreateWeatherProviderInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) marshalNEvent2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐEvent(ctx context.Context, sel ast.SelectionSet, v model.Event) graphql.Marshaler {
 	return ec._Event(ctx, sel, &v)
 }
@@ -10432,6 +12431,11 @@ func (ec *executionContext) unmarshalNTestCalendarAccountInput2githubᚗcomᚋku
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) unmarshalNTestWeatherProviderInput2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐTestWeatherProviderInput(ctx context.Context, v any) (model.TestWeatherProviderInput, error) {
+	res, err := ec.unmarshalInputTestWeatherProviderInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) marshalNTimer2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐTimer(ctx context.Context, sel ast.SelectionSet, v *model.Timer) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
@@ -10449,6 +12453,16 @@ func (ec *executionContext) unmarshalNUpdateCalendarAccountInput2githubᚗcomᚋ
 
 func (ec *executionContext) unmarshalNUpdateCalendarAssociationInput2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐUpdateCalendarAssociationInput(ctx context.Context, v any) (model.UpdateCalendarAssociationInput, error) {
 	res, err := ec.unmarshalInputUpdateCalendarAssociationInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNUpdateWeatherLocationInput2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐUpdateWeatherLocationInput(ctx context.Context, v any) (model.UpdateWeatherLocationInput, error) {
+	res, err := ec.unmarshalInputUpdateWeatherLocationInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNUpdateWeatherProviderInput2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐUpdateWeatherProviderInput(ctx context.Context, v any) (model.UpdateWeatherProviderInput, error) {
+	res, err := ec.unmarshalInputUpdateWeatherProviderInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
@@ -10495,6 +12509,91 @@ func (ec *executionContext) unmarshalNWeatherCondition2githubᚗcomᚋkurtschwar
 }
 
 func (ec *executionContext) marshalNWeatherCondition2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐWeatherCondition(ctx context.Context, sel ast.SelectionSet, v model.WeatherCondition) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) marshalNWeatherLocation2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐWeatherLocation(ctx context.Context, sel ast.SelectionSet, v model.WeatherLocation) graphql.Marshaler {
+	return ec._WeatherLocation(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNWeatherLocation2ᚕgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐWeatherLocationᚄ(ctx context.Context, sel ast.SelectionSet, v []model.WeatherLocation) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNWeatherLocation2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐWeatherLocation(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNWeatherLocation2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐWeatherLocation(ctx context.Context, sel ast.SelectionSet, v *model.WeatherLocation) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._WeatherLocation(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNWeatherProvider2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐWeatherProvider(ctx context.Context, sel ast.SelectionSet, v model.WeatherProvider) graphql.Marshaler {
+	return ec._WeatherProvider(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNWeatherProvider2ᚕgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐWeatherProviderᚄ(ctx context.Context, sel ast.SelectionSet, v []model.WeatherProvider) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNWeatherProvider2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐWeatherProvider(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNWeatherProvider2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐWeatherProvider(ctx context.Context, sel ast.SelectionSet, v *model.WeatherProvider) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._WeatherProvider(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNWeatherProviderConnection2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐWeatherProviderConnection(ctx context.Context, sel ast.SelectionSet, v model.WeatherProviderConnection) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._WeatherProviderConnection(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNWeatherProviderConnectionInput2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐWeatherProviderConnectionInput(ctx context.Context, v any) (*model.WeatherProviderConnectionInput, error) {
+	res, err := ec.unmarshalInputWeatherProviderConnectionInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNWeatherProviderKind2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐWeatherProviderKind(ctx context.Context, v any) (model.WeatherProviderKind, error) {
+	var res model.WeatherProviderKind
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNWeatherProviderKind2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐWeatherProviderKind(ctx context.Context, sel ast.SelectionSet, v model.WeatherProviderKind) graphql.Marshaler {
 	return v
 }
 
@@ -10881,11 +12980,43 @@ func (ec *executionContext) unmarshalOUpdateCalendarConnectionInput2ᚖgithubᚗ
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) unmarshalOUpdateWeatherKitConnectionInput2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐUpdateWeatherKitConnectionInput(ctx context.Context, v any) (*model.UpdateWeatherKitConnectionInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputUpdateWeatherKitConnectionInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOUpdateWeatherProviderConnectionInput2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐUpdateWeatherProviderConnectionInput(ctx context.Context, v any) (*model.UpdateWeatherProviderConnectionInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputUpdateWeatherProviderConnectionInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) marshalOUser2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐUser(ctx context.Context, sel ast.SelectionSet, v *model.User) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
 	return ec._User(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOWeatherKitConnectionInput2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐWeatherKitConnectionInput(ctx context.Context, v any) (*model.WeatherKitConnectionInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputWeatherKitConnectionInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOWeatherProviderConnectionInput2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐWeatherProviderConnectionInput(ctx context.Context, v any) (*model.WeatherProviderConnectionInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputWeatherProviderConnectionInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalO__EnumValue2ᚕgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐEnumValueᚄ(ctx context.Context, sel ast.SelectionSet, v []introspection.EnumValue) graphql.Marshaler {

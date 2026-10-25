@@ -74,6 +74,7 @@ type Repository interface {
 	ListPeople(context.Context) ([]Person, error)
 	UpsertPerson(context.Context, Person) error
 	SetFamily(context.Context, uuid.UUID) error
+	SetPersonOrder(context.Context, []uuid.UUID) error
 	DeletePerson(context.Context, uuid.UUID) error
 	ListAssociations(context.Context) ([]Association, error)
 	InsertAssociation(context.Context, Association) error
@@ -134,7 +135,8 @@ func (r *SQLiteRepository) ListPeople(ctx context.Context) ([]Person, error) {
 
 // UpsertPerson inserts or updates a person. is_family is always written as 0
 // and excluded from the update: it can only change via SetFamily, which is
-// the only path that satisfies the partial unique index.
+// the only path that satisfies the partial unique index. sort_order is
+// likewise only written on insert; SetPersonOrder is the way to change it.
 func (r *SQLiteRepository) UpsertPerson(ctx context.Context, person Person) error {
 	row := personRow{
 		ID: person.ID[:], Name: person.Name, Emoji: person.Emoji, Swatch: person.Swatch,
@@ -146,9 +148,23 @@ func (r *SQLiteRepository) UpsertPerson(ctx context.Context, person Person) erro
 		ON CONFLICT(id) DO UPDATE SET
 			name = excluded.name,
 			emoji = excluded.emoji,
-			swatch = excluded.swatch,
-			sort_order = excluded.sort_order`, row)
+			swatch = excluded.swatch`, row)
 	return err
+}
+
+// SetPersonOrder gives each person the sort_order of their position in ids.
+func (r *SQLiteRepository) SetPersonOrder(ctx context.Context, ids []uuid.UUID) error {
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	for position, id := range ids {
+		if _, err := tx.ExecContext(ctx, `UPDATE people SET sort_order = ? WHERE id = ?`, position, id[:]); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
 // SetFamily moves the family flag to the given person in one transaction.

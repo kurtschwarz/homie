@@ -123,6 +123,7 @@ type ComplexityRoot struct {
 		PauseTimer                func(childComplexity int) int
 		RefreshCalendar           func(childComplexity int, id string) int
 		RefreshEvents             func(childComplexity int) int
+		ReorderPeople             func(childComplexity int, ids []string) int
 		ResumeTimer               func(childComplexity int) int
 		RevokeSession             func(childComplexity int, id string) int
 		SavePerson                func(childComplexity int, input model.PersonInput) int
@@ -235,6 +236,7 @@ type MutationResolver interface {
 	CreateEvent(ctx context.Context, input model.EventInput) (*model.Event, error)
 	SavePerson(ctx context.Context, input model.PersonInput) (*model.Person, error)
 	DeletePerson(ctx context.Context, id string) (bool, error)
+	ReorderPeople(ctx context.Context, ids []string) ([]model.Person, error)
 	CreateCalendarAssociation(ctx context.Context, input model.CreateCalendarAssociationInput) (*model.CalendarAssociation, error)
 	UpdateCalendarAssociation(ctx context.Context, input model.UpdateCalendarAssociationInput) (*model.CalendarAssociation, error)
 	DeleteCalendarAssociation(ctx context.Context, calendarID string, personID string) (bool, error)
@@ -690,6 +692,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.RefreshEvents(childComplexity), true
+	case "Mutation.reorderPeople":
+		if e.ComplexityRoot.Mutation.ReorderPeople == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_reorderPeople_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.ReorderPeople(childComplexity, args["ids"].([]string)), true
 	case "Mutation.resumeTimer":
 		if e.ComplexityRoot.Mutation.ResumeTimer == nil {
 			break
@@ -1499,6 +1512,8 @@ extend type Mutation {
   createEvent(input: EventInput!): Event! @protected
   savePerson(input: PersonInput!): Person! @protected
   deletePerson(id: ID!): Boolean! @protected
+  "Sets the display order. ids must list every person exactly once."
+  reorderPeople(ids: [ID!]!): [Person!]! @protected
   createCalendarAssociation(input: CreateCalendarAssociationInput!): CalendarAssociation! @protected
   updateCalendarAssociation(input: UpdateCalendarAssociationInput!): CalendarAssociation! @protected
   deleteCalendarAssociation(calendarId: ID!, personId: ID!): Boolean! @protected
@@ -2162,6 +2177,20 @@ func (ec *executionContext) field_Mutation_refreshCalendar_args(ctx context.Cont
 		return nil, err
 	}
 	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_reorderPeople_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "ids",
+		func(ctx context.Context, v any) ([]string, error) {
+			return ec.unmarshalNID2ᚕstringᚄ(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["ids"] = arg0
 	return args, nil
 }
 
@@ -4205,6 +4234,50 @@ func (ec *executionContext) fieldContext_Mutation_deletePerson(ctx context.Conte
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_deletePerson_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_reorderPeople(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_reorderPeople(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().ReorderPeople(ctx, fc.Args["ids"].([]string))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.Person) graphql.Marshaler {
+			return ec.marshalNPerson2ᚕgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPersonᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_reorderPeople(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Person(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_reorderPeople_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -8523,6 +8596,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "deletePerson":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_deletePerson(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "reorderPeople":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_reorderPeople(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++

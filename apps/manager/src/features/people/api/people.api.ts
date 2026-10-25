@@ -21,6 +21,16 @@ export const peopleApi = {
     return data.savePerson.id
   },
 
+  reorder: async (ids: string[]): Promise<ManagerPerson[]> => {
+    const data = await graphql<{ reorderPeople: ManagerPerson[] }>(
+      `mutation ReorderPeople($ids: [ID!]!) {
+        reorderPeople(ids: $ids) { id name emoji swatch isFamily }
+      }`,
+      { ids },
+    )
+    return data.reorderPeople
+  },
+
   remove: (id: string) =>
     graphql(`mutation DeletePerson($id: ID!) { deletePerson(id: $id) }`, { id }),
 }

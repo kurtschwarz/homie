@@ -66,6 +66,30 @@ func (r *mutationResolver) DeletePerson(ctx context.Context, id string) (bool, e
 	return true, nil
 }
 
+// ReorderPeople is the resolver for the reorderPeople field.
+func (r *mutationResolver) ReorderPeople(ctx context.Context, ids []string) ([]model.Person, error) {
+	if r.Resolver.Events == nil {
+		return nil, errEventsNotConfigured
+	}
+	parsed := make([]uuid.UUID, 0, len(ids))
+	for _, raw := range ids {
+		id, err := uuid.Parse(raw)
+		if err != nil {
+			return nil, err
+		}
+		parsed = append(parsed, id)
+	}
+	people, err := r.Resolver.Events.ReorderPeople(ctx, parsed)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]model.Person, 0, len(people))
+	for _, person := range people {
+		result = append(result, toModelPerson(person))
+	}
+	return result, nil
+}
+
 // CreateCalendarAssociation is the resolver for the createCalendarAssociation field.
 func (r *mutationResolver) CreateCalendarAssociation(ctx context.Context, input model.CreateCalendarAssociationInput) (*model.CalendarAssociation, error) {
 	if r.Resolver.Events == nil {

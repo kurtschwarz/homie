@@ -3,6 +3,7 @@ import * as React from 'react'
 import { eventQueries } from '@/features/events'
 import { ErrorMessage } from '@/shared/ui/error-message'
 import { Page } from '@/shared/ui/page'
+import { useReorderPeople } from './api/people.mutations'
 import { peopleQueries } from './api/people.queries'
 import { PersonList } from './components/person-list'
 import { PersonEditor } from './person-editor'
@@ -10,6 +11,7 @@ import { PersonEditor } from './person-editor'
 export function PeoplePage() {
   const { data: events = [], isError: eventsFailed } = useQuery(eventQueries.list())
   const people = useQuery(peopleQueries.list())
+  const reorder = useReorderPeople()
   const [selectedId, setSelectedId] = React.useState<string>()
   const [adding, setAdding] = React.useState(false)
   const [editorDirty, setEditorDirty] = React.useState(false)
@@ -39,6 +41,9 @@ export function PeoplePage() {
       ) : (
         <>
           {people.error && <ErrorMessage message={people.error.message} />}
+          {reorder.error && (
+            <ErrorMessage label="Couldn't save the order" message={reorder.error.message} />
+          )}
           <div className="grid items-start gap-7 lg:grid-cols-[minmax(260px,340px)_minmax(0,1fr)]">
             <PersonList
               people={ordered}
@@ -46,6 +51,12 @@ export function PeoplePage() {
               showWeek={!eventsFailed}
               selectedId={active?.id}
               adding={adding}
+              onReorder={(ids) => {
+                const family = ordered
+                  .filter((person) => person.isFamily)
+                  .map((person) => person.id)
+                reorder.reorder([...ids, ...family])
+              }}
               onSelect={(id) => {
                 if (!canDiscardDraft()) return
                 setAdding(false)

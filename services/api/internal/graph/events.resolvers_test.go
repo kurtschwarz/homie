@@ -72,6 +72,32 @@ func TestSavePersonResolverCreateUpdateAndRejectsUnknownSwatch(t *testing.T) {
 	}
 }
 
+func TestReorderPeopleResolver(t *testing.T) {
+	_, service := newEventsRepoAndService(t)
+	resolver := &mutationResolver{Resolver: &Resolver{Events: service}}
+	ctx := context.Background()
+
+	a, err := resolver.SavePerson(ctx, model.PersonInput{Name: "A", Swatch: "clay"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := resolver.SavePerson(ctx, model.PersonInput{Name: "B", Swatch: "pine"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := resolver.ReorderPeople(ctx, []string{b.ID, a.ID})
+	if err != nil || len(got) != 2 || got[0].ID != b.ID || got[1].ID != a.ID {
+		t.Fatalf("expected b, a: got=%+v err=%v", got, err)
+	}
+	if _, err := resolver.ReorderPeople(ctx, []string{b.ID}); err != events.ErrInvalidPeopleOrder {
+		t.Fatalf("expected ErrInvalidPeopleOrder, got %v", err)
+	}
+	if _, err := resolver.ReorderPeople(ctx, []string{"nope", a.ID}); err == nil {
+		t.Fatal("expected an error for a malformed id")
+	}
+}
+
 func TestCalendarAssociationResolversCreateUpdateQueryAndDelete(t *testing.T) {
 	_, service := newEventsRepoAndService(t)
 	mutation := &mutationResolver{Resolver: &Resolver{Events: service}}

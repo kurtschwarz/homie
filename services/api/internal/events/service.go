@@ -34,6 +34,9 @@ var Swatches = map[string]struct{}{
 // ErrUnknownSwatch is returned by savePerson for a swatch outside the palette.
 var ErrUnknownSwatch = errors.New("unknown swatch")
 
+// ErrInvalidPeopleOrder is returned by reorderPeople when the ids are not every person exactly once.
+var ErrInvalidPeopleOrder = errors.New("people order must list every person exactly once")
+
 // ErrAssociationExists is returned when a person is already associated with a calendar.
 var ErrAssociationExists = errors.New("events: person is already associated with this calendar")
 
@@ -538,6 +541,16 @@ func (s *Service) SavePerson(ctx context.Context, person Person) (Person, error)
 			return Person{}, err
 		}
 		person.ID = id
+		people, err := s.repo.ListPeople(ctx)
+		if err != nil {
+			return Person{}, err
+		}
+		person.Order = 0
+		for _, existing := range people {
+			if existing.Order >= person.Order {
+				person.Order = existing.Order + 1
+			}
+		}
 	}
 	if err := s.repo.UpsertPerson(ctx, person); err != nil {
 		return Person{}, err
@@ -548,6 +561,32 @@ func (s *Service) SavePerson(ctx context.Context, person Person) (Person, error)
 		}
 	}
 	return person, nil
+}
+
+// ReorderPeople sets the display order. ids must list every person exactly once.
+func (s *Service) ReorderPeople(ctx context.Context, ids []uuid.UUID) ([]Person, error) {
+	people, err := s.repo.ListPeople(ctx)
+	if err != nil {
+		return nil, err
+	}
+	known := make(map[uuid.UUID]bool, len(people))
+	for _, person := range people {
+		known[person.ID] = true
+	}
+	seen := make(map[uuid.UUID]bool, len(ids))
+	for _, id := range ids {
+		if !known[id] || seen[id] {
+			return nil, ErrInvalidPeopleOrder
+		}
+		seen[id] = true
+	}
+	if len(ids) != len(people) {
+		return nil, ErrInvalidPeopleOrder
+	}
+	if err := s.repo.SetPersonOrder(ctx, ids); err != nil {
+		return nil, err
+	}
+	return s.repo.ListPeople(ctx)
 }
 
 // DeletePerson removes a person; their associations cascade with them.

@@ -429,6 +429,60 @@ func TestSavePersonMovesFamilyFlag(t *testing.T) {
 	}
 }
 
+func TestSavePersonAppendsNewPeopleAndKeepsOrderOnUpdate(t *testing.T) {
+	db := openDB(t)
+	repo := events.NewSQLiteRepository(db)
+	service := events.New(repo)
+	ctx := context.Background()
+
+	a, err := service.SavePerson(ctx, events.Person{Name: "A", Swatch: "clay"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := service.SavePerson(ctx, events.Person{Name: "B", Swatch: "pine"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.ReorderPeople(ctx, []uuid.UUID{b.ID, a.ID}); err != nil {
+		t.Fatal(err)
+	}
+	a.Name = "A Renamed"
+	a.Order = 0
+	if _, err := service.SavePerson(ctx, a); err != nil {
+		t.Fatal(err)
+	}
+	people, err := repo.ListPeople(ctx)
+	if err != nil || len(people) != 2 || people[0].ID != b.ID || people[1].ID != a.ID {
+		t.Fatalf("expected a rename to keep the reordered list: got=%+v err=%v", people, err)
+	}
+}
+
+func TestReorderPeople(t *testing.T) {
+	db := openDB(t)
+	repo := events.NewSQLiteRepository(db)
+	service := events.New(repo)
+	ctx := context.Background()
+
+	a, _ := service.SavePerson(ctx, events.Person{Name: "A", Swatch: "clay"})
+	b, _ := service.SavePerson(ctx, events.Person{Name: "B", Swatch: "pine"})
+	c, _ := service.SavePerson(ctx, events.Person{Name: "C", Swatch: "sky"})
+
+	got, err := service.ReorderPeople(ctx, []uuid.UUID{c.ID, a.ID, b.ID})
+	if err != nil || len(got) != 3 || got[0].ID != c.ID || got[1].ID != a.ID || got[2].ID != b.ID {
+		t.Fatalf("expected c, a, b: got=%+v err=%v", got, err)
+	}
+
+	for name, ids := range map[string][]uuid.UUID{
+		"missing":   {a.ID, b.ID},
+		"duplicate": {a.ID, a.ID, b.ID},
+		"unknown":   {a.ID, b.ID, uuid.New()},
+	} {
+		if _, err := service.ReorderPeople(ctx, ids); err != events.ErrInvalidPeopleOrder {
+			t.Fatalf("%s: expected ErrInvalidPeopleOrder, got %v", name, err)
+		}
+	}
+}
+
 func TestParseTermsInfersKindAndNormalises(t *testing.T) {
 	got := events.ParseTerms([]string{" #Lana ", "Lana", "lana", "#lana", "  ", "#"})
 	want := []events.AssociationTerm{

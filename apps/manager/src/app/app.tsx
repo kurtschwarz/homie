@@ -3,6 +3,7 @@ import { AuthGate } from '@/features/auth'
 import { AddCalendarAccountPage, CalendarsPage } from '@/features/calendars'
 import { PeoplePage } from '@/features/people'
 import { SystemPage } from '@/features/system'
+import { WeatherPage } from '@/features/weather'
 import { PlaceholderPage } from '@/shared/ui/placeholder-page'
 import { AdminShell } from './shell/admin-shell'
 
@@ -16,12 +17,7 @@ export function App() {
           <Route path="calendars" element={<CalendarsPage />} />
           <Route path="calendars/add" element={<AddCalendarAccountPage />} />
           <Route path="calendars/:accountId/edit" element={<AddCalendarAccountPage />} />
-          <Route
-            path="weather"
-            element={
-              <PlaceholderPage title="Weather" description="Weather settings will live here." />
-            }
-          />
+          <Route path="weather" element={<WeatherPage />} />
           <Route
             path="kitchen-screen"
             element={

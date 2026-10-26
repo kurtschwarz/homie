@@ -73,7 +73,6 @@ struct SignInView: View {
                 .padding(.bottom, 28)
         }
         .padding(.horizontal, 56)
-        .frame(minWidth: 720, minHeight: 620)
         .onAppear { focusedField = .username }
     }
 

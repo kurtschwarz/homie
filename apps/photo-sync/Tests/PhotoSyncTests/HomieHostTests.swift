@@ -109,6 +109,24 @@ final class HomieHostTests: XCTestCase {
         XCTAssertNil(defaults.string(forKey: "HomieAPIURL"))
     }
 
+    @MainActor
+    func testResetToDefaultClearsPersistedHost() async throws {
+        let defaults = defaults(suite: "HomieHostResetTests")
+        let store = HomieHostStore(defaults: defaults) { _ in HomieHealth(status: "OK", version: "1.2.3") }
+        try await store.select(HomieHost.manual("other.local:3000")!)
+        let previousIdentity = store.contentIdentity
+
+        store.resetToDefault()
+
+        XCTAssertEqual(store.selected.graphQLURL, HomieAPI.defaultEndpoint)
+        XCTAssertNotEqual(store.contentIdentity, previousIdentity)
+        XCTAssertNil(store.health)
+        XCTAssertFalse(store.requiresSetup)
+        XCTAssertNil(defaults.string(forKey: "HomieAPIURL"))
+        XCTAssertNil(defaults.string(forKey: "HomieAPIName"))
+        XCTAssertNil(defaults.object(forKey: "HomieAPIDiscovered"))
+    }
+
     private func defaults(suite: String) -> UserDefaults {
         let defaults = UserDefaults(suiteName: suite)!
         defaults.removePersistentDomain(forName: suite)

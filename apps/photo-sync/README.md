@@ -42,6 +42,8 @@ To install a build, download `HomiePhotos.dmg` from the [latest release](https:/
 
 The app does not modify the Photos library. PhotoKit's macOS authorization API uses the `.readWrite` access level. It defaults to the album named `Homie`, shows other albums in the picker, and allows iCloud downloads when an asset is not stored locally. The local ledger is stored in UserDefaults and can be reset by clearing the app's defaults. If the API database is reset, clear the ledger too so photos can be uploaded again.
 
+Choose **Homie Photos → Reset Homie Photos…** to return the app to onboarding. The reset removes saved hosts, sessions, upload history, and cached places, but macOS keeps the Photos permission. It also removes the local API override set by `just dev photo-sync`; run that recipe again to restore the development endpoint.
+
 ## API endpoint
 
 Uploads go to `http://homie:3000/graphql`, the Pi, by default. `just dev photo-sync` configures the local endpoint automatically. To point the app at a local API manually instead:

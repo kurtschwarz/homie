@@ -7,6 +7,7 @@ final class HomieHostStore: ObservableObject {
     @Published private(set) var health: HomieHealth?
     @Published private(set) var isChecking = false
     @Published private(set) var requiresSetup = false
+    @Published private(set) var contentIdentity = UUID()
 
     let discovery = HomieDiscovery()
     private let defaults: UserDefaults
@@ -54,6 +55,19 @@ final class HomieHostStore: ObservableObject {
         self.health = health
         requiresSetup = false
         selected = host
+        contentIdentity = UUID()
+    }
+
+    func resetToDefault() {
+        checkID = UUID()
+        isChecking = false
+        health = nil
+        requiresSetup = false
+        defaults.removeObject(forKey: "HomieAPIURL")
+        defaults.removeObject(forKey: "HomieAPIName")
+        defaults.removeObject(forKey: "HomieAPIDiscovered")
+        selected = HomieHost.configured(defaults: defaults)
+        contentIdentity = UUID()
     }
 }
 

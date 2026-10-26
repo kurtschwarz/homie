@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-APP="$ROOT/build/PhotoSync.app"
+APP="$ROOT/build/Homie Photos.app"
 
 swift build --package-path "$ROOT" -c release
 mkdir -p "$APP/Contents/MacOS"

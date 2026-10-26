@@ -5,7 +5,7 @@ struct PhotoSyncApp: App {
     @StateObject private var hostStore = HomieHostStore()
 
     var body: some Scene {
-        WindowGroup {
+        WindowGroup("Homie Photos") {
             ContentView(hostStore: hostStore)
                 .id(hostStore.selected.graphQLURL.absoluteString)
         }

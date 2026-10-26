@@ -27,6 +27,8 @@ A bare origin gets `/graphql` appended, so the value is spelled the same way as 
 
 Sign in with the Homie admin username and password. Photo Sync stores its session in the macOS Keychain, and the session appears in the manager's Active Sessions list, where it can be revoked. Photo Sync asks you to sign in again when the session expires or is revoked.
 
+Photo Sync discovers Homie devices advertised over Bonjour and also checks `homie.local:3000` as a fallback. Use **Change** on the sign-in screen, or the display button after signing in, to select another discovered device or enter an address manually. Sessions are stored separately for each address.
+
 The app bundle sets `NSAllowsLocalNetworking` because the API is plain HTTP. App Transport Security exempts `localhost` but not the Pi's hostname.
 
 The server accepts JPEG uploads up to 20 MB. Photo Sync encodes full-resolution images and retries oversized images at lower JPEG quality; images that still exceed the server limit are marked as failed.

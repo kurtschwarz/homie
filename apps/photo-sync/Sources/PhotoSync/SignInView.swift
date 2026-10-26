@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SignInView: View {
     @ObservedObject var auth: AuthModel
+    @ObservedObject var hostStore: HomieHostStore
     @State private var username = ""
     @State private var password = ""
     @FocusState private var focusedField: Field?
@@ -29,6 +30,8 @@ struct SignInView: View {
             .padding(.bottom, 28)
 
             VStack(alignment: .leading, spacing: 16) {
+                HomieHostControl(store: hostStore)
+
                 VStack(alignment: .leading, spacing: 7) {
                     Text("Username").font(.headline)
                     TextField("Your Homie username", text: $username)

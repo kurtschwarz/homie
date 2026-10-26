@@ -17,13 +17,14 @@ final class PhotoUploader: ObservableObject {
     @Published private(set) var isUploading = false
 
     private let library: PhotoLibrary
-    private let api = HomieAPI()
+    private let api: HomieAPI
     private let ledger = UploadLedger()
     private let geocoder = CLGeocoder()
     private let onAuthenticationRequired: () -> Void
 
-    init(library: PhotoLibrary, onAuthenticationRequired: @escaping () -> Void) {
+    init(library: PhotoLibrary, api: HomieAPI, onAuthenticationRequired: @escaping () -> Void) {
         self.library = library
+        self.api = api
         self.onAuthenticationRequired = onAuthenticationRequired
     }
 

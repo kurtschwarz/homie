@@ -3,18 +3,24 @@ import Photos
 import SwiftUI
 
 struct ContentView: View {
+    @ObservedObject private var hostStore: HomieHostStore
     @StateObject private var auth: AuthModel
     @StateObject private var library: PhotoLibrary
     @StateObject private var uploader: PhotoUploader
     @State private var selectedPhoto: PhotoAsset?
+    @State private var showsHostPicker = false
 
-    init() {
-        let auth = AuthModel()
+    init(hostStore: HomieHostStore) {
+        self.hostStore = hostStore
+        let endpoint = hostStore.selected.graphQLURL
+        let api = HomieAPI(endpoint: endpoint, sessionToken: { HomieSession.token(for: endpoint) })
+        let auth = AuthModel(api: api)
         let library = PhotoLibrary()
         _auth = StateObject(wrappedValue: auth)
         _library = StateObject(wrappedValue: library)
         _uploader = StateObject(wrappedValue: PhotoUploader(
             library: library,
+            api: api,
             onAuthenticationRequired: { auth.sessionExpired() }
         ))
     }
@@ -26,7 +32,7 @@ struct ContentView: View {
                 ProgressView("Checking your Homie session…")
                     .frame(minWidth: 720, minHeight: 620)
             case .signedOut:
-                SignInView(auth: auth)
+                SignInView(auth: auth, hostStore: hostStore)
             case .signedIn:
                 photoLibraryContent
             }
@@ -90,6 +96,13 @@ struct ContentView: View {
             Button { library.loadAlbums() } label: { Image(systemName: "arrow.clockwise") }
                 .help("Refresh albums")
             Spacer()
+            Button { showsHostPicker = true } label: {
+                Label(hostStore.selected.name, systemImage: "display")
+            }
+            .disabled(uploader.isUploading)
+            .sheet(isPresented: $showsHostPicker) {
+                HomieHostPicker(store: hostStore, isPresented: $showsHostPicker)
+            }
             if library.isLoading { ProgressView().controlSize(.small) }
             if uploader.isUploading {
                 ProgressView(value: Double(uploader.completed), total: Double(max(uploader.total, 1)))

@@ -53,9 +53,10 @@ package: build
     #!/usr/bin/env bash
     set -euo pipefail
     rm -rf dist/pkgroot dist/homie.deb
-    mkdir -p dist/pkgroot/usr/bin dist/pkgroot/lib/systemd/system dist/pkgroot/etc/sudoers.d
+    mkdir -p dist/pkgroot/usr/bin dist/pkgroot/lib/systemd/system dist/pkgroot/etc/sudoers.d dist/pkgroot/etc/avahi/services
     install -m 0755 dist/homie-api dist/pkgroot/usr/bin/homie-api
     install -m 0644 deploy/homie-api.service deploy/homie-kiosk.service dist/pkgroot/lib/systemd/system/
+    install -m 0644 deploy/homie.service dist/pkgroot/etc/avahi/services/homie.service
     install -m 0440 deploy/debian/sudoers dist/pkgroot/etc/sudoers.d/homie-deploy
     python3 deploy/blank-cursor.py dist/pkgroot/usr/share/homie/cursors default
     version="0.0.0+$(date -u +%Y%m%d%H%M%S).g$(git rev-parse --short HEAD)"

@@ -54,6 +54,13 @@ struct SessionPayload: Decodable {
     let session: Session?
 }
 
+struct HomieHealth: Decodable, Equatable {
+    let status: String
+    let version: String
+}
+
+struct HealthPayload: Decodable { let health: HomieHealth? }
+
 struct HomieAPI {
     // A bundle launched by `open` does not inherit the shell environment, so
     // UserDefaults is the command-line override that works for the app bundle:
@@ -67,7 +74,7 @@ struct HomieAPI {
     init(
         endpoint: URL = HomieAPI.configuredEndpoint(),
         session: URLSession? = nil,
-        sessionToken: @escaping () -> String? = { HomieSession.token }
+        sessionToken: (() -> String?)? = nil
     ) {
         self.endpoint = endpoint
         if let session {
@@ -77,7 +84,7 @@ struct HomieAPI {
             configuration.httpShouldSetCookies = false
             self.session = URLSession(configuration: configuration)
         }
-        self.sessionToken = sessionToken
+        self.sessionToken = sessionToken ?? { HomieSession.token(for: endpoint) }
     }
 
     // A bare origin gets /graphql appended so the override can be spelled the
@@ -119,6 +126,19 @@ struct HomieAPI {
     func logout(token: String) async throws {
         let (data, response) = try await perform(query: "mutation Logout { logout }", variables: [:], token: token)
         try validate(data: data, response: response)
+    }
+
+    func health() async throws -> HomieHealth {
+        let (data, response) = try await perform(
+            query: "query Health { health { status version } }",
+            variables: [:],
+            token: nil
+        )
+        try validate(data: data, response: response)
+        guard let health = try decode(GraphQLResponse<HealthPayload>.self, from: data, response: response).data?.health else {
+            throw HomieAPIError.invalidResponse
+        }
+        return health
     }
 
     func upload(_ input: PhotoUploadInput, jpeg: Data, filename: String) async throws -> UploadedPhoto {

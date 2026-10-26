@@ -13,34 +13,36 @@ final class AuthModel: ObservableObject {
     @Published private(set) var isSigningIn = false
 
     private let api: HomieAPI
+    private let endpoint: URL
     private var didRestore = false
 
     init(api: HomieAPI = HomieAPI()) {
         self.api = api
+        endpoint = api.endpoint
     }
 
     func restoreSession() async {
         guard !didRestore else { return }
         didRestore = true
-        guard let token = HomieSession.token else {
+        guard let token = HomieSession.token(for: endpoint) else {
             state = .signedOut(nil)
             return
         }
         do {
             guard let user = try await api.currentUser(token: token) else {
-                HomieSession.clear()
+                HomieSession.clear(for: endpoint)
                 state = .signedOut(nil)
                 return
             }
             guard user.role == .admin else {
                 try? await api.logout(token: token)
-                HomieSession.clear()
+                HomieSession.clear(for: endpoint)
                 state = .signedOut(HomieAPIError.forbidden.localizedDescription)
                 return
             }
             state = .signedIn(user)
         } catch {
-            if case HomieAPIError.unauthorized = error { HomieSession.clear() }
+            if case HomieAPIError.unauthorized = error { HomieSession.clear(for: endpoint) }
             state = .signedOut(error.localizedDescription)
         }
     }
@@ -60,7 +62,7 @@ final class AuthModel: ObservableObject {
                 try? await api.logout(token: result.token)
                 throw HomieAPIError.forbidden
             }
-            try HomieSession.save(result.token)
+            try HomieSession.save(result.token, for: endpoint)
             state = .signedIn(result.user)
         } catch {
             state = .signedOut(error.localizedDescription)
@@ -68,15 +70,15 @@ final class AuthModel: ObservableObject {
     }
 
     func signOut() {
-        let token = HomieSession.token
-        HomieSession.clear()
+        let token = HomieSession.token(for: endpoint)
+        HomieSession.clear(for: endpoint)
         state = .signedOut(nil)
         guard let token else { return }
         Task { try? await api.logout(token: token) }
     }
 
     func sessionExpired() {
-        HomieSession.clear()
+        HomieSession.clear(for: endpoint)
         state = .signedOut(HomieAPIError.unauthorized.localizedDescription)
     }
 }

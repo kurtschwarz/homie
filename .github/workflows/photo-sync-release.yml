@@ -18,8 +18,8 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 30
     env:
-      APP_PATH: apps/photo-sync/build/Homie Photos.app
-      ARCHIVE_PATH: apps/photo-sync/build/HomiePhotos.zip
+      CODESIGN_IDENTITY: "Developer ID Application: KURT SCHWARZ (P9DZH3LW75)"
+      DMG_PATH: apps/photo-sync/build/HomiePhotos.dmg
 
     steps:
       - name: Check out repository
@@ -75,14 +75,13 @@ jobs:
 
       - name: Build signed app
         timeout-minutes: 10
-        env:
-          CODESIGN_IDENTITY: "Developer ID Application: KURT SCHWARZ (P9DZH3LW75)"
         run: ./apps/photo-sync/build.sh
 
-      - name: Create notarization archive
-        run: ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$ARCHIVE_PATH"
+      - name: Package DMG
+        timeout-minutes: 10
+        run: ./apps/photo-sync/package.sh
 
-      - name: Notarize app
+      - name: Notarize DMG
         env:
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
@@ -95,7 +94,7 @@ jobs:
           api_key_path="$RUNNER_TEMP/AuthKey_${APPLE_API_KEY_ID}.p8"
           printf '%s' "$APPLE_API_KEY" | base64 --decode > "$api_key_path"
 
-          xcrun notarytool submit "$ARCHIVE_PATH" \
+          xcrun notarytool submit "$DMG_PATH" \
             --key "$api_key_path" \
             --key-id "$APPLE_API_KEY_ID" \
             --issuer "$APPLE_API_ISSUER_ID" \
@@ -105,18 +104,21 @@ jobs:
 
       - name: Staple notarization ticket
         run: |
-          xcrun stapler staple "$APP_PATH"
-          xcrun stapler validate "$APP_PATH"
-          spctl --assess --type execute --verbose=2 "$APP_PATH"
+          xcrun stapler staple "$DMG_PATH"
+          xcrun stapler validate "$DMG_PATH"
 
-          rm -f "$ARCHIVE_PATH"
-          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$ARCHIVE_PATH"
+          # A disk image is assessed as "open", not "execute".
+          spctl --assess \
+            --type open \
+            --context context:primary-signature \
+            --verbose=2 \
+            "$DMG_PATH"
 
-      - name: Upload app
+      - name: Upload DMG
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: HomiePhotos-${{ github.sha }}
-          path: apps/photo-sync/build/HomiePhotos.zip
+          path: apps/photo-sync/build/HomiePhotos.dmg
           if-no-files-found: error
           retention-days: 30
 
@@ -129,3 +131,37 @@ jobs:
           rm -f \
             "$RUNNER_TEMP/developer-id.p12" \
             "$RUNNER_TEMP"/AuthKey_*.p8
+
+  publish:
+    name: Publish rolling release
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    # Only this job gets a write token, so it never holds the signing secrets.
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download DMG
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: HomiePhotos-${{ github.sha }}
+          path: dist
+
+      - name: Publish latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Recreate the release so the "latest" tag tracks the current commit.
+          gh release delete latest \
+            --repo "$GITHUB_REPOSITORY" \
+            --yes \
+            --cleanup-tag 2>/dev/null || true
+
+          gh release create latest dist/HomiePhotos.dmg \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title 'Latest build' \
+            --notes "Built from $GITHUB_SHA" \
+            --prerelease

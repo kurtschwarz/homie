@@ -21,6 +21,10 @@ mod dev 'scripts/dev/justfile'
 photo-sync:
     ./apps/photo-sync/build.sh
 
+# Package the Photo Sync app as a disk image.
+photo-sync-dmg: photo-sync
+    ./apps/photo-sync/package.sh
+
 # Build, install, and launch Homie in the iPhone 17 simulator.
 # Override IOS_SIMULATOR_ID to target another booted or available simulator.
 ios-sim:

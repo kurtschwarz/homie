@@ -14,7 +14,7 @@ The script builds a minimal `Homie Photos.app` bundle and ad-hoc signs it. Launc
 
 ## Download a signed build
 
-The **Photo Sync** GitHub Actions workflow tests the app. Builds from `main` and manually dispatched builds publish `HomiePhotos.zip` as a workflow artifact. The app is signed with the Developer ID identity for team `P9DZH3LW75`, notarized by Apple, and stapled so it can be opened normally after download. Pull requests test and build the app with an ad-hoc signature, but do not publish a distribution artifact.
+The **Photo Sync** GitHub Actions workflow tests the app. Builds from `main` and manually dispatched builds publish `HomiePhotos.dmg` to the `latest` prerelease, which always tracks the newest commit on `main`. The app and the disk image are both signed with the Developer ID identity for team `P9DZH3LW75`, and the image is notarized by Apple and stapled so it can be opened normally after download. Pull requests test and build the app with an ad-hoc signature, but do not publish a distribution build.
 
 The workflow requires these repository secrets:
 
@@ -24,7 +24,7 @@ The workflow requires these repository secrets:
 - `APPLE_API_ISSUER_ID`: the App Store Connect issuer UUID
 - `APPLE_API_KEY`: the API key `.p8` file, base64-encoded
 
-To download a build, open the workflow run on the repository's **Actions** page and select its artifact. GitHub retains each artifact for 30 days.
+To install a build, download `HomiePhotos.dmg` from the [latest release](https://github.com/kurtschwarz/homie/releases/tag/latest), open it, and drag **Homie Photos** to Applications. Each run also uploads the image as a workflow artifact, which GitHub retains for 30 days; artifacts are served inside an extra zip wrapper, so prefer the release for a plain download.
 
 The app does not modify the Photos library. PhotoKit's macOS authorization API uses the `.readWrite` access level. It defaults to the album named `Homie`, shows other albums in the picker, and allows iCloud downloads when an asset is not stored locally. The local ledger is stored in UserDefaults and can be reset by clearing the app's defaults. If the API database is reset, clear the ledger too so photos can be uploaded again.
 

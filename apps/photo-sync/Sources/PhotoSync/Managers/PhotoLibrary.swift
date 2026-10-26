@@ -43,7 +43,10 @@ final class PhotoLibrary: ObservableObject {
                 cover: cover
             ))
         }
-        albums = found.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+        albums = found.sorted {
+            if $0.count != $1.count { return $0.count > $1.count }
+            return $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending
+        }
     }
 
     func assets(inAlbum id: String) -> [PhotoAsset] {

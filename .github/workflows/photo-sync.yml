@@ -1,0 +1,135 @@
+name: Photo Sync
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - apps/photo-sync/**
+      - .github/workflows/photo-sync.yml
+  pull_request:
+    paths:
+      - apps/photo-sync/**
+      - .github/workflows/photo-sync.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build macOS app
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      APP_PATH: apps/photo-sync/build/Homie Photos.app
+      ARCHIVE_PATH: apps/photo-sync/build/HomiePhotos.zip
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Show Swift version
+        run: swift --version
+
+      - name: Run tests
+        run: swift test --package-path apps/photo-sync
+
+      - name: Import Developer ID certificate
+        if: github.event_name != 'pull_request'
+        env:
+          KEYCHAIN_PATH: ${{ runner.temp }}/photo-sync-signing.keychain-db
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          : "${MACOS_CERTIFICATE:?MACOS_CERTIFICATE secret is required}"
+          : "${MACOS_CERTIFICATE_PASSWORD:?MACOS_CERTIFICATE_PASSWORD secret is required}"
+
+          certificate_path="$RUNNER_TEMP/developer-id.p12"
+          keychain_password="$(openssl rand -base64 32)"
+
+          printf '%s' "$MACOS_CERTIFICATE" | base64 --decode > "$certificate_path"
+          security create-keychain -p "$keychain_password" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$keychain_password" "$KEYCHAIN_PATH"
+          security import "$certificate_path" \
+            -k "$KEYCHAIN_PATH" \
+            -P "$MACOS_CERTIFICATE_PASSWORD" \
+            -t cert \
+            -f pkcs12
+          security set-key-partition-list \
+            -S apple-tool:,apple: \
+            -s \
+            -k "$keychain_password" \
+            "$KEYCHAIN_PATH"
+          security list-keychains -d user -s \
+            "$KEYCHAIN_PATH" \
+            $(security list-keychains -d user | tr -d '"')
+
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+          rm -f "$certificate_path"
+
+      - name: Build signed app
+        if: github.event_name != 'pull_request'
+        env:
+          CODESIGN_IDENTITY: "Developer ID Application: KURT SCHWARZ (P9DZH3LW75)"
+        run: ./apps/photo-sync/build.sh
+
+      - name: Build ad-hoc signed app
+        if: github.event_name == 'pull_request'
+        run: ./apps/photo-sync/build.sh
+
+      - name: Create notarization archive
+        if: github.event_name != 'pull_request'
+        run: ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$ARCHIVE_PATH"
+
+      - name: Notarize app
+        if: github.event_name != 'pull_request'
+        env:
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+        run: |
+          : "${APPLE_API_KEY_ID:?APPLE_API_KEY_ID secret is required}"
+          : "${APPLE_API_ISSUER_ID:?APPLE_API_ISSUER_ID secret is required}"
+          : "${APPLE_API_KEY:?APPLE_API_KEY secret is required}"
+
+          api_key_path="$RUNNER_TEMP/AuthKey_${APPLE_API_KEY_ID}.p8"
+          printf '%s' "$APPLE_API_KEY" | base64 --decode > "$api_key_path"
+
+          xcrun notarytool submit "$ARCHIVE_PATH" \
+            --key "$api_key_path" \
+            --key-id "$APPLE_API_KEY_ID" \
+            --issuer "$APPLE_API_ISSUER_ID" \
+            --wait
+
+          rm -f "$api_key_path"
+
+      - name: Staple notarization ticket
+        if: github.event_name != 'pull_request'
+        run: |
+          xcrun stapler staple "$APP_PATH"
+          xcrun stapler validate "$APP_PATH"
+          spctl --assess --type execute --verbose=2 "$APP_PATH"
+
+          rm -f "$ARCHIVE_PATH"
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$ARCHIVE_PATH"
+
+      - name: Upload app
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: HomiePhotos-${{ github.sha }}
+          path: apps/photo-sync/build/HomiePhotos.zip
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Remove signing material
+        if: ${{ always() && github.event_name != 'pull_request' }}
+        env:
+          KEYCHAIN_PATH: ${{ runner.temp }}/photo-sync-signing.keychain-db
+        run: |
+          security delete-keychain "$KEYCHAIN_PATH" 2>/dev/null || true
+          rm -f \
+            "$RUNNER_TEMP/developer-id.p12" \
+            "$RUNNER_TEMP"/AuthKey_*.p8

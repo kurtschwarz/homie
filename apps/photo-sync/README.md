@@ -12,6 +12,20 @@ just photo-sync
 
 The script builds a minimal `Homie Photos.app` bundle and ad-hoc signs it. Launch through `open`, not by running the executable directly: the Photos privacy prompt must be attributed to the app bundle.
 
+## Download a signed build
+
+The **Photo Sync** GitHub Actions workflow tests the app. Builds from `main` and manually dispatched builds publish `HomiePhotos.zip` as a workflow artifact. The app is signed with the Developer ID identity for team `P9DZH3LW75`, notarized by Apple, and stapled so it can be opened normally after download. Pull requests test and build the app with an ad-hoc signature, but do not publish a distribution artifact.
+
+The workflow requires these repository secrets:
+
+- `MACOS_CERTIFICATE`: the Developer ID Application certificate and private key exported as a password-protected `.p12`, then base64-encoded
+- `MACOS_CERTIFICATE_PASSWORD`: the `.p12` export password
+- `APPLE_API_KEY_ID`: the App Store Connect API key ID
+- `APPLE_API_ISSUER_ID`: the App Store Connect issuer UUID
+- `APPLE_API_KEY`: the API key `.p8` file, base64-encoded
+
+To download a build, open the workflow run on the repository's **Actions** page and select its artifact. GitHub retains each artifact for 30 days.
+
 The app does not modify the Photos library. PhotoKit's macOS authorization API uses the `.readWrite` access level. It defaults to the album named `Homie`, shows other albums in the picker, and allows iCloud downloads when an asset is not stored locally. The local ledger is stored in UserDefaults and can be reset by clearing the app's defaults. If the API database is reset, clear the ledger too so photos can be uploaded again.
 
 ## API endpoint
@@ -41,4 +55,4 @@ If authorization gets stuck after rebuilding, reset the app's TCC grant and reop
 tccutil reset Photos ar.schw.homie.photo-sync
 ```
 
-Ad-hoc signatures are suitable for this local spike; they are not a distribution/signing strategy.
+Local builds use an ad-hoc signature. The GitHub Actions build uses Developer ID signing and Apple notarization for distribution.

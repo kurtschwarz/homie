@@ -10,6 +10,12 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$ROOT/.build/$CONFIGURATION/PhotoSync" "$APP/Contents/MacOS/PhotoSync"
 cp "$ROOT/Info.plist" "$APP/Contents/Info.plist"
+
+# Must happen before codesign, which seals Info.plist.
+if [[ -n "${VERSION:-}" ]]; then
+    plutil -replace CFBundleShortVersionString -string "$VERSION" "$APP/Contents/Info.plist"
+    plutil -replace CFBundleVersion -string "$(git -C "$ROOT" rev-list --count HEAD)" "$APP/Contents/Info.plist"
+fi
 cp "$ROOT/Resources/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
 
 if [[ -n "${CODESIGN_IDENTITY:-}" ]]; then

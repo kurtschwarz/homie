@@ -17,6 +17,8 @@ jobs:
     name: Build macOS app
     runs-on: macos-15
     timeout-minutes: 30
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     env:
       CODESIGN_IDENTITY: "Developer ID Application: KURT SCHWARZ (P9DZH3LW75)"
       DMG_PATH: apps/photo-sync/build/HomiePhotos.dmg
@@ -24,6 +26,16 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Compute version
+        id: version
+        run: |
+          version="$(./apps/photo-sync/version.sh)"
+          printf 'Next version: %s\n' "$version"
+          printf 'version=%s\n' "$version" >> "$GITHUB_OUTPUT"
 
       - name: Show Swift version
         run: swift --version
@@ -75,6 +87,8 @@ jobs:
 
       - name: Build signed app
         timeout-minutes: 10
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: ./apps/photo-sync/build.sh
 
       - name: Package DMG
@@ -104,8 +118,17 @@ jobs:
 
       - name: Staple notarization ticket
         run: |
-          xcrun stapler staple "$DMG_PATH"
-          xcrun stapler validate "$DMG_PATH"
+          # Stapling fetches the ticket from Apple's CloudKit, which drops connections intermittently.
+          for attempt in 1 2 3 4 5; do
+            if xcrun stapler staple "$DMG_PATH" && xcrun stapler validate "$DMG_PATH"; then
+              break
+            fi
+            if [ "$attempt" -eq 5 ]; then
+              echo "::error::Stapling failed after $attempt attempts"
+              exit 1
+            fi
+            sleep $((attempt * 15))
+          done
 
           # A disk image is assessed as "open", not "execute".
           spctl --assess \
@@ -133,7 +156,7 @@ jobs:
             "$RUNNER_TEMP"/AuthKey_*.p8
 
   publish:
-    name: Publish rolling release
+    name: Publish release
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -143,25 +166,28 @@ jobs:
       contents: write
 
     steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
       - name: Download DMG
         uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
         with:
           name: HomiePhotos-${{ github.sha }}
           path: dist
 
-      - name: Publish latest release
+      - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.build.outputs.version }}
         run: |
-          # Recreate the release so the "latest" tag tracks the current commit.
-          gh release delete latest \
-            --repo "$GITHUB_REPOSITORY" \
-            --yes \
-            --cleanup-tag 2>/dev/null || true
+          ./apps/photo-sync/version.sh notes > notes.md
 
-          gh release create latest dist/HomiePhotos.dmg \
+          gh release create "photo-sync-v$VERSION" dist/HomiePhotos.dmg \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
-            --title 'Latest build' \
-            --notes "Built from $GITHUB_SHA" \
-            --prerelease
+            --title "Homie Photos $VERSION" \
+            --notes-file notes.md \
+            --latest

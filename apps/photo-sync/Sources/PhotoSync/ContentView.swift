@@ -30,14 +30,15 @@ struct ContentView: View {
             switch auth.state {
             case .checking:
                 ProgressView("Checking your Homie session…")
-                    .frame(minWidth: 720, minHeight: 620)
             case .signedOut:
                 SignInView(auth: auth, hostStore: hostStore)
             case .signedIn:
                 photoLibraryContent
             }
         }
-        .frame(minWidth: 560, minHeight: 620)
+        .frame(minWidth: 520, minHeight: 620)
+        .hidingWindowTitle()
+        .toolbar { WindowTitleToolbar() }
         .task {
             await auth.restoreSession()
         }
@@ -100,5 +101,33 @@ struct ContentView: View {
     private func startSync() {
         let ids = library.albums.map(\.id).filter { selection.contains($0) }
         uploader.sync(albumIDs: ids) { selection.markSynced() }
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func hidingWindowTitle() -> some View {
+        if #available(macOS 15, *) {
+            toolbar(removing: .title)
+        } else {
+            self
+        }
+    }
+}
+
+private struct WindowTitleToolbar: ToolbarContent {
+    private var title: some View {
+        Text("Homie Photos")
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundStyle(.secondary)
+    }
+
+    var body: some ToolbarContent {
+        if #available(macOS 26, *) {
+            ToolbarItem(placement: .principal) { title }
+                .sharedBackgroundVisibility(.hidden)
+        } else {
+            ToolbarItem(placement: .principal) { title }
+        }
     }
 }

@@ -11,6 +11,7 @@ struct PhotoSyncApp: App {
                 .id(hostStore.contentIdentity)
         }
         .windowStyle(.titleBar)
+        .defaultSize(width: 560, height: 680)
         .commands {
             CommandGroup(after: .appInfo) {
                 Divider()

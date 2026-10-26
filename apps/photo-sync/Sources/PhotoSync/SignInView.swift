@@ -12,21 +12,21 @@ struct SignInView: View {
         VStack(spacing: 0) {
             Spacer()
             HomieSignInMark()
-                .frame(width: 220, height: 220)
+                .frame(width: 154, height: 154)
                 .accessibilityHidden(true)
 
-            VStack(spacing: 22) {
+            VStack(spacing: 14) {
                 Text("Sign in to Homie")
-                    .font(.system(size: 50, weight: .bold))
-                    .tracking(-1.2)
+                    .font(.system(size: 36, weight: .bold))
+                    .tracking(-0.8)
                 Text("Use a manager account to send iCloud Photos\nto your Homie.")
-                    .font(.system(size: 27, weight: .regular))
-                    .lineSpacing(8)
+                    .font(.system(size: 20, weight: .regular))
+                    .lineSpacing(5)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
-            .padding(.top, 18)
-            .padding(.bottom, 42)
+            .padding(.top, 12)
+            .padding(.bottom, 28)
 
             VStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 7) {
@@ -81,7 +81,9 @@ struct SignInView: View {
 
 private struct HomieSignInMark: View {
     var body: some View {
-        Canvas { context, _ in
+        Canvas { context, size in
+            let scale = min(size.width, size.height) / 220
+            context.scaleBy(x: scale, y: scale)
             let ball = Path(ellipseIn: CGRect(x: 24, y: 4, width: 172, height: 172))
 
             context.drawLayer { shadow in

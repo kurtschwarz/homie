@@ -30,7 +30,7 @@ struct AlbumPickerView: View {
                         .padding(.top, 4)
 
                     HStack {
-                        Text("ICLOUD PHOTOS")
+                        Text("ICLOUD ALBUMS")
                             .font(.system(size: 13, weight: .semibold))
                             .tracking(0.6)
                             .foregroundStyle(.secondary)

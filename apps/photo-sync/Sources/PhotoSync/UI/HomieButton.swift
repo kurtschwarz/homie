@@ -7,7 +7,7 @@ struct HomieButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(size: 17, weight: .semibold))
-            .foregroundStyle(prominent ? Color.homieGreenDark : Color.primary)
+            .foregroundStyle(prominent ? Color.homieButtonText : Color.primary)
             .padding(.horizontal, 28)
             .padding(.vertical, 12)
             .background {

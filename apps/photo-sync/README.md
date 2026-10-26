@@ -10,7 +10,21 @@ From the repository root:
 just photo-sync
 ```
 
-The script builds a minimal `Homie Photos.app` bundle and ad-hoc signs it. Launch through `open`, not by running the executable directly: the Photos privacy prompt must be attributed to the app bundle.
+This builds the release app at `build/release/Homie Photos.app`. The script builds a minimal app bundle and ad-hoc signs it. Launch through `open`, not by running the executable directly: the Photos privacy prompt must be attributed to the app bundle.
+
+To build and launch a debug app against the local development API on port 3030:
+
+```sh
+just dev photo-sync
+```
+
+This overwrites the app's saved host with `http://localhost:3030`, so the first local run requires a separate sign-in. To restore the default Pi endpoint, remove the override:
+
+```sh
+defaults delete ar.schw.homie.photo-sync HomieAPIURL
+defaults delete ar.schw.homie.photo-sync HomieAPIName
+defaults delete ar.schw.homie.photo-sync HomieAPIDiscovered
+```
 
 ## Download a signed build
 
@@ -30,7 +44,7 @@ The app does not modify the Photos library. PhotoKit's macOS authorization API u
 
 ## API endpoint
 
-Uploads go to `http://homie:3000/graphql`, the Pi, by default. To point the app at a local API instead:
+Uploads go to `http://homie:3000/graphql`, the Pi, by default. `just dev photo-sync` configures the local endpoint automatically. To point the app at a local API manually instead:
 
 ```sh
 defaults write ar.schw.homie.photo-sync HomieAPIURL http://localhost:3030

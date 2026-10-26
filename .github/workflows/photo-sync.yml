@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - feat/photo-sync-ci
     paths:
       - apps/photo-sync/**
       - .github/workflows/photo-sync.yml

@@ -26,6 +26,7 @@ struct OnboardingReset {
         let token = tokenForEndpoint(endpoint)
         clearSessions()
         UploadLedger(defaults: defaults).clear()
+        AlbumSelection.clear(defaults: defaults)
         hostStore.resetToDefault()
         if let token { await logout(endpoint, token) }
     }

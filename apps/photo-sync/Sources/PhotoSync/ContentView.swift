@@ -123,11 +123,15 @@ private struct WindowTitleToolbar: ToolbarContent {
     }
 
     var body: some ToolbarContent {
+        #if compiler(>=6.2)
         if #available(macOS 26, *) {
             ToolbarItem(placement: .principal) { title }
                 .sharedBackgroundVisibility(.hidden)
         } else {
             ToolbarItem(placement: .principal) { title }
         }
+        #else
+        ToolbarItem(placement: .principal) { title }
+        #endif
     }
 }

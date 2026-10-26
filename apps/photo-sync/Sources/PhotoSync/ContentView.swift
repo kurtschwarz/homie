@@ -3,39 +3,61 @@ import Photos
 import SwiftUI
 
 struct ContentView: View {
+    @StateObject private var auth: AuthModel
     @StateObject private var library: PhotoLibrary
     @StateObject private var uploader: PhotoUploader
     @State private var selectedPhoto: PhotoAsset?
 
     init() {
+        let auth = AuthModel()
         let library = PhotoLibrary()
+        _auth = StateObject(wrappedValue: auth)
         _library = StateObject(wrappedValue: library)
-        _uploader = StateObject(wrappedValue: PhotoUploader(library: library))
+        _uploader = StateObject(wrappedValue: PhotoUploader(
+            library: library,
+            onAuthenticationRequired: { auth.sessionExpired() }
+        ))
     }
 
     var body: some View {
         Group {
-            switch library.authorization {
-            case .authorized, .limited:
-                browser
-            case .denied, .restricted:
-                ContentUnavailableView("Photos Access Needed", systemImage: "photo.badge.exclamationmark", description: Text("Allow Photo Sync to access your Photos library in System Settings → Privacy & Security → Photos."))
-            case .notDetermined:
-                ContentUnavailableView {
-                    Label("Connect to Photos", systemImage: "photo.on.rectangle.angled")
-                } description: {
-                    Text("Photo Sync reads your Homie album and displays photo metadata locally.")
-                } actions: {
-                    Button("Allow Photo Access") { Task { await library.authorize() } }
-                        .buttonStyle(.borderedProminent)
-                }
-            @unknown default:
-                ContentUnavailableView("Photos Unavailable", systemImage: "photo")
+            switch auth.state {
+            case .checking:
+                ProgressView("Checking your Homie session…")
+                    .frame(minWidth: 720, minHeight: 620)
+            case .signedOut:
+                SignInView(auth: auth)
+            case .signedIn:
+                photoLibraryContent
             }
         }
         .frame(minWidth: 900, minHeight: 620)
         .task {
-            if library.authorization == .authorized || library.authorization == .limited { library.loadAlbums() }
+            await auth.restoreSession()
+        }
+    }
+
+    @ViewBuilder
+    private var photoLibraryContent: some View {
+        switch library.authorization {
+        case .authorized, .limited:
+            browser
+                .onAppear {
+                    if library.albums.isEmpty { library.loadAlbums() }
+                }
+        case .denied, .restricted:
+            ContentUnavailableView("Photos Access Needed", systemImage: "photo.badge.exclamationmark", description: Text("Allow Photo Sync to access your Photos library in System Settings → Privacy & Security → Photos."))
+        case .notDetermined:
+            ContentUnavailableView {
+                Label("Connect to Photos", systemImage: "photo.on.rectangle.angled")
+            } description: {
+                Text("Photo Sync reads your Homie album and displays photo metadata locally.")
+            } actions: {
+                Button("Allow Photo Access") { Task { await library.authorize() } }
+                    .buttonStyle(.borderedProminent)
+            }
+        @unknown default:
+            ContentUnavailableView("Photos Unavailable", systemImage: "photo")
         }
     }
 
@@ -81,6 +103,11 @@ struct ContentView: View {
             }
             .disabled(uploader.isUploading)
             .help("Clear upload history and cached place lookups")
+            if case .signedIn(let user) = auth.state {
+                Menu(user.username) {
+                    Button("Sign Out", role: .destructive) { auth.signOut() }
+                }
+            }
             Text("\(library.photos.count) photos · \(library.gpsCount) with GPS (\(library.gpsPercent)%) · \(library.enumerationDuration, specifier: "%.2f")s")
                 .font(.callout.monospacedDigit())
                 .foregroundStyle(.secondary)

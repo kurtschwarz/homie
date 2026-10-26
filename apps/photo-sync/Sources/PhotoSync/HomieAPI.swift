@@ -17,42 +17,67 @@ struct UploadedPhoto: Decodable {
     let url: String
 }
 
-struct GraphQLResponse: Decodable {
-    struct Payload: Decodable {
-        let uploadPhoto: UploadedPhoto?
+struct HomieRole: Decodable, Equatable {
+    static let admin = HomieRole(rawValue: "ADMIN")
+    let rawValue: String
 
-        private enum CodingKeys: String, CodingKey { case uploadPhoto }
-
-        init(from decoder: Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            uploadPhoto = try container.decodeIfPresent(UploadedPhoto.self, forKey: .uploadPhoto)
-        }
+    init(rawValue: String) {
+        self.rawValue = rawValue
     }
 
-    struct ErrorItem: Decodable { let message: String }
-    let data: Payload?
-    let errors: [ErrorItem]?
-
-    private enum CodingKeys: String, CodingKey { case data, errors }
-
     init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        data = try container.decodeIfPresent(Payload.self, forKey: .data)
-        errors = try container.decodeIfPresent([ErrorItem].self, forKey: .errors)
+        rawValue = try decoder.singleValueContainer().decode(String.self)
     }
 }
 
+struct HomieUser: Decodable, Equatable {
+    let id: String
+    let username: String
+    let role: HomieRole
+}
+
+struct GraphQLResponse<Payload: Decodable>: Decodable {
+    let data: Payload?
+    let errors: [GraphQLErrorItem]?
+}
+
+struct GraphQLErrorItem: Decodable { let message: String }
+
+struct UploadPayload: Decodable {
+    let uploadPhoto: UploadedPhoto?
+}
+
+struct LoginPayload: Decodable { let login: HomieUser? }
+
+struct SessionPayload: Decodable {
+    struct Session: Decodable { let user: HomieUser? }
+    let session: Session?
+}
+
 struct HomieAPI {
-    // The Pi that runs Homie. A bundle launched by `open` does not inherit
-    // the shell environment, so UserDefaults is the override that actually
-    // works from the command line:
+    // A bundle launched by `open` does not inherit the shell environment, so
+    // UserDefaults is the command-line override that works for the app bundle:
     //   defaults write ar.schw.homie.photo-sync HomieAPIURL http://localhost:3030
     static let defaultEndpoint = URL(string: "http://homie:3000/graphql")!
 
     let endpoint: URL
+    private let session: URLSession
+    private let sessionToken: () -> String?
 
-    init(endpoint: URL = HomieAPI.configuredEndpoint()) {
+    init(
+        endpoint: URL = HomieAPI.configuredEndpoint(),
+        session: URLSession? = nil,
+        sessionToken: @escaping () -> String? = { HomieSession.token }
+    ) {
         self.endpoint = endpoint
+        if let session {
+            self.session = session
+        } else {
+            let configuration = URLSessionConfiguration.ephemeral
+            configuration.httpShouldSetCookies = false
+            self.session = URLSession(configuration: configuration)
+        }
+        self.sessionToken = sessionToken
     }
 
     // A bare origin gets /graphql appended so the override can be spelled the
@@ -68,17 +93,39 @@ struct HomieAPI {
         return defaultEndpoint
     }
 
+    func login(username: String, password: String) async throws -> (user: HomieUser, token: String) {
+        let (data, response) = try await perform(
+            query: "mutation Login($username: String!, $password: String!) { login(username: $username, password: $password) { id username role } }",
+            variables: ["username": username, "password": password],
+            token: nil
+        )
+        try validate(data: data, response: response)
+        let result = try decode(GraphQLResponse<LoginPayload>.self, from: data, response: response)
+        guard let user = result.data?.login else { throw HomieAPIError.invalidResponse }
+        guard let token = Self.sessionToken(from: response) else { throw HomieAPIError.missingSessionCookie }
+        return (user, token)
+    }
+
+    func currentUser(token: String) async throws -> HomieUser? {
+        let (data, response) = try await perform(
+            query: "query Session { session { user { id username role } } }",
+            variables: [:],
+            token: token
+        )
+        try validate(data: data, response: response)
+        return try decode(GraphQLResponse<SessionPayload>.self, from: data, response: response).data?.session?.user
+    }
+
+    func logout(token: String) async throws {
+        let (data, response) = try await perform(query: "mutation Logout { logout }", variables: [:], token: token)
+        try validate(data: data, response: response)
+    }
+
     func upload(_ input: PhotoUploadInput, jpeg: Data, filename: String) async throws -> UploadedPhoto {
+        guard let token = sessionToken(), !token.isEmpty else { throw HomieAPIError.unauthorized }
         let boundary = "HomiePhotoSync-\(UUID().uuidString)"
-        var request = URLRequest(url: endpoint)
-        request.httpMethod = "POST"
+        var request = request(token: token)
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        let token = UserDefaults.standard.string(forKey: "HomieAPIToken")
-            ?? ProcessInfo.processInfo.environment["HOMIE_AUTH_TOKEN"]
-        if let token, !token.isEmpty {
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
 
         let encoder = JSONEncoder()
         let inputData = try encoder.encode(input)
@@ -97,28 +144,80 @@ struct HomieAPI {
         body.append(Data("\r\n--\(boundary)--\r\n".utf8))
         request.httpBody = body
 
-        let (data, response): (Data, URLResponse)
+        let (data, response) = try await send(request)
+        try validate(data: data, response: response)
+        let result = try decode(GraphQLResponse<UploadPayload>.self, from: data, response: response)
+        guard let photo = result.data?.uploadPhoto else { throw HomieAPIError.invalidResponse }
+        return photo
+    }
+
+    static func sessionToken(fromSetCookieHeader header: String) -> String? {
+        header.split(separator: ";", omittingEmptySubsequences: true)
+            .lazy
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .first { $0.hasPrefix("homie_session=") }
+            .map { String($0.dropFirst("homie_session=".count)) }
+            .flatMap { $0.isEmpty ? nil : $0 }
+    }
+
+    static func error(forGraphQLMessage message: String) -> HomieAPIError {
+        switch message.lowercased() {
+        case "unauthorized": .unauthorized
+        case "forbidden": .forbidden
+        default: .graphQL(message)
+        }
+    }
+
+    private static func sessionToken(from response: HTTPURLResponse) -> String? {
+        guard let header = response.value(forHTTPHeaderField: "Set-Cookie") else { return nil }
+        return sessionToken(fromSetCookieHeader: header)
+    }
+
+    private func perform(query: String, variables: [String: String], token: String?) async throws -> (Data, HTTPURLResponse) {
+        var request = request(token: token)
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: ["query": query, "variables": variables])
+        return try await send(request)
+    }
+
+    private func request(token: String?) -> URLRequest {
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("PhotoSync/1", forHTTPHeaderField: "User-Agent")
+        if let token, !token.isEmpty {
+            request.setValue("homie_session=\(token)", forHTTPHeaderField: "Cookie")
+        }
+        return request
+    }
+
+    private func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+        let data: Data
+        let response: URLResponse
         do {
-            (data, response) = try await URLSession.shared.data(for: request)
+            (data, response) = try await session.data(for: request)
         } catch {
             throw HomieAPIError.network(message: error.localizedDescription, endpoint: endpoint)
         }
         guard let response = response as? HTTPURLResponse else { throw HomieAPIError.invalidResponse }
-        guard !data.isEmpty else {
-            throw HomieAPIError.emptyResponse(status: response.statusCode, endpoint: endpoint)
+        guard !data.isEmpty else { throw HomieAPIError.emptyResponse(status: response.statusCode, endpoint: endpoint) }
+        return (data, response)
+    }
+
+    private func validate(data: Data, response: HTTPURLResponse) throws {
+        if let message = try? JSONDecoder().decode(GraphQLResponse<EmptyPayload>.self, from: data).errors?.first?.message {
+            throw Self.error(forGraphQLMessage: message)
         }
-        let result: GraphQLResponse
+        guard (200..<300).contains(response.statusCode) else { throw HomieAPIError.http(response.statusCode) }
+    }
+
+    private func decode<T: Decodable>(_ type: T.Type, from data: Data, response: HTTPURLResponse) throws -> T {
         do {
-            result = try JSONDecoder().decode(GraphQLResponse.self, from: data)
+            return try JSONDecoder().decode(type, from: data)
         } catch {
             let body = String(decoding: data.prefix(512), as: UTF8.self)
             throw HomieAPIError.unexpectedResponse(status: response.statusCode, body: body, reason: error.localizedDescription)
         }
-        if let message = result.errors?.first?.message { throw HomieAPIError.graphQL(message) }
-        guard (200..<300).contains(response.statusCode), let photo = result.data?.uploadPhoto else {
-            throw HomieAPIError.http(response.statusCode)
-        }
-        return photo
     }
 
     private func appendField(_ name: String, value: String, boundary: String, to data: inout Data) {
@@ -126,8 +225,13 @@ struct HomieAPI {
     }
 }
 
+private struct EmptyPayload: Decodable {}
+
 enum HomieAPIError: LocalizedError {
     case invalidResponse
+    case missingSessionCookie
+    case unauthorized
+    case forbidden
     case emptyResponse(status: Int, endpoint: URL)
     case http(Int)
     case graphQL(String)
@@ -137,6 +241,9 @@ enum HomieAPIError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidResponse: "The server returned an invalid response."
+        case .missingSessionCookie: "The server signed in successfully but did not return a session."
+        case .unauthorized: "Your Homie session has expired. Sign in again."
+        case .forbidden: "This account is not allowed to sync photos. Use an admin account."
         case .emptyResponse(let status, let endpoint):
             "The server returned an empty response (HTTP \(status)). Is the API running at \(endpoint.absoluteString)?"
         case .http(let status): "The server returned HTTP \(status)."

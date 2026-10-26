@@ -20,8 +20,12 @@ final class PhotoUploader: ObservableObject {
     private let api = HomieAPI()
     private let ledger = UploadLedger()
     private let geocoder = CLGeocoder()
+    private let onAuthenticationRequired: () -> Void
 
-    init(library: PhotoLibrary) { self.library = library }
+    init(library: PhotoLibrary, onAuthenticationRequired: @escaping () -> Void) {
+        self.library = library
+        self.onAuthenticationRequired = onAuthenticationRequired
+    }
 
     func clearLocalState() {
         guard !isUploading else { return }
@@ -80,6 +84,11 @@ final class PhotoUploader: ObservableObject {
                 states[photo.id] = .uploaded(uploaded.url)
             } catch {
                 states[photo.id] = .failed(error.localizedDescription)
+                if case HomieAPIError.unauthorized = error {
+                    onAuthenticationRequired()
+                    completed += 1
+                    break
+                }
             }
             completed += 1
         }

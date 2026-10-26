@@ -104,11 +104,11 @@ private struct AlbumRow: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            RoundedRectangle(cornerRadius: 6)
+            RoundedRectangle(cornerRadius: 4)
                 .fill(isSelected ? Color.homieGreenDark : Color.clear)
-                .overlay(RoundedRectangle(cornerRadius: 6).stroke(isSelected ? Color.clear : Color.secondary.opacity(0.4), lineWidth: 2))
-                .overlay { if isSelected { Image(systemName: "checkmark").font(.system(size: 13, weight: .bold)).foregroundStyle(.white) } }
-                .frame(width: 26, height: 26)
+                .overlay(RoundedRectangle(cornerRadius: 4).stroke(isSelected ? Color.clear : Color.secondary.opacity(0.4), lineWidth: 1.5))
+                .overlay { if isSelected { Image(systemName: "checkmark").font(.system(size: 9, weight: .bold)).foregroundStyle(.white) } }
+                .frame(width: 16, height: 16)
             AlbumCover(album: album, library: library)
             VStack(alignment: .leading, spacing: 2) {
                 Text(album.title).font(.system(size: 17, weight: .semibold))

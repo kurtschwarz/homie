@@ -62,22 +62,22 @@ struct SyncStatusView: View {
                     if phase == .syncing {
                         ProgressView().controlSize(.small)
                     } else {
-                        Image(systemName: iconName).font(.system(size: 26, weight: .semibold)).foregroundStyle(iconColor)
+                        Image(systemName: iconName).font(.system(size: 22, weight: .semibold)).foregroundStyle(iconColor)
                     }
                 }
                 .frame(width: 76, height: 76)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(title).font(.system(size: 28, weight: .bold))
-                    Text(subtitle).font(.system(size: 15)).foregroundStyle(.secondary)
+                    Text(title).font(.system(size: 24, weight: .bold))
+                    Text(subtitle).font(.system(size: 13)).foregroundStyle(.secondary)
                 }
             }
             ProgressView(value: fraction).tint(.homieGreen)
             HStack {
-                Text("\(photoDone.formatted()) of \(photoTotal.formatted()) photos").font(.system(size: 15, weight: .semibold))
+                Text("\(photoDone.formatted()) of \(photoTotal.formatted()) photos").font(.system(size: 13, weight: .semibold))
                 Spacer()
                 if let last = selection.lastSyncedAt, phase != .syncing {
                     Text("Last synced \(last.formatted(.relative(presentation: .named)))")
-                        .font(.system(size: 15)).foregroundStyle(.secondary)
+                        .font(.system(size: 13)).foregroundStyle(.secondary)
                 }
             }
         }
@@ -90,7 +90,7 @@ struct SyncStatusView: View {
             if selection.keepSyncing {
                 HStack(spacing: 10) {
                     Circle().fill(Color.homieGreen).frame(width: 10, height: 10)
-                    Text("New photos will sync automatically").font(.system(size: 15)).foregroundStyle(.secondary)
+                    Text("New photos will sync automatically").font(.system(size: 13)).foregroundStyle(.secondary)
                 }
             }
             HStack {
@@ -148,9 +148,9 @@ private struct SyncAlbumRow: View {
             AlbumCover(album: album, library: library, size: 70)
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text(album.title).font(.system(size: 17, weight: .semibold))
+                    Text(album.title).font(.system(size: 14, weight: .semibold))
                     Spacer()
-                    Text(status).font(.system(size: 14, weight: .semibold)).foregroundStyle(progress?.failed ?? 0 > 0 ? Color.orange : Color.homieGreenDark)
+                    Text(status).font(.system(size: 12, weight: .semibold)).foregroundStyle(progress?.failed ?? 0 > 0 ? Color.orange : Color.homieGreenDark)
                 }
                 ProgressView(value: progress == nil ? 1 : fraction).tint(.homieGreen)
             }

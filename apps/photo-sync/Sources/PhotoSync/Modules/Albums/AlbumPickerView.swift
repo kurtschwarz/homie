@@ -23,15 +23,15 @@ struct AlbumPickerView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     Text("Pick albums for Homie")
-                        .font(.system(size: 28, weight: .bold))
+                        .font(.system(size: 24, weight: .bold))
                     Text("Photos from these albums show in the slideshow on \(hostName).")
-                        .font(.system(size: 15))
+                        .font(.system(size: 13))
                         .foregroundStyle(.secondary)
                         .padding(.top, 4)
 
                     HStack {
                         Text("ICLOUD ALBUMS")
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(.system(size: 12, weight: .semibold))
                             .tracking(0.6)
                             .foregroundStyle(.secondary)
                         Spacer()
@@ -39,7 +39,7 @@ struct AlbumPickerView: View {
                             selection.select(allSelected ? [] : library.albums.map(\.id))
                         }
                         .buttonStyle(.plain)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(Color.homieGreenDark)
                     }
                     .padding(.top, 24)
@@ -59,9 +59,9 @@ struct AlbumPickerView: View {
             VStack(spacing: 14) {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Keep syncing new photos").font(.system(size: 16, weight: .semibold))
+                        Text("Keep syncing new photos").font(.system(size: 14, weight: .semibold))
                         Text("New photos in these albums go to Homie automatically.")
-                            .font(.system(size: 13))
+                            .font(.system(size: 12))
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
@@ -73,7 +73,7 @@ struct AlbumPickerView: View {
                 HStack {
                     (Text("\(selectedAlbums.count) \(selectedAlbums.count == 1 ? "album" : "albums")").fontWeight(.semibold)
                         + Text(" · \(photoCount.formatted()) photos · about \(sizeText)"))
-                        .font(.system(size: 15))
+                        .font(.system(size: 13))
                     Spacer()
                     Button("Start sync", action: onStart)
                         .buttonStyle(HomieButtonStyle(prominent: true))
@@ -81,12 +81,12 @@ struct AlbumPickerView: View {
                 }
                 HStack {
                     Text("Signed in as \(username)")
-                        .font(.system(size: 13))
+                        .font(.system(size: 12))
                         .foregroundStyle(.secondary)
                     Spacer()
                     Button("Sign out", action: onSignOut)
                         .buttonStyle(.plain)
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(Color.homieGreenDark)
                 }
             }
@@ -111,13 +111,13 @@ private struct AlbumRow: View {
                 .frame(width: 16, height: 16)
             AlbumCover(album: album, library: library)
             VStack(alignment: .leading, spacing: 2) {
-                Text(album.title).font(.system(size: 17, weight: .semibold))
-                Text("\(album.count.formatted()) photos").font(.system(size: 14)).foregroundStyle(.secondary)
+                Text(album.title).font(.system(size: 14, weight: .semibold))
+                Text("\(album.count.formatted()) photos").font(.system(size: 12)).foregroundStyle(.secondary)
             }
             Spacer()
             if album.isShared {
                 Text("Shared")
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.system(size: 12, weight: .medium))
                     .padding(.horizontal, 12)
                     .padding(.vertical, 5)
                     .background(Color.secondary.opacity(0.12), in: Capsule())

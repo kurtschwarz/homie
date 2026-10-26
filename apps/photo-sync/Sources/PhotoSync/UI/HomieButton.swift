@@ -6,10 +6,10 @@ struct HomieButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 17, weight: .semibold))
+            .font(.system(size: 14, weight: .semibold))
             .foregroundStyle(prominent ? Color.homieButtonText : Color.primary)
-            .padding(.horizontal, 28)
-            .padding(.vertical, 12)
+            .padding(.horizontal, 22)
+            .padding(.vertical, 9)
             .background {
                 if prominent {
                     RoundedRectangle(cornerRadius: 12).fill(Color.homieGreen.opacity(0.75))

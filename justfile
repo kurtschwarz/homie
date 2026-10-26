@@ -17,7 +17,7 @@ ios_app := ios_derived_data + "/Build/Products/Debug-iphonesimulator/Homie.app"
 # Run the API and both Vite dev servers, with a Firefox window for the local UIs.
 mod dev 'scripts/dev/justfile'
 
-# Build the Photo Sync macOS test app.
+# Build the release configuration of the Photo Sync macOS app.
 photo-sync:
     ./apps/photo-sync/build.sh
 

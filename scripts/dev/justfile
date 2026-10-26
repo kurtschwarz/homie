@@ -4,6 +4,8 @@ set working-directory := "../.."
 
 firefox_bin := env_var_or_default("FIREFOX_BIN", "/Applications/Firefox Developer Edition.app/Contents/MacOS/firefox")
 firefox_profile := ".scratch/firefox-dev-profile"
+photo_sync_bundle_id := "ar.schw.homie.photo-sync"
+photo_sync_app := "apps/photo-sync/build/debug/Homie Photos.app"
 
 # The window in CSS pixels: the 1920x1080 kiosk panel the display is laid out
 # for (apps/display/src/index.css), plus the tab and nav bars on top of it.
@@ -83,6 +85,25 @@ dev:
     ) >"$profile/firefox.log" 2>&1 &
     firefox_pid=$!
     docker compose up --build
+
+# Build and launch the Photo Sync macOS app against the local development API.
+photo-sync:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ./apps/photo-sync/build.sh debug
+    defaults write "{{photo_sync_bundle_id}}" HomieAPIURL -string "http://localhost:3030"
+    defaults write "{{photo_sync_bundle_id}}" HomieAPIName -string "Local Homie"
+    defaults write "{{photo_sync_bundle_id}}" HomieAPIDiscovered -bool false
+    if pgrep -x PhotoSync >/dev/null; then
+        osascript -e 'tell application id "{{photo_sync_bundle_id}}" to quit' 2>/dev/null || true
+        for _ in {1..50}; do
+            pgrep -x PhotoSync >/dev/null || break
+            sleep 0.1
+        done
+        pkill -x PhotoSync 2>/dev/null || true
+    fi
+    # Launch the bundle so macOS attributes the Photos privacy prompt to the app.
+    open "{{photo_sync_app}}"
 
 # Tear down the local dev stack: containers, networks, and named volumes.
 # Host state under .scratch (synced photos, the Firefox profile) is left alone.

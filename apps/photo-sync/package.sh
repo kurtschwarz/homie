@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-APP="$ROOT/build/Homie Photos.app"
+APP="$ROOT/build/release/Homie Photos.app"
 DMG="$ROOT/build/HomiePhotos.dmg"
 STAGE="$ROOT/build/dmg"
 

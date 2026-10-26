@@ -38,6 +38,14 @@ enum HomieSession {
         SecItemDelete(itemQuery(account: sessionAccount(for: endpoint)) as CFDictionary)
     }
 
+    static func clearAll() {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+        ]
+        SecItemDelete(query as CFDictionary)
+    }
+
     private static func itemQuery(account: String) -> [String: Any] {
         [
             kSecClass as String: kSecClassGenericPassword,

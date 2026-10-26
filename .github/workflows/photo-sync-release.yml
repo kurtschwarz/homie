@@ -51,9 +51,10 @@ jobs:
             -k "$KEYCHAIN_PATH" \
             -P "$MACOS_CERTIFICATE_PASSWORD" \
             -t cert \
-            -f pkcs12
+            -f pkcs12 \
+            -T /usr/bin/codesign
           security set-key-partition-list \
-            -S apple-tool:,apple: \
+            -S apple-tool:,apple:,codesign: \
             -s \
             -k "$keychain_password" \
             "$KEYCHAIN_PATH"
@@ -61,10 +62,19 @@ jobs:
             "$KEYCHAIN_PATH" \
             $(security list-keychains -d user | tr -d '"')
 
-          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+          identities="$(security find-identity -v -p codesigning "$KEYCHAIN_PATH")"
+          printf '%s\n' "$identities"
+
+          # find-identity exits 0 even when it finds nothing, so assert instead.
+          if ! printf '%s' "$identities" | grep -q 'Developer ID Application'; then
+            printf 'No Developer ID Application identity in the signing keychain\n' >&2
+            exit 1
+          fi
+
           rm -f "$certificate_path"
 
       - name: Build signed app
+        timeout-minutes: 10
         env:
           CODESIGN_IDENTITY: "Developer ID Application: KURT SCHWARZ (P9DZH3LW75)"
         run: ./apps/photo-sync/build.sh

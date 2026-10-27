@@ -114,4 +114,4 @@ jobs:
             --target "$GITHUB_SHA" \
             --title "Homie $VERSION" \
             --notes-file notes.md \
-            --latest=false
+            --latest=true

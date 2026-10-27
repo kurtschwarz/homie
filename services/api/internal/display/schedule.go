@@ -108,7 +108,7 @@ type Current struct {
 // Resolve picks the current mode from the clock, the schedule, and any live override.
 func Resolve(schedule Schedule, now time.Time, override *Override) Current {
 	if override != nil && now.Before(override.EndsAt) {
-		return Current{Mode: override.Mode, Brightness: override.Brightness, Power: true, OverrideActive: true, OverrideEndsAt: override.EndsAt}
+		return Current{Mode: override.Mode, Brightness: override.Brightness, Power: override.Mode != ModeOff, OverrideActive: true, OverrideEndsAt: override.EndsAt}
 	}
 	sorted := append([]ModeSetting(nil), schedule.Modes...)
 	if len(sorted) == 0 {

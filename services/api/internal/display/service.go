@@ -122,6 +122,9 @@ func (s *Service) Preview(ctx context.Context, mode Mode, duration time.Duration
 	s.override = &Override{Mode: mode, Brightness: setting.Brightness, EndsAt: s.now().Add(duration)}
 	s.mu.Unlock()
 	s.Nudge()
+	// The periodic reconcile is a minute apart, which is far longer than a
+	// preview; without this the panel stays as the preview left it.
+	time.AfterFunc(duration, s.Nudge)
 	return s.Status(ctx)
 }
 

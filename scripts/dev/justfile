@@ -55,6 +55,9 @@ dev:
         printf '%s' '{{firefox_xulstore}}' > "$profile/xulstore.json"
     fi
     test -x "{{firefox_bin}}" || { echo "Firefox Developer Edition not found at {{firefox_bin}}" >&2; exit 1; }
+    # Firefox and the API container both take their timezone from TZ. Read the
+    # host's zone from /etc/localtime, since a shell may pin TZ to UTC.
+    export TZ="$(readlink /etc/localtime | sed 's|.*/zoneinfo/||')"
     # Job control gives the browser its own process group, so the Ctrl+C that
     # stops compose is not also delivered to Firefox. Without it the parent dies
     # instantly and its orphaned content processes print "Exiting due to channel

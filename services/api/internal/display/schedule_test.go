@@ -43,6 +43,8 @@ func TestResolve(t *testing.T) {
 		{"after midnight with power saving", at(2, 0), true, nil, ModeOff, 20, false},
 		{"override wins", at(23, 30), true, &Override{ModeLight, 100, at(23, 40)}, ModeLight, 100, true},
 		{"expired override ignored", at(23, 30), true, &Override{ModeLight, 100, at(23, 29)}, ModeOff, 20, false},
+		{"off override powers the panel down", at(12, 0), true, &Override{ModeOff, 0, at(12, 1)}, ModeOff, 0, false},
+		{"off override powers down even without power saving", at(12, 0), false, &Override{ModeOff, 0, at(12, 1)}, ModeOff, 0, false},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

@@ -1,0 +1,117 @@
+name: Homie Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - services/api/**
+      - apps/display/**
+      - apps/manager/**
+      - packages/**
+      - deploy/**
+      - Dockerfile
+      - justfile
+      - pnpm-lock.yaml
+      - scripts/version.sh
+      - .github/workflows/homie-release.yml
+  workflow_dispatch:
+
+concurrency:
+  group: homie-release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  # The paths that end up in homie.deb. Keep in step with the push filter above.
+  HOMIE_PATHS: services/api apps/display apps/manager packages deploy Dockerfile justfile pnpm-lock.yaml
+  JUST_VERSION: 1.59.0
+  JUST_SHA256: 23871b1702bfd550fb5f901778fd4290ecf2ee034a45a889fbe96d89b188086d
+
+jobs:
+  build:
+    name: Build Debian package
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Compute version
+        id: version
+        run: |
+          # shellcheck disable=SC2086
+          version="$(./scripts/version.sh homie-v 0.0.0 version $HOMIE_PATHS)"
+          printf 'Next version: %s\n' "$version"
+          printf 'version=%s\n' "$version" >> "$GITHUB_OUTPUT"
+
+      - name: Install just
+        run: |
+          archive="just-${JUST_VERSION}-aarch64-unknown-linux-musl.tar.gz"
+          curl -fsSL -o "$RUNNER_TEMP/$archive" \
+            "https://github.com/casey/just/releases/download/${JUST_VERSION}/${archive}"
+          printf '%s  %s\n' "$JUST_SHA256" "$RUNNER_TEMP/$archive" | sha256sum --check -
+          sudo tar -xzf "$RUNNER_TEMP/$archive" -C /usr/local/bin just
+          just --version
+
+      - name: Build package
+        timeout-minutes: 20
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: just package
+
+      - name: Upload package
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: homie-${{ github.sha }}
+          path: dist/homie.deb
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    name: Publish release
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    # Only this job gets a write token, so it never runs the build.
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Download package
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: homie-${{ github.sha }}
+          path: dist
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          # shellcheck disable=SC2086
+          ./scripts/version.sh homie-v 0.0.0 notes $HOMIE_PATHS > notes.md
+
+          mv dist/homie.deb "dist/homie_${VERSION}_arm64.deb"
+
+          gh release create "homie-v$VERSION" "dist/homie_${VERSION}_arm64.deb" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Homie $VERSION" \
+            --notes-file notes.md \
+            --latest=false

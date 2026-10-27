@@ -47,12 +47,17 @@ codegen:
     docker compose run --rm --no-deps api go run github.com/99designs/gqlgen generate
 
 # Cross-compile the homie-api binary (linux/arm64) with both SPAs embedded.
+# VERSION and COMMIT are stamped into the binary; releases set them in CI.
 build:
-    docker buildx build --platform linux/arm64 --target export --output type=local,dest=./dist .
+    docker buildx build --platform linux/arm64 --target export \
+        --build-arg VERSION="${VERSION:-dev}" \
+        --build-arg COMMIT="${COMMIT:-$(git rev-parse --short HEAD)}" \
+        --output type=local,dest=./dist .
 
 # Package the binary, systemd units, and blank-cursor theme as dist/homie.deb.
-# The version is a UTC timestamp plus the commit, so a rebuild of the same
-# commit still installs as an upgrade rather than being skipped as current.
+# Releases pass VERSION. Local builds default to a UTC timestamp plus the
+# commit, so a rebuild of the same commit still installs as an upgrade rather
+# than being skipped as current.
 package: build
     #!/usr/bin/env bash
     set -euo pipefail
@@ -63,7 +68,7 @@ package: build
     install -m 0644 deploy/homie.service dist/pkgroot/etc/avahi/services/homie.service
     install -m 0440 deploy/debian/sudoers dist/pkgroot/etc/sudoers.d/homie-deploy
     python3 deploy/blank-cursor.py dist/pkgroot/usr/share/homie/cursors default
-    version="0.0.0+$(date -u +%Y%m%d%H%M%S).g$(git rev-parse --short HEAD)"
+    version="${VERSION:-0.0.0+$(date -u +%Y%m%d%H%M%S).g$(git rev-parse --short HEAD)}"
     size="$(du -sk dist/pkgroot | cut -f1)"
     mkdir -p dist/pkgroot/DEBIAN
     install -m 0755 deploy/debian/postinst deploy/debian/prerm deploy/debian/postrm dist/pkgroot/DEBIAN/

@@ -174,6 +174,10 @@ ssh -t raspberrypi.local "sudo apt-get install -y /tmp/homie.deb && rm /tmp/homi
 
 After that, `just deploy` installs without a password prompt.
 
+To remove Homie from the Pi, run `sudo sh /usr/share/homie/uninstall.sh`. It
+stops the services and deletes the package, config, and data. It leaves the
+`homie` user and hostname alone.
+
 Every push to `main` that touches the API, the display or manager apps,
 `packages`, or `deploy` also publishes a `homie-vX.Y.Z` GitHub release with the
 built `.deb` attached (`.github/workflows/homie-release.yml`). The version

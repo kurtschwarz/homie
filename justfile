@@ -64,7 +64,7 @@ package: build
     rm -rf dist/pkgroot dist/homie.deb
     mkdir -p dist/pkgroot/usr/bin dist/pkgroot/lib/systemd/system dist/pkgroot/etc/sudoers.d dist/pkgroot/etc/avahi/services dist/pkgroot/usr/share/homie
     install -m 0755 dist/homie-api dist/pkgroot/usr/bin/homie-api
-    install -m 0644 deploy/homie-api.service deploy/homie-kiosk.service deploy/homie-emoji-font.service deploy/homie-emoji-font.timer dist/pkgroot/lib/systemd/system/
+    install -m 0644 deploy/homie-api.service deploy/homie-api.socket deploy/homie-kiosk.service deploy/homie-emoji-font.service deploy/homie-emoji-font.timer dist/pkgroot/lib/systemd/system/
     install -m 0644 deploy/homie.service dist/pkgroot/etc/avahi/services/homie.service
     install -m 0440 deploy/debian/sudoers dist/pkgroot/etc/sudoers.d/homie-deploy
     install -m 0755 deploy/scripts/uninstall.sh dist/pkgroot/usr/share/homie/uninstall.sh

@@ -48,6 +48,11 @@ case "$1" in
 
         systemctl daemon-reload
         systemctl enable homie-api.service homie-kiosk.service homie-emoji-font.service
+        # systemd refuses to start a socket while its service is running, and
+        # an upgrade finds the old API still up on its own :3000. Stop it so
+        # the socket can bind port 80 before the restart below.
+        systemctl stop homie-api.service
+        systemctl enable --now homie-api.socket
         systemctl restart homie-api.service
         systemctl restart homie-kiosk.service
         # --no-block because this downloads 116 MB of font on a first install,

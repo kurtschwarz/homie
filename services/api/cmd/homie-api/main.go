@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io/fs"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -24,6 +25,7 @@ import (
 	"github.com/kurtschwarz/homie/services/api/internal/photos"
 	photosjobs "github.com/kurtschwarz/homie/services/api/internal/photos/jobs"
 	"github.com/kurtschwarz/homie/services/api/internal/queue"
+	"github.com/kurtschwarz/homie/services/api/internal/sdlisten"
 	"github.com/kurtschwarz/homie/services/api/internal/sdnotify"
 	"github.com/kurtschwarz/homie/services/api/internal/secrets"
 	"github.com/kurtschwarz/homie/services/api/internal/server"
@@ -210,9 +212,22 @@ func main() {
 		os.Exit(1)
 	}
 
+	lanListener, err := sdlisten.Listener("lan")
+	if err == nil && lanListener == nil {
+		lanListener, err = net.Listen("tcp", addr)
+	}
+	if err != nil {
+		logger.Error("listen", "error", err)
+		_ = backgroundQueue.Stop(context.Background())
+		if db != nil {
+			_ = db.Close()
+		}
+		os.Exit(1)
+	}
+
 	go func() {
-		logger.Info("listening", "addr", addr, "version", version, "commit", commit)
-		if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		logger.Info("listening", "addr", lanListener.Addr().String(), "version", version, "commit", commit)
+		if err := httpServer.Serve(lanListener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Error("listen", "error", err)
 			os.Exit(1)
 		}

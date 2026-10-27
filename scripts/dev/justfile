@@ -20,7 +20,7 @@ firefox_dppx := env_var_or_default("FIREFOX_DPPX", "1.875")
 # Rewritten on every start, because user.js is re-read then.
 firefox_prefs := '''
 user_pref("browser.startup.page", 1);
-user_pref("browser.startup.homepage", "http://localhost:5173|http://localhost:5174/manage/");
+user_pref("browser.startup.homepage", "http://localhost:5173|http://localhost:5174/");
 user_pref("browser.shell.checkDefaultBrowser", false);
 user_pref("browser.aboutwelcome.enabled", false);
 user_pref("toolkit.telemetry.enabled", false);

@@ -27,7 +27,7 @@ final class HomieDiscovery: NSObject, ObservableObject {
             guard hosts.isEmpty else { return }
             let fallback = HomieHost(
                 name: "Homie",
-                graphQLURL: URL(string: "http://homie.local:3000/graphql")!,
+                graphQLURL: URL(string: "http://homie.local/graphql")!,
                 source: .fallback
             )
             if (try? await HomieAPI(endpoint: fallback.graphQLURL).health()) != nil,

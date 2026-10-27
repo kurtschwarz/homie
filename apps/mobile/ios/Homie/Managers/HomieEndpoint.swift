@@ -8,7 +8,7 @@ enum HomieEndpoint {
         guard let configuredURL,
               let url = URL(string: configuredURL),
               url.host() != nil else {
-            return URL(string: "http://homie:3000")!
+            return URL(string: "http://homie")!
         }
 
         if url.path().isEmpty || url.path() == "/" {

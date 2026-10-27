@@ -8,7 +8,7 @@ import {
   Users,
 } from 'lucide-react'
 
-/** The admin sections, in sidebar order. Paths are relative to the /manage basename. */
+/** The admin sections, in sidebar order. Paths are relative to the site root. */
 export const sections: { to: string; label: string; icon: LucideIcon }[] = [
   { to: '/people', label: 'People', icon: Users },
   { to: '/calendars', label: 'Calendars', icon: CalendarDays },

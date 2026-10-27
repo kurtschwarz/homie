@@ -1,12 +1,12 @@
 [Unit]
 Description=Homie API
-After=network-online.target
+After=network-online.target homie-api.socket
 Wants=network-online.target
+Requires=homie-api.socket
 
 [Service]
 Type=notify
 ExecStart=/usr/bin/homie-api
-Environment=HOMIE_ADDR=:3000
 Environment=HOMIE_LOCAL_ADDR=127.0.0.1:3001
 EnvironmentFile=-/etc/homie/api.env
 WatchdogSec=30s

@@ -29,22 +29,22 @@ final class HomieHostTests: XCTestCase {
     }
 
     func testEquivalentLocalNamesShareASessionAccount() {
-        let short = URL(string: "http://homie:3000/graphql")!
-        let local = URL(string: "http://homie.local.:3000/graphql")!
+        let short = URL(string: "http://homie/graphql")!
+        let local = URL(string: "http://homie.local./graphql")!
 
         XCTAssertEqual(HomieSession.sessionAccount(for: short), HomieSession.sessionAccount(for: local))
     }
 
     func testEquivalentLocalNamesHaveTheSameDiscoveryIdentity() {
-        let short = HomieHost(name: "Short", graphQLURL: URL(string: "http://homie:3000/graphql")!, source: .fallback)
-        let local = HomieHost(name: "Bonjour", graphQLURL: URL(string: "http://homie.local.:3000/graphql")!, source: .discovered)
+        let short = HomieHost(name: "Short", graphQLURL: URL(string: "http://homie/graphql")!, source: .fallback)
+        let local = HomieHost(name: "Bonjour", graphQLURL: URL(string: "http://homie.local./graphql")!, source: .discovered)
 
         XCTAssertEqual(short.id, local.id)
     }
 
     func testDifferentSchemesDoNotShareASessionAccount() {
-        let http = URL(string: "http://homie.local:3000/graphql")!
-        let https = URL(string: "https://homie.local:3000/graphql")!
+        let http = URL(string: "http://homie.local/graphql")!
+        let https = URL(string: "https://homie.local/graphql")!
 
         XCTAssertNotEqual(HomieSession.sessionAccount(for: http), HomieSession.sessionAccount(for: https))
     }
@@ -85,7 +85,7 @@ final class HomieHostTests: XCTestCase {
     func testSetupRequiredIsExposedForEquivalentDiscoveredHost() async {
         let defaults = defaults(suite: "HomieHostFallbackSetupTests")
         let store = HomieHostStore(defaults: defaults) { _ in HomieHealth(status: "SETUP_REQUIRED", version: "1.2.3") }
-        let discovered = HomieHost(name: "Homie", graphQLURL: URL(string: "http://homie.local:3000/graphql")!, source: .fallback)
+        let discovered = HomieHost(name: "Homie", graphQLURL: URL(string: "http://homie.local/graphql")!, source: .fallback)
 
         try? await store.select(discovered)
 

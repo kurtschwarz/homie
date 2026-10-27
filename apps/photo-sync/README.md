@@ -46,7 +46,7 @@ Choose **Homie Photos → Reset Homie Photos…** to return the app to onboardin
 
 ## API endpoint
 
-Uploads go to `http://homie:3000/graphql`, the Pi, by default. `just dev photo-sync` configures the local endpoint automatically. To point the app at a local API manually instead:
+Uploads go to `http://homie/graphql`, the Pi, by default. `just dev photo-sync` configures the local endpoint automatically. To point the app at a local API manually instead:
 
 ```sh
 defaults write ar.schw.homie.photo-sync HomieAPIURL http://localhost:3030
@@ -57,7 +57,7 @@ A bare origin gets `/graphql` appended, so the value is spelled the same way as 
 
 Sign in with the Homie admin username and password. Photo Sync stores its session in the macOS Keychain, and the session appears in the manager's Active Sessions list, where it can be revoked. Photo Sync asks you to sign in again when the session expires or is revoked.
 
-Photo Sync discovers Homie devices advertised over Bonjour and also checks `homie.local:3000` as a fallback. Use **Change** on the sign-in screen, or the display button after signing in, to select another discovered device or enter an address manually. Sessions are stored separately for each address.
+Photo Sync discovers Homie devices advertised over Bonjour and also checks `homie.local` as a fallback. Use **Change** on the sign-in screen, or the display button after signing in, to select another discovered device or enter an address manually. Sessions are stored separately for each address.
 
 The app bundle sets `NSAllowsLocalNetworking` because the API is plain HTTP. App Transport Security exempts `localhost` but not the Pi's hostname.
 

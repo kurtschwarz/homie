@@ -65,7 +65,7 @@ struct HomieAPI {
     // A bundle launched by `open` does not inherit the shell environment, so
     // UserDefaults is the command-line override that works for the app bundle:
     //   defaults write ar.schw.homie.photo-sync HomieAPIURL http://localhost:3030
-    static let defaultEndpoint = URL(string: "http://homie:3000/graphql")!
+    static let defaultEndpoint = URL(string: "http://homie/graphql")!
 
     let endpoint: URL
     private let session: URLSession

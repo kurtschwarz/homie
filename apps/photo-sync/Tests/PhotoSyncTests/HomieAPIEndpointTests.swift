@@ -12,7 +12,7 @@ final class HomieAPIEndpointTests: XCTestCase {
     func testDefaultsToThePi() {
         let endpoint = HomieAPI.configuredEndpoint(defaults: defaults(nil), environment: [:])
 
-        XCTAssertEqual(endpoint.absoluteString, "http://homie:3000/graphql")
+        XCTAssertEqual(endpoint.absoluteString, "http://homie/graphql")
     }
 
     func testUserDefaultsOverrideWinsOverTheEnvironment() {

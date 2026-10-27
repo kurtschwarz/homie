@@ -132,7 +132,7 @@ struct HomieHostPicker: View {
 
             GroupBox("Manual address") {
                 HStack {
-                    TextField("homie.local:3000", text: $manualAddress)
+                    TextField("homie.local", text: $manualAddress)
                         .textFieldStyle(.roundedBorder)
                         .onSubmit(connectManually)
                     Button("Connect", action: connectManually)

@@ -1,0 +1,9 @@
+[Unit]
+Description=Homie API socket
+
+[Socket]
+ListenStream=80
+FileDescriptorName=lan
+
+[Install]
+WantedBy=sockets.target

@@ -37,8 +37,8 @@ main() {
         esac
     fi
 
-    systemctl stop homie-kiosk.service homie-api.service homie-emoji-font.service homie-emoji-font.timer 2>/dev/null || true
-    systemctl disable homie-kiosk.service homie-api.service homie-emoji-font.service homie-emoji-font.timer 2>/dev/null || true
+    systemctl stop homie-kiosk.service homie-api.socket homie-api.service homie-emoji-font.service homie-emoji-font.timer 2>/dev/null || true
+    systemctl disable homie-kiosk.service homie-api.socket homie-api.service homie-emoji-font.service homie-emoji-font.timer 2>/dev/null || true
     systemctl start getty@tty1.service 2>/dev/null || true
 
     if dpkg -s homie >/dev/null 2>&1; then
@@ -46,6 +46,7 @@ main() {
     else
         rm -f /usr/bin/homie-api \
             /lib/systemd/system/homie-api.service \
+            /lib/systemd/system/homie-api.socket \
             /lib/systemd/system/homie-kiosk.service \
             /lib/systemd/system/homie-emoji-font.service \
             /lib/systemd/system/homie-emoji-font.timer

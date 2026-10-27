@@ -48,6 +48,9 @@ case "$1" in
 
         systemctl daemon-reload
         systemctl enable homie-api.service homie-kiosk.service homie-emoji-font.service
+        # The socket must be listening before the API restarts, so the new
+        # process inherits port 80 instead of the old one's private :3000.
+        systemctl enable --now homie-api.socket
         systemctl restart homie-api.service
         systemctl restart homie-kiosk.service
         # --no-block because this downloads 116 MB of font on a first install,

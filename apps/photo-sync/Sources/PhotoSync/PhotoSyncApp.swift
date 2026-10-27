@@ -13,13 +13,25 @@ struct PhotoSyncApp: App {
         .windowStyle(.titleBar)
         .defaultSize(width: 560, height: 680)
         .commands {
-            CommandGroup(after: .appInfo) {
+            CommandGroup(replacing: .appInfo) {
+                Button("About Homie Photos") {
+                    showAbout()
+                }
                 Divider()
                 Button("Reset Homie Photos…") {
                     confirmReset()
                 }
             }
         }
+    }
+
+    private func showAbout() {
+        // The standard panel renders "Version <applicationVersion> (<version>)".
+        var options: [NSApplication.AboutPanelOptionKey: Any] = [:]
+        if let commit = Bundle.main.object(forInfoDictionaryKey: "HomieGitCommit") as? String {
+            options[.version] = commit
+        }
+        NSApp.orderFrontStandardAboutPanel(options: options)
     }
 
     private func confirmReset() {

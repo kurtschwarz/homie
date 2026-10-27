@@ -13,6 +13,12 @@ export type DisplaySchedule = {
   ddcBus: string
 }
 
+export type DdcBus = {
+  bus: string
+  connector: string
+  monitor: string
+}
+
 export type DisplayStatus = {
   mode: DisplayModeKey
   brightness: number

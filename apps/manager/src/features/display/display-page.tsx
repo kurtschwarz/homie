@@ -6,6 +6,7 @@ import { ToggleSwitch } from '@/shared/ui/toggle-switch'
 import { useUpdateDisplaySchedule } from './api/display.mutations'
 import { displayQueries } from './api/display.queries'
 import { DayTimeline } from './components/day-timeline'
+import { DdcCard } from './components/ddc-card'
 import { ModeRow } from './components/mode-row'
 import { RightNow } from './components/right-now'
 import { WifiCard } from './components/wifi-card'
@@ -127,6 +128,7 @@ function DisplayContent({ initial }: { initial: DisplaySchedule }) {
       </section>
       <div className="flex flex-col gap-6">
         <WifiCard />
+        <DdcCard bus={draft.ddcBus} onSelect={(ddcBus) => update({ ...draft, ddcBus })} />
         <RightNow schedule={draft} nowMinutes={nowMinutes} />
       </div>
     </div>

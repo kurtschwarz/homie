@@ -1,5 +1,5 @@
 import { graphql } from '@/shared/lib/graphql'
-import type { DisplayModeKey, DisplaySchedule, DisplayStatus, WifiStatus } from '../types'
+import type { DdcBus, DisplayModeKey, DisplaySchedule, DisplayStatus, WifiStatus } from '../types'
 
 const SCHEDULE_FIELDS = `
   modes { mode startsAtMinutes brightness }
@@ -28,6 +28,14 @@ export const displayApi = {
       `query ManageWifiStatus { wifiStatus { connected ssid signalPercent } }`,
     )
     return data.wifiStatus
+  },
+
+  /** Runs a ddcutil detection scan on the API host, which takes a few seconds. */
+  ddcBuses: async () => {
+    const data = await graphql<{ ddcBuses: DdcBus[] }>(
+      `query ManageDdcBuses { ddcBuses { bus connector monitor } }`,
+    )
+    return data.ddcBuses
   },
 
   /** ddcBus is always sent back: the input defaults it to empty, which would disable panel control. */

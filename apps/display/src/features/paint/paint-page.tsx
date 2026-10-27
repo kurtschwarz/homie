@@ -23,7 +23,7 @@ const SIZE_OPTIONS: { size: SizeName; dot: string }[] = [
 ]
 
 const tile =
-  'flex cursor-pointer flex-col items-center justify-center gap-hm-6 rounded-hm-control border-2 bg-hm-surface text-hm-caption font-medium [-webkit-tap-highlight-color:transparent] active:scale-(--hm-press-scale)'
+  'flex cursor-pointer flex-col items-center justify-center gap-hm-2 rounded-hm-control leading-none border-2 bg-hm-surface text-[calc(1.125rem*var(--hm-density))] font-medium [-webkit-tap-highlight-color:transparent] active:scale-(--hm-press-scale)'
 
 export function PaintPage({ onClose }: { onClose: () => void }) {
   const [tool, setTool] = React.useState<Tool>('brush')
@@ -56,13 +56,13 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
         )}
       </div>
 
-      <aside className="flex w-hm-420 flex-none flex-col gap-hm-24">
+      <aside className="flex w-[calc(21rem*var(--hm-density))] flex-none flex-col gap-hm-24">
         <header className="flex items-center justify-between">
           <h1 className="m-0 text-hm-title-lg font-semibold tracking-[-0.035em]">Painting</h1>
           <Button
             variant="outline"
             aria-label="Close painting"
-            className="size-hm-72 px-0"
+            className="size-hm-76 px-0"
             onClick={onClose}
           >
             <X aria-hidden />
@@ -80,7 +80,7 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
                 onClick={() => setTool(option)}
                 className={cn(
                   tile,
-                  'h-hm-104',
+                  'h-[calc(6.5rem*var(--hm-density))]',
                   tool === option
                     ? 'border-hm-accent bg-hm-accent-soft text-hm-accent'
                     : 'border-hm-line text-hm-ink-2',
@@ -105,7 +105,7 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
                 onClick={() => setSize(option)}
                 className={cn(
                   tile,
-                  'h-hm-80',
+                  'h-[calc(5rem*var(--hm-density))]',
                   size === option ? 'border-hm-accent bg-hm-accent-soft' : 'border-hm-line',
                 )}
               >

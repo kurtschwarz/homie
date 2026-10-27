@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-4 -4 108 116" width="432" height="464" role="img" aria-label="Homie, idle: a mint green ball with a lopsided grin">
+<title>Homie · idle</title>
+<style>
+@keyframes homie-blink{0%,88%,100%{transform:scaleY(1)}92%{transform:scaleY(.1)}}
+@keyframes homie-look{0%,38%,100%{transform:translate(0,0)}44%,58%{transform:translate(-9px,3px)}64%,72%{transform:translate(2px,-2px)}}
+@keyframes homie-roll{0%,38%,100%{transform:translate(0,0)}44%,58%{transform:translate(-13px,4px)}64%,72%{transform:translate(3px,-3px)}}
+.homie-blink{transform-box:fill-box;transform-origin:50% 60%;animation:homie-blink 5s ease-in-out infinite}
+.homie-look{animation:homie-look 9s ease-in-out infinite}
+.homie-roll{animation:homie-roll 9s ease-in-out infinite}
+@media (prefers-reduced-motion: reduce){.homie-blink,.homie-look,.homie-roll{animation:none}}
+</style>
+<defs>
+<linearGradient id="homie-warm" x1="0.15" y1="0.08" x2="0.9" y2="0.95"><stop offset="0" stop-color="#4F9D62"></stop><stop offset="0.55" stop-color="#70C092"></stop><stop offset="1" stop-color="#B9E8CD"></stop></linearGradient>
+<radialGradient id="homie-shade" gradientUnits="userSpaceOnUse" cx="50" cy="50" r="60"><stop offset="0" stop-color="#FFFFFF" stop-opacity="0.16"></stop><stop offset="0.42" stop-color="#FFFFFF" stop-opacity="0"></stop><stop offset="0.8" stop-color="#06200F" stop-opacity="0"></stop><stop offset="0.93" stop-color="#06200F" stop-opacity="0.34"></stop><stop offset="1" stop-color="#06200F" stop-opacity="0.62"></stop></radialGradient>
+<radialGradient id="homie-ground"><stop offset="0" stop-color="#000000" stop-opacity="0.18"></stop><stop offset="1" stop-color="#000000" stop-opacity="0"></stop></radialGradient>
+<clipPath id="homie-clip" clipPathUnits="userSpaceOnUse"><circle cx="50" cy="50" r="48"></circle></clipPath>
+</defs>
+<ellipse cx="50" cy="103" rx="34" ry="4.5" fill="url(#homie-ground)"></ellipse><circle cx="50" cy="50" r="48" fill="url(#homie-warm)"></circle><g clip-path="url(#homie-clip)"><g transform="translate(11 -5)"><g class="homie-roll"><rect x="-40" y="-40" width="180" height="180" fill="url(#homie-shade)"></rect></g></g></g><g class="homie-look"><g class="homie-blink"><ellipse cx="53" cy="41" rx="4.6" ry="7.2" transform="rotate(-14 53 41)" fill="#FFFFFF"></ellipse><ellipse cx="72" cy="33" rx="4" ry="6.4" transform="rotate(-22 72 33)" fill="#FFFFFF"></ellipse></g><path d="M44 57 Q60 71 77 56" fill="none" stroke="#FFFFFF" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"></path></g>
+</svg>

@@ -1,6 +1,5 @@
-import homieAnimationUrl from '@homie/ui/assets/homie-confetti.lottie?url'
+import homieIdleUrl from '@homie/ui/assets/homie-idle.svg?url'
 import { Button } from '@homie/ui/components/button'
-import { HomieAnimation } from '@homie/ui/components/homie-animation'
 import { useIdle } from '@homie/ui/hooks/use-idle'
 import { cn } from '@homie/ui/lib/utils'
 import { Check, Eraser, Paintbrush, Rainbow, Spline, Trash2, Undo2, X } from 'lucide-react'
@@ -50,7 +49,7 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
         />
         {!dirty && (
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-hm-12 text-hm-ink-3">
-            <HomieAnimation src={homieAnimationUrl} className="size-hm-128" />
+            <img src={homieIdleUrl} alt="" className="h-hm-128 w-auto" />
             <p className="m-0 text-hm-lead font-medium">Draw anything with your finger</p>
           </div>
         )}

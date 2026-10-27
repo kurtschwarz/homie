@@ -14,16 +14,20 @@ PREFIX='photo-sync-v'
 last_tag="$(git -C "$REPO" tag --list "${PREFIX}*" --sort=-v:refname | sed -n 1p)"
 
 if [[ -n "$last_tag" ]]; then
-    base="${last_tag#"$PREFIX"}"
     range="$last_tag..HEAD"
 else
-    base="$(plutil -extract CFBundleShortVersionString raw "$ROOT/Info.plist")"
     range="HEAD"
 fi
 
 if [[ "${1:-}" == "notes" ]]; then
     git -C "$REPO" log --no-merges --format='- %s (%h)' "$range" -- "$SCOPE"
     exit 0
+fi
+
+if [[ -n "$last_tag" ]]; then
+    base="${last_tag#"$PREFIX"}"
+else
+    base="$(plutil -extract CFBundleShortVersionString raw "$ROOT/Info.plist")"
 fi
 
 IFS=. read -r major minor patch <<< "$base"

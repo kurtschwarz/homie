@@ -17,6 +17,8 @@ StateDirectory=homie
 WorkingDirectory=/var/lib/homie
 User=homie
 Group=homie
+SupplementaryGroups=i2c
+DeviceAllow=char-i2c rw
 
 NoNewPrivileges=true
 ProtectSystem=strict

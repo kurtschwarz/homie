@@ -84,6 +84,33 @@ type ComplexityRoot struct {
 		Longitude func(childComplexity int) int
 	}
 
+	DdcBus struct {
+		Bus       func(childComplexity int) int
+		Connector func(childComplexity int) int
+		Monitor   func(childComplexity int) int
+	}
+
+	DisplayModeSetting struct {
+		Brightness      func(childComplexity int) int
+		Mode            func(childComplexity int) int
+		StartsAtMinutes func(childComplexity int) int
+	}
+
+	DisplaySchedule struct {
+		DdcBus             func(childComplexity int) int
+		Modes              func(childComplexity int) int
+		PowerSavingEnabled func(childComplexity int) int
+		WakeForAlerts      func(childComplexity int) int
+	}
+
+	DisplayStatus struct {
+		Brightness     func(childComplexity int) int
+		Mode           func(childComplexity int) int
+		OverrideActive func(childComplexity int) int
+		OverrideEndsAt func(childComplexity int) int
+		Powered        func(childComplexity int) int
+	}
+
 	Event struct {
 		AllDay     func(childComplexity int) int
 		CalendarID func(childComplexity int) int
@@ -126,6 +153,7 @@ type ComplexityRoot struct {
 		Login                     func(childComplexity int, username string, password string) int
 		Logout                    func(childComplexity int) int
 		PauseTimer                func(childComplexity int) int
+		PreviewDisplayMode        func(childComplexity int, mode model.DisplayMode, seconds int) int
 		RefreshCalendar           func(childComplexity int, id string) int
 		RefreshEvents             func(childComplexity int) int
 		ReorderPeople             func(childComplexity int, ids []string) int
@@ -140,6 +168,7 @@ type ComplexityRoot struct {
 		UpdateCalendarAccount     func(childComplexity int, input model.UpdateCalendarAccountInput) int
 		UpdateCalendarAssociation func(childComplexity int, input model.UpdateCalendarAssociationInput) int
 		UpdateCalendarVisibility  func(childComplexity int, id string, visible bool) int
+		UpdateDisplaySchedule     func(childComplexity int, input model.UpdateDisplayScheduleInput) int
 		UpdateWeatherLocation     func(childComplexity int, input model.UpdateWeatherLocationInput) int
 		UpdateWeatherProvider     func(childComplexity int, input model.UpdateWeatherProviderInput) int
 		UploadPhoto               func(childComplexity int, input model.PhotoUploadInput, file graphql.Upload) int
@@ -183,6 +212,9 @@ type ComplexityRoot struct {
 		CalendarAssociations func(childComplexity int, calendarID *string, personID *string) int
 		CalendarTags         func(childComplexity int, calendarID string) int
 		Calendars            func(childComplexity int, accountID *string) int
+		DdcBuses             func(childComplexity int) int
+		DisplaySchedule      func(childComplexity int) int
+		DisplayStatus        func(childComplexity int) int
 		Events               func(childComplexity int, days *int) int
 		Health               func(childComplexity int) int
 		People               func(childComplexity int) int
@@ -196,6 +228,7 @@ type ComplexityRoot struct {
 		Weather              func(childComplexity int) int
 		WeatherLocations     func(childComplexity int) int
 		WeatherProviders     func(childComplexity int) int
+		WifiStatus           func(childComplexity int) int
 	}
 
 	SessionInfo struct {
@@ -249,6 +282,12 @@ type ComplexityRoot struct {
 		LastError              func(childComplexity int) int
 		RefreshIntervalSeconds func(childComplexity int) int
 	}
+
+	WifiStatus struct {
+		Connected     func(childComplexity int) int
+		SignalPercent func(childComplexity int) int
+		Ssid          func(childComplexity int) int
+	}
 }
 
 // endregion ***************************** api!.gotpl *****************************
@@ -268,6 +307,8 @@ type MutationResolver interface {
 	DiscoverCalendars(ctx context.Context, accountID string) ([]model.Calendar, error)
 	UpdateCalendarVisibility(ctx context.Context, id string, visible bool) (*model.Calendar, error)
 	RefreshCalendar(ctx context.Context, id string) (bool, error)
+	UpdateDisplaySchedule(ctx context.Context, input model.UpdateDisplayScheduleInput) (*model.DisplaySchedule, error)
+	PreviewDisplayMode(ctx context.Context, mode model.DisplayMode, seconds int) (*model.DisplayStatus, error)
 	CreateEvent(ctx context.Context, input model.EventInput) (*model.Event, error)
 	SavePerson(ctx context.Context, input model.PersonInput) (*model.Person, error)
 	DeletePerson(ctx context.Context, id string) (bool, error)
@@ -298,6 +339,10 @@ type QueryResolver interface {
 	Sessions(ctx context.Context) ([]model.ActiveSession, error)
 	CalendarAccounts(ctx context.Context) ([]model.CalendarAccount, error)
 	Calendars(ctx context.Context, accountID *string) ([]model.Calendar, error)
+	DisplaySchedule(ctx context.Context) (*model.DisplaySchedule, error)
+	DisplayStatus(ctx context.Context) (*model.DisplayStatus, error)
+	WifiStatus(ctx context.Context) (*model.WifiStatus, error)
+	DdcBuses(ctx context.Context) ([]model.DdcBus, error)
 	Events(ctx context.Context, days *int) ([]model.Event, error)
 	People(ctx context.Context) ([]model.Person, error)
 	CalendarAssociations(ctx context.Context, calendarID *string, personID *string) ([]model.CalendarAssociation, error)
@@ -514,6 +559,100 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Coordinate.Longitude(childComplexity), true
+
+	case "DdcBus.bus":
+		if e.ComplexityRoot.DdcBus.Bus == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DdcBus.Bus(childComplexity), true
+	case "DdcBus.connector":
+		if e.ComplexityRoot.DdcBus.Connector == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DdcBus.Connector(childComplexity), true
+	case "DdcBus.monitor":
+		if e.ComplexityRoot.DdcBus.Monitor == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DdcBus.Monitor(childComplexity), true
+
+	case "DisplayModeSetting.brightness":
+		if e.ComplexityRoot.DisplayModeSetting.Brightness == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DisplayModeSetting.Brightness(childComplexity), true
+	case "DisplayModeSetting.mode":
+		if e.ComplexityRoot.DisplayModeSetting.Mode == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DisplayModeSetting.Mode(childComplexity), true
+	case "DisplayModeSetting.startsAtMinutes":
+		if e.ComplexityRoot.DisplayModeSetting.StartsAtMinutes == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DisplayModeSetting.StartsAtMinutes(childComplexity), true
+
+	case "DisplaySchedule.ddcBus":
+		if e.ComplexityRoot.DisplaySchedule.DdcBus == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DisplaySchedule.DdcBus(childComplexity), true
+	case "DisplaySchedule.modes":
+		if e.ComplexityRoot.DisplaySchedule.Modes == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DisplaySchedule.Modes(childComplexity), true
+	case "DisplaySchedule.powerSavingEnabled":
+		if e.ComplexityRoot.DisplaySchedule.PowerSavingEnabled == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DisplaySchedule.PowerSavingEnabled(childComplexity), true
+	case "DisplaySchedule.wakeForAlerts":
+		if e.ComplexityRoot.DisplaySchedule.WakeForAlerts == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DisplaySchedule.WakeForAlerts(childComplexity), true
+
+	case "DisplayStatus.brightness":
+		if e.ComplexityRoot.DisplayStatus.Brightness == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DisplayStatus.Brightness(childComplexity), true
+	case "DisplayStatus.mode":
+		if e.ComplexityRoot.DisplayStatus.Mode == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DisplayStatus.Mode(childComplexity), true
+	case "DisplayStatus.overrideActive":
+		if e.ComplexityRoot.DisplayStatus.OverrideActive == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DisplayStatus.OverrideActive(childComplexity), true
+	case "DisplayStatus.overrideEndsAt":
+		if e.ComplexityRoot.DisplayStatus.OverrideEndsAt == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DisplayStatus.OverrideEndsAt(childComplexity), true
+	case "DisplayStatus.powered":
+		if e.ComplexityRoot.DisplayStatus.Powered == nil {
+			break
+		}
+
+		return e.ComplexityRoot.DisplayStatus.Powered(childComplexity), true
 
 	case "Event.allDay":
 		if e.ComplexityRoot.Event.AllDay == nil {
@@ -775,6 +914,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.PauseTimer(childComplexity), true
+	case "Mutation.previewDisplayMode":
+		if e.ComplexityRoot.Mutation.PreviewDisplayMode == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_previewDisplayMode_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.PreviewDisplayMode(childComplexity, args["mode"].(model.DisplayMode), args["seconds"].(int)), true
 	case "Mutation.refreshCalendar":
 		if e.ComplexityRoot.Mutation.RefreshCalendar == nil {
 			break
@@ -919,6 +1069,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.UpdateCalendarVisibility(childComplexity, args["id"].(string), args["visible"].(bool)), true
+	case "Mutation.updateDisplaySchedule":
+		if e.ComplexityRoot.Mutation.UpdateDisplaySchedule == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateDisplaySchedule_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.UpdateDisplaySchedule(childComplexity, args["input"].(model.UpdateDisplayScheduleInput)), true
 	case "Mutation.updateWeatherLocation":
 		if e.ComplexityRoot.Mutation.UpdateWeatherLocation == nil {
 			break
@@ -1122,6 +1283,24 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.Calendars(childComplexity, args["accountId"].(*string)), true
+	case "Query.ddcBuses":
+		if e.ComplexityRoot.Query.DdcBuses == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Query.DdcBuses(childComplexity), true
+	case "Query.displaySchedule":
+		if e.ComplexityRoot.Query.DisplaySchedule == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Query.DisplaySchedule(childComplexity), true
+	case "Query.displayStatus":
+		if e.ComplexityRoot.Query.DisplayStatus == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Query.DisplayStatus(childComplexity), true
 	case "Query.events":
 		if e.ComplexityRoot.Query.Events == nil {
 			break
@@ -1216,6 +1395,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.WeatherProviders(childComplexity), true
+	case "Query.wifiStatus":
+		if e.ComplexityRoot.Query.WifiStatus == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Query.WifiStatus(childComplexity), true
 
 	case "SessionInfo.user":
 		if e.ComplexityRoot.SessionInfo.User == nil {
@@ -1410,6 +1595,25 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.WeatherProvider.RefreshIntervalSeconds(childComplexity), true
 
+	case "WifiStatus.connected":
+		if e.ComplexityRoot.WifiStatus.Connected == nil {
+			break
+		}
+
+		return e.ComplexityRoot.WifiStatus.Connected(childComplexity), true
+	case "WifiStatus.signalPercent":
+		if e.ComplexityRoot.WifiStatus.SignalPercent == nil {
+			break
+		}
+
+		return e.ComplexityRoot.WifiStatus.SignalPercent(childComplexity), true
+	case "WifiStatus.ssid":
+		if e.ComplexityRoot.WifiStatus.Ssid == nil {
+			break
+		}
+
+		return e.ComplexityRoot.WifiStatus.Ssid(childComplexity), true
+
 	}
 	return 0, false
 }
@@ -1424,6 +1628,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputCreateCalendarAssociationInput,
 		ec.unmarshalInputCreateWeatherLocationInput,
 		ec.unmarshalInputCreateWeatherProviderInput,
+		ec.unmarshalInputDisplayModeSettingInput,
 		ec.unmarshalInputEventInput,
 		ec.unmarshalInputFocalRegionInput,
 		ec.unmarshalInputPersonInput,
@@ -1434,6 +1639,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputUpdateCalendarAccountInput,
 		ec.unmarshalInputUpdateCalendarAssociationInput,
 		ec.unmarshalInputUpdateCalendarConnectionInput,
+		ec.unmarshalInputUpdateDisplayScheduleInput,
 		ec.unmarshalInputUpdateWeatherKitConnectionInput,
 		ec.unmarshalInputUpdateWeatherLocationInput,
 		ec.unmarshalInputUpdateWeatherProviderConnectionInput,
@@ -1684,6 +1890,81 @@ build rather than silently becoming reachable by everyone. See
 TestRootFieldsAreClassified.
 """
 directive @protected(kinds: [AuthKind!]! = [USER], role: AuthRole = ADMIN) on FIELD_DEFINITION
+`, BuiltIn: false},
+	{Name: "../../graph/display.graphqls", Input: `enum DisplayMode {
+  LIGHT
+  DARK
+  NIGHT
+  OFF
+}
+
+type DisplayModeSetting {
+  mode: DisplayMode!
+  "Minutes since midnight."
+  startsAtMinutes: Int!
+  "0-100. Ignored for OFF."
+  brightness: Int!
+}
+
+type DisplaySchedule {
+  modes: [DisplayModeSetting!]!
+  powerSavingEnabled: Boolean!
+  wakeForAlerts: Boolean!
+  "I2C bus number ddcutil controls the panel on. Empty disables backlight and power control."
+  ddcBus: String!
+}
+
+"A display ddcutil can control."
+type DdcBus {
+  "The I2C bus number, as stored in DisplaySchedule.ddcBus."
+  bus: String!
+  connector: String!
+  monitor: String!
+}
+
+type DisplayStatus {
+  mode: DisplayMode!
+  brightness: Int!
+  "False while the panel is switched off."
+  powered: Boolean!
+  overrideActive: Boolean!
+  "Unix seconds when a live override ends."
+  overrideEndsAt: Int
+}
+
+type WifiStatus {
+  connected: Boolean!
+  ssid: String!
+  signalPercent: Int!
+}
+
+input DisplayModeSettingInput {
+  mode: DisplayMode!
+  startsAtMinutes: Int!
+  brightness: Int!
+}
+
+input UpdateDisplayScheduleInput {
+  "Every mode exactly once, in ascending order around the day."
+  modes: [DisplayModeSettingInput!]!
+  powerSavingEnabled: Boolean!
+  wakeForAlerts: Boolean!
+  ddcBus: String! = ""
+}
+
+extend type Query {
+  displaySchedule: DisplaySchedule! @protected(kinds: [USER, DISPLAY])
+  displayStatus: DisplayStatus! @protected(kinds: [USER, DISPLAY])
+  wifiStatus: WifiStatus! @protected
+  "Runs a detection scan, which takes a few seconds."
+  ddcBuses: [DdcBus!]! @protected
+}
+
+extend type Mutation {
+  updateDisplaySchedule(input: UpdateDisplayScheduleInput!): DisplaySchedule! @protected
+  "Shows a mode for up to an hour, then returns to the schedule."
+  previewDisplayMode(mode: DisplayMode!, seconds: Int!): DisplayStatus! @protected
+}
 `, BuiltIn: false},
 	{Name: "../../graph/events.graphqls", Input: `type Person {
   id: ID!
@@ -2115,6 +2396,60 @@ func (ec *executionContext) childFields_Coordinate(ctx context.Context, field gr
 	return nil, fmt.Errorf("no field named %q was found under type Coordinate", field.Name)
 }
 
+func (ec *executionContext) childFields_DdcBus(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "bus":
+		return ec.fieldContext_DdcBus_bus(ctx, field)
+	case "connector":
+		return ec.fieldContext_DdcBus_connector(ctx, field)
+	case "monitor":
+		return ec.fieldContext_DdcBus_monitor(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type DdcBus", field.Name)
+}
+
+func (ec *executionContext) childFields_DisplayModeSetting(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "mode":
+		return ec.fieldContext_DisplayModeSetting_mode(ctx, field)
+	case "startsAtMinutes":
+		return ec.fieldContext_DisplayModeSetting_startsAtMinutes(ctx, field)
+	case "brightness":
+		return ec.fieldContext_DisplayModeSetting_brightness(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type DisplayModeSetting", field.Name)
+}
+
+func (ec *executionContext) childFields_DisplaySchedule(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "modes":
+		return ec.fieldContext_DisplaySchedule_modes(ctx, field)
+	case "powerSavingEnabled":
+		return ec.fieldContext_DisplaySchedule_powerSavingEnabled(ctx, field)
+	case "wakeForAlerts":
+		return ec.fieldContext_DisplaySchedule_wakeForAlerts(ctx, field)
+	case "ddcBus":
+		return ec.fieldContext_DisplaySchedule_ddcBus(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type DisplaySchedule", field.Name)
+}
+
+func (ec *executionContext) childFields_DisplayStatus(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "mode":
+		return ec.fieldContext_DisplayStatus_mode(ctx, field)
+	case "brightness":
+		return ec.fieldContext_DisplayStatus_brightness(ctx, field)
+	case "powered":
+		return ec.fieldContext_DisplayStatus_powered(ctx, field)
+	case "overrideActive":
+		return ec.fieldContext_DisplayStatus_overrideActive(ctx, field)
+	case "overrideEndsAt":
+		return ec.fieldContext_DisplayStatus_overrideEndsAt(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type DisplayStatus", field.Name)
+}
+
 func (ec *executionContext) childFields_Event(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "id":
@@ -2317,6 +2652,18 @@ func (ec *executionContext) childFields_WeatherProvider(ctx context.Context, fie
 		return ec.fieldContext_WeatherProvider_lastError(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type WeatherProvider", field.Name)
+}
+
+func (ec *executionContext) childFields_WifiStatus(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "connected":
+		return ec.fieldContext_WifiStatus_connected(ctx, field)
+	case "ssid":
+		return ec.fieldContext_WifiStatus_ssid(ctx, field)
+	case "signalPercent":
+		return ec.fieldContext_WifiStatus_signalPercent(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type WifiStatus", field.Name)
 }
 
 func (ec *executionContext) childFields___Directive(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -2633,6 +2980,28 @@ func (ec *executionContext) field_Mutation_login_args(ctx context.Context, rawAr
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_previewDisplayMode_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "mode",
+		func(ctx context.Context, v any) (model.DisplayMode, error) {
+			return ec.unmarshalNDisplayMode2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐDisplayMode(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["mode"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "seconds",
+		func(ctx context.Context, v any) (int, error) {
+			return ec.unmarshalNInt2int(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["seconds"] = arg1
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_refreshCalendar_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -2838,6 +3207,20 @@ func (ec *executionContext) field_Mutation_updateCalendarVisibility_args(ctx con
 		return nil, err
 	}
 	args["visible"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_updateDisplaySchedule_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.UpdateDisplayScheduleInput, error) {
+			return ec.unmarshalNUpdateDisplayScheduleInput2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐUpdateDisplayScheduleInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
 	return args, nil
 }
 
@@ -3756,6 +4139,360 @@ func (ec *executionContext) fieldContext_Coordinate_longitude(_ context.Context,
 	return graphql.NewScalarFieldContext("Coordinate", field, false, false, errors.New("field of type Float does not have child fields"))
 }
 
+func (ec *executionContext) _DdcBus_bus(ctx context.Context, field graphql.CollectedField, obj *model.DdcBus) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DdcBus_bus(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Bus, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DdcBus_bus(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DdcBus", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _DdcBus_connector(ctx context.Context, field graphql.CollectedField, obj *model.DdcBus) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DdcBus_connector(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Connector, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DdcBus_connector(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DdcBus", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _DdcBus_monitor(ctx context.Context, field graphql.CollectedField, obj *model.DdcBus) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DdcBus_monitor(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Monitor, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DdcBus_monitor(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DdcBus", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _DisplayModeSetting_mode(ctx context.Context, field graphql.CollectedField, obj *model.DisplayModeSetting) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DisplayModeSetting_mode(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Mode, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v model.DisplayMode) graphql.Marshaler {
+			return ec.marshalNDisplayMode2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐDisplayMode(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DisplayModeSetting_mode(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DisplayModeSetting", field, false, false, errors.New("field of type DisplayMode does not have child fields"))
+}
+
+func (ec *executionContext) _DisplayModeSetting_startsAtMinutes(ctx context.Context, field graphql.CollectedField, obj *model.DisplayModeSetting) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DisplayModeSetting_startsAtMinutes(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.StartsAtMinutes, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DisplayModeSetting_startsAtMinutes(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DisplayModeSetting", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _DisplayModeSetting_brightness(ctx context.Context, field graphql.CollectedField, obj *model.DisplayModeSetting) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DisplayModeSetting_brightness(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Brightness, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DisplayModeSetting_brightness(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DisplayModeSetting", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _DisplaySchedule_modes(ctx context.Context, field graphql.CollectedField, obj *model.DisplaySchedule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DisplaySchedule_modes(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Modes, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.DisplayModeSetting) graphql.Marshaler {
+			return ec.marshalNDisplayModeSetting2ᚕgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐDisplayModeSettingᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DisplaySchedule_modes(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DisplaySchedule",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_DisplayModeSetting(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DisplaySchedule_powerSavingEnabled(ctx context.Context, field graphql.CollectedField, obj *model.DisplaySchedule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DisplaySchedule_powerSavingEnabled(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.PowerSavingEnabled, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DisplaySchedule_powerSavingEnabled(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DisplaySchedule", field, false, false, errors.New("field of type Boolean does not have child fields"))
+}
+
+func (ec *executionContext) _DisplaySchedule_wakeForAlerts(ctx context.Context, field graphql.CollectedField, obj *model.DisplaySchedule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DisplaySchedule_wakeForAlerts(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.WakeForAlerts, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DisplaySchedule_wakeForAlerts(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DisplaySchedule", field, false, false, errors.New("field of type Boolean does not have child fields"))
+}
+
+func (ec *executionContext) _DisplaySchedule_ddcBus(ctx context.Context, field graphql.CollectedField, obj *model.DisplaySchedule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DisplaySchedule_ddcBus(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.DdcBus, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DisplaySchedule_ddcBus(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DisplaySchedule", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _DisplayStatus_mode(ctx context.Context, field graphql.CollectedField, obj *model.DisplayStatus) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DisplayStatus_mode(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Mode, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v model.DisplayMode) graphql.Marshaler {
+			return ec.marshalNDisplayMode2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐDisplayMode(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DisplayStatus_mode(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DisplayStatus", field, false, false, errors.New("field of type DisplayMode does not have child fields"))
+}
+
+func (ec *executionContext) _DisplayStatus_brightness(ctx context.Context, field graphql.CollectedField, obj *model.DisplayStatus) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DisplayStatus_brightness(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Brightness, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DisplayStatus_brightness(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DisplayStatus", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _DisplayStatus_powered(ctx context.Context, field graphql.CollectedField, obj *model.DisplayStatus) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DisplayStatus_powered(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Powered, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DisplayStatus_powered(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DisplayStatus", field, false, false, errors.New("field of type Boolean does not have child fields"))
+}
+
+func (ec *executionContext) _DisplayStatus_overrideActive(ctx context.Context, field graphql.CollectedField, obj *model.DisplayStatus) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DisplayStatus_overrideActive(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.OverrideActive, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_DisplayStatus_overrideActive(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DisplayStatus", field, false, false, errors.New("field of type Boolean does not have child fields"))
+}
+
+func (ec *executionContext) _DisplayStatus_overrideEndsAt(ctx context.Context, field graphql.CollectedField, obj *model.DisplayStatus) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_DisplayStatus_overrideEndsAt(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.OverrideEndsAt, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *int) graphql.Marshaler {
+			return ec.marshalOInt2ᚖint(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_DisplayStatus_overrideEndsAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("DisplayStatus", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
 func (ec *executionContext) _Event_id(ctx context.Context, field graphql.CollectedField, obj *model.Event) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -4611,6 +5348,94 @@ func (ec *executionContext) fieldContext_Mutation_refreshCalendar(ctx context.Co
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_refreshCalendar_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_updateDisplaySchedule(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_updateDisplaySchedule(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().UpdateDisplaySchedule(ctx, fc.Args["input"].(model.UpdateDisplayScheduleInput))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.DisplaySchedule) graphql.Marshaler {
+			return ec.marshalNDisplaySchedule2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐDisplaySchedule(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_updateDisplaySchedule(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_DisplaySchedule(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_updateDisplaySchedule_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_previewDisplayMode(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_previewDisplayMode(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().PreviewDisplayMode(ctx, fc.Args["mode"].(model.DisplayMode), fc.Args["seconds"].(int))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.DisplayStatus) graphql.Marshaler {
+			return ec.marshalNDisplayStatus2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐDisplayStatus(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_previewDisplayMode(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_DisplayStatus(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_previewDisplayMode_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -6239,6 +7064,134 @@ func (ec *executionContext) fieldContext_Query_calendars(ctx context.Context, fi
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_displaySchedule(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_displaySchedule(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Query().DisplaySchedule(ctx)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.DisplaySchedule) graphql.Marshaler {
+			return ec.marshalNDisplaySchedule2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐDisplaySchedule(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_displaySchedule(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_DisplaySchedule(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_displayStatus(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_displayStatus(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Query().DisplayStatus(ctx)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.DisplayStatus) graphql.Marshaler {
+			return ec.marshalNDisplayStatus2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐDisplayStatus(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_displayStatus(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_DisplayStatus(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_wifiStatus(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_wifiStatus(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Query().WifiStatus(ctx)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.WifiStatus) graphql.Marshaler {
+			return ec.marshalNWifiStatus2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐWifiStatus(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_wifiStatus(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_WifiStatus(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_ddcBuses(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_ddcBuses(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Query().DdcBuses(ctx)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.DdcBus) graphql.Marshaler {
+			return ec.marshalNDdcBus2ᚕgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐDdcBusᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_ddcBuses(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_DdcBus(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_events(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -7438,6 +8391,75 @@ func (ec *executionContext) _WeatherProvider_lastError(ctx context.Context, fiel
 }
 func (ec *executionContext) fieldContext_WeatherProvider_lastError(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("WeatherProvider", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _WifiStatus_connected(ctx context.Context, field graphql.CollectedField, obj *model.WifiStatus) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_WifiStatus_connected(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Connected, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_WifiStatus_connected(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("WifiStatus", field, false, false, errors.New("field of type Boolean does not have child fields"))
+}
+
+func (ec *executionContext) _WifiStatus_ssid(ctx context.Context, field graphql.CollectedField, obj *model.WifiStatus) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_WifiStatus_ssid(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Ssid, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_WifiStatus_ssid(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("WifiStatus", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _WifiStatus_signalPercent(ctx context.Context, field graphql.CollectedField, obj *model.WifiStatus) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_WifiStatus_signalPercent(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.SignalPercent, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_WifiStatus_signalPercent(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("WifiStatus", field, false, false, errors.New("field of type Int does not have child fields"))
 }
 
 func (ec *executionContext) ___Directive_name(ctx context.Context, field graphql.CollectedField, obj *introspection.Directive) (ret graphql.Marshaler) {
@@ -8806,6 +9828,50 @@ func (ec *executionContext) unmarshalInputCreateWeatherProviderInput(ctx context
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputDisplayModeSettingInput(ctx context.Context, obj any) (model.DisplayModeSettingInput, error) {
+	var it model.DisplayModeSettingInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"mode", "startsAtMinutes", "brightness"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "mode":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("mode"))
+			data, err := ec.unmarshalNDisplayMode2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐDisplayMode(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Mode = data
+		case "startsAtMinutes":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("startsAtMinutes"))
+			data, err := ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.StartsAtMinutes = data
+		case "brightness":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("brightness"))
+			data, err := ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Brightness = data
+		}
+	}
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputEventInput(ctx context.Context, obj any) (model.EventInput, error) {
 	var it model.EventInput
 	if obj == nil {
@@ -9346,6 +10412,61 @@ func (ec *executionContext) unmarshalInputUpdateCalendarConnectionInput(ctx cont
 				return it, err
 			}
 			it.Caldav = data
+		}
+	}
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputUpdateDisplayScheduleInput(ctx context.Context, obj any) (model.UpdateDisplayScheduleInput, error) {
+	var it model.UpdateDisplayScheduleInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	if _, present := asMap["ddcBus"]; !present {
+		asMap["ddcBus"] = ""
+	}
+
+	fieldsInOrder := [...]string{"modes", "powerSavingEnabled", "wakeForAlerts", "ddcBus"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "modes":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("modes"))
+			data, err := ec.unmarshalNDisplayModeSettingInput2ᚕgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐDisplayModeSettingInputᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Modes = data
+		case "powerSavingEnabled":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("powerSavingEnabled"))
+			data, err := ec.unmarshalNBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PowerSavingEnabled = data
+		case "wakeForAlerts":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("wakeForAlerts"))
+			data, err := ec.unmarshalNBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.WakeForAlerts = data
+		case "ddcBus":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ddcBus"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.DdcBus = data
 		}
 	}
 	return it, nil
@@ -10011,6 +11132,213 @@ func (ec *executionContext) _Coordinate(ctx context.Context, sel ast.SelectionSe
 	return out
 }
 
+var ddcBusImplementors = []string{"DdcBus"}
+
+func (ec *executionContext) _DdcBus(ctx context.Context, sel ast.SelectionSet, obj *model.DdcBus) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, ddcBusImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferredFieldSet := graphql.NewFieldSet(nil)
+	deferLabelToView := make(map[string]*graphql.FieldSetView)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("DdcBus")
+		case "bus":
+			out.Values[i] = ec._DdcBus_bus(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "connector":
+			out.Values[i] = ec._DdcBus_connector(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "monitor":
+			out.Values[i] = ec._DdcBus_monitor(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferLabelToView), math.MaxInt32)))
+
+	ec.ProcessDeferredGroup(graphql.DeferredGroup{
+		Defers:   deferLabelToView,
+		Path:     graphql.GetPath(ctx),
+		FieldSet: deferredFieldSet,
+		Context:  ctx,
+	})
+
+	return out
+}
+
+var displayModeSettingImplementors = []string{"DisplayModeSetting"}
+
+func (ec *executionContext) _DisplayModeSetting(ctx context.Context, sel ast.SelectionSet, obj *model.DisplayModeSetting) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, displayModeSettingImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferredFieldSet := graphql.NewFieldSet(nil)
+	deferLabelToView := make(map[string]*graphql.FieldSetView)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("DisplayModeSetting")
+		case "mode":
+			out.Values[i] = ec._DisplayModeSetting_mode(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "startsAtMinutes":
+			out.Values[i] = ec._DisplayModeSetting_startsAtMinutes(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "brightness":
+			out.Values[i] = ec._DisplayModeSetting_brightness(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferLabelToView), math.MaxInt32)))
+
+	ec.ProcessDeferredGroup(graphql.DeferredGroup{
+		Defers:   deferLabelToView,
+		Path:     graphql.GetPath(ctx),
+		FieldSet: deferredFieldSet,
+		Context:  ctx,
+	})
+
+	return out
+}
+
+var displayScheduleImplementors = []string{"DisplaySchedule"}
+
+func (ec *executionContext) _DisplaySchedule(ctx context.Context, sel ast.SelectionSet, obj *model.DisplaySchedule) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, displayScheduleImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferredFieldSet := graphql.NewFieldSet(nil)
+	deferLabelToView := make(map[string]*graphql.FieldSetView)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("DisplaySchedule")
+		case "modes":
+			out.Values[i] = ec._DisplaySchedule_modes(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "powerSavingEnabled":
+			out.Values[i] = ec._DisplaySchedule_powerSavingEnabled(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "wakeForAlerts":
+			out.Values[i] = ec._DisplaySchedule_wakeForAlerts(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "ddcBus":
+			out.Values[i] = ec._DisplaySchedule_ddcBus(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferLabelToView), math.MaxInt32)))
+
+	ec.ProcessDeferredGroup(graphql.DeferredGroup{
+		Defers:   deferLabelToView,
+		Path:     graphql.GetPath(ctx),
+		FieldSet: deferredFieldSet,
+		Context:  ctx,
+	})
+
+	return out
+}
+
+var displayStatusImplementors = []string{"DisplayStatus"}
+
+func (ec *executionContext) _DisplayStatus(ctx context.Context, sel ast.SelectionSet, obj *model.DisplayStatus) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, displayStatusImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferredFieldSet := graphql.NewFieldSet(nil)
+	deferLabelToView := make(map[string]*graphql.FieldSetView)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("DisplayStatus")
+		case "mode":
+			out.Values[i] = ec._DisplayStatus_mode(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "brightness":
+			out.Values[i] = ec._DisplayStatus_brightness(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "powered":
+			out.Values[i] = ec._DisplayStatus_powered(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "overrideActive":
+			out.Values[i] = ec._DisplayStatus_overrideActive(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "overrideEndsAt":
+			out.Values[i] = ec._DisplayStatus_overrideEndsAt(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferLabelToView), math.MaxInt32)))
+
+	ec.ProcessDeferredGroup(graphql.DeferredGroup{
+		Defers:   deferLabelToView,
+		Path:     graphql.GetPath(ctx),
+		FieldSet: deferredFieldSet,
+		Context:  ctx,
+	})
+
+	return out
+}
+
 var eventImplementors = []string{"Event"}
 
 func (ec *executionContext) _Event(ctx context.Context, sel ast.SelectionSet, obj *model.Event) graphql.Marshaler {
@@ -10285,6 +11613,20 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "refreshCalendar":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_refreshCalendar(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "updateDisplaySchedule":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_updateDisplaySchedule(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "previewDisplayMode":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_previewDisplayMode(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -10841,6 +12183,94 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_calendars(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "displaySchedule":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_displaySchedule(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "displayStatus":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_displayStatus(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "wifiStatus":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_wifiStatus(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "ddcBuses":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_ddcBuses(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -11516,6 +12946,54 @@ func (ec *executionContext) _WeatherProvider(ctx context.Context, sel ast.Select
 	return out
 }
 
+var wifiStatusImplementors = []string{"WifiStatus"}
+
+func (ec *executionContext) _WifiStatus(ctx context.Context, sel ast.SelectionSet, obj *model.WifiStatus) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, wifiStatusImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferredFieldSet := graphql.NewFieldSet(nil)
+	deferLabelToView := make(map[string]*graphql.FieldSetView)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("WifiStatus")
+		case "connected":
+			out.Values[i] = ec._WifiStatus_connected(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "ssid":
+			out.Values[i] = ec._WifiStatus_ssid(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "signalPercent":
+			out.Values[i] = ec._WifiStatus_signalPercent(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferLabelToView), math.MaxInt32)))
+
+	ec.ProcessDeferredGroup(graphql.DeferredGroup{
+		Defers:   deferLabelToView,
+		Path:     graphql.GetPath(ctx),
+		FieldSet: deferredFieldSet,
+		Context:  ctx,
+	})
+
+	return out
+}
+
 var __DirectiveImplementors = []string{"__Directive"}
 
 func (ec *executionContext) ___Directive(ctx context.Context, sel ast.SelectionSet, obj *introspection.Directive) graphql.Marshaler {
@@ -12139,6 +13617,95 @@ func (ec *executionContext) unmarshalNCreateWeatherProviderInput2githubᚗcomᚋ
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) marshalNDdcBus2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐDdcBus(ctx context.Context, sel ast.SelectionSet, v model.DdcBus) graphql.Marshaler {
+	return ec._DdcBus(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNDdcBus2ᚕgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐDdcBusᚄ(ctx context.Context, sel ast.SelectionSet, v []model.DdcBus) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNDdcBus2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐDdcBus(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) unmarshalNDisplayMode2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐDisplayMode(ctx context.Context, v any) (model.DisplayMode, error) {
+	var res model.DisplayMode
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNDisplayMode2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐDisplayMode(ctx context.Context, sel ast.SelectionSet, v model.DisplayMode) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) marshalNDisplayModeSetting2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐDisplayModeSetting(ctx context.Context, sel ast.SelectionSet, v model.DisplayModeSetting) graphql.Marshaler {
+	return ec._DisplayModeSetting(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNDisplayModeSetting2ᚕgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐDisplayModeSettingᚄ(ctx context.Context, sel ast.SelectionSet, v []model.DisplayModeSetting) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNDisplayModeSetting2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐDisplayModeSetting(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) unmarshalNDisplayModeSettingInput2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐDisplayModeSettingInput(ctx context.Context, v any) (model.DisplayModeSettingInput, error) {
+	res, err := ec.unmarshalInputDisplayModeSettingInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNDisplayModeSettingInput2ᚕgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐDisplayModeSettingInputᚄ(ctx context.Context, v any) ([]model.DisplayModeSettingInput, error) {
+	vSlice := graphql.CoerceList(v)
+	var err error
+	res := make([]model.DisplayModeSettingInput, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNDisplayModeSettingInput2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐDisplayModeSettingInput(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNDisplaySchedule2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐDisplaySchedule(ctx context.Context, sel ast.SelectionSet, v *model.DisplaySchedule) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._DisplaySchedule(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNDisplayStatus2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐDisplayStatus(ctx context.Context, sel ast.SelectionSet, v *model.DisplayStatus) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._DisplayStatus(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNEvent2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐEvent(ctx context.Context, sel ast.SelectionSet, v model.Event) graphql.Marshaler {
 	return ec._Event(ctx, sel, &v)
 }
@@ -12456,6 +14023,11 @@ func (ec *executionContext) unmarshalNUpdateCalendarAssociationInput2githubᚗco
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) unmarshalNUpdateDisplayScheduleInput2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐUpdateDisplayScheduleInput(ctx context.Context, v any) (model.UpdateDisplayScheduleInput, error) {
+	res, err := ec.unmarshalInputUpdateDisplayScheduleInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) unmarshalNUpdateWeatherLocationInput2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐUpdateWeatherLocationInput(ctx context.Context, v any) (model.UpdateWeatherLocationInput, error) {
 	res, err := ec.unmarshalInputUpdateWeatherLocationInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -12595,6 +14167,16 @@ func (ec *executionContext) unmarshalNWeatherProviderKind2githubᚗcomᚋkurtsch
 
 func (ec *executionContext) marshalNWeatherProviderKind2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐWeatherProviderKind(ctx context.Context, sel ast.SelectionSet, v model.WeatherProviderKind) graphql.Marshaler {
 	return v
+}
+
+func (ec *executionContext) marshalNWifiStatus2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐWifiStatus(ctx context.Context, sel ast.SelectionSet, v *model.WifiStatus) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._WifiStatus(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalN__Directive2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐDirective(ctx context.Context, sel ast.SelectionSet, v introspection.Directive) graphql.Marshaler {

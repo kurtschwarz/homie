@@ -111,6 +111,46 @@ type CreateWeatherProviderInput struct {
 	RefreshIntervalSeconds int                             `json:"refreshIntervalSeconds"`
 }
 
+// A display ddcutil can control.
+type DdcBus struct {
+	// The I2C bus number, as stored in DisplaySchedule.ddcBus.
+	Bus       string `json:"bus"`
+	Connector string `json:"connector"`
+	Monitor   string `json:"monitor"`
+}
+
+type DisplayModeSetting struct {
+	Mode DisplayMode `json:"mode"`
+	// Minutes since midnight.
+	StartsAtMinutes int `json:"startsAtMinutes"`
+	// 0-100. Ignored for OFF.
+	Brightness int `json:"brightness"`
+}
+
+type DisplayModeSettingInput struct {
+	Mode            DisplayMode `json:"mode"`
+	StartsAtMinutes int         `json:"startsAtMinutes"`
+	Brightness      int         `json:"brightness"`
+}
+
+type DisplaySchedule struct {
+	Modes              []DisplayModeSetting `json:"modes"`
+	PowerSavingEnabled bool                 `json:"powerSavingEnabled"`
+	WakeForAlerts      bool                 `json:"wakeForAlerts"`
+	// I2C bus number ddcutil controls the panel on. Empty disables backlight and power control.
+	DdcBus string `json:"ddcBus"`
+}
+
+type DisplayStatus struct {
+	Mode       DisplayMode `json:"mode"`
+	Brightness int         `json:"brightness"`
+	// False while the panel is switched off.
+	Powered        bool `json:"powered"`
+	OverrideActive bool `json:"overrideActive"`
+	// Unix seconds when a live override ends.
+	OverrideEndsAt *int `json:"overrideEndsAt,omitempty"`
+}
+
 type Event struct {
 	ID         string   `json:"id"`
 	CalendarID string   `json:"calendarId"`
@@ -271,6 +311,14 @@ type UpdateCalendarConnectionInput struct {
 	Caldav *UpdateCalDAVConnectionInput `json:"caldav,omitempty"`
 }
 
+type UpdateDisplayScheduleInput struct {
+	// Every mode exactly once, in ascending order around the day.
+	Modes              []DisplayModeSettingInput `json:"modes"`
+	PowerSavingEnabled bool                      `json:"powerSavingEnabled"`
+	WakeForAlerts      bool                      `json:"wakeForAlerts"`
+	DdcBus             string                    `json:"ddcBus"`
+}
+
 // Omitted fields keep their stored value.
 type UpdateWeatherKitConnectionInput struct {
 	TeamID    *string `json:"teamId,omitempty"`
@@ -353,6 +401,12 @@ type WeatherProvider struct {
 // Exactly one provider key. The provider is the key that is set.
 type WeatherProviderConnectionInput struct {
 	Weatherkit *WeatherKitConnectionInput `json:"weatherkit,omitempty"`
+}
+
+type WifiStatus struct {
+	Connected     bool   `json:"connected"`
+	Ssid          string `json:"ssid"`
+	SignalPercent int    `json:"signalPercent"`
 }
 
 type AssociationScope string
@@ -575,6 +629,65 @@ func (e *CalendarProvider) UnmarshalJSON(b []byte) error {
 }
 
 func (e CalendarProvider) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type DisplayMode string
+
+const (
+	DisplayModeLight DisplayMode = "LIGHT"
+	DisplayModeDark  DisplayMode = "DARK"
+	DisplayModeNight DisplayMode = "NIGHT"
+	DisplayModeOff   DisplayMode = "OFF"
+)
+
+var AllDisplayMode = []DisplayMode{
+	DisplayModeLight,
+	DisplayModeDark,
+	DisplayModeNight,
+	DisplayModeOff,
+}
+
+func (e DisplayMode) IsValid() bool {
+	switch e {
+	case DisplayModeLight, DisplayModeDark, DisplayModeNight, DisplayModeOff:
+		return true
+	}
+	return false
+}
+
+func (e DisplayMode) String() string {
+	return string(e)
+}
+
+func (e *DisplayMode) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = DisplayMode(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid DisplayMode", str)
+	}
+	return nil
+}
+
+func (e DisplayMode) MarshalGQL(w io.Writer) {
+	_, _ = fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *DisplayMode) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e DisplayMode) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

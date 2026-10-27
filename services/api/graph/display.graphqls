@@ -1,0 +1,74 @@
+enum DisplayMode {
+  LIGHT
+  DARK
+  NIGHT
+  OFF
+}
+
+type DisplayModeSetting {
+  mode: DisplayMode!
+  "Minutes since midnight."
+  startsAtMinutes: Int!
+  "0-100. Ignored for OFF."
+  brightness: Int!
+}
+
+type DisplaySchedule {
+  modes: [DisplayModeSetting!]!
+  powerSavingEnabled: Boolean!
+  wakeForAlerts: Boolean!
+  "I2C bus number ddcutil controls the panel on. Empty disables backlight and power control."
+  ddcBus: String!
+}
+
+"A display ddcutil can control."
+type DdcBus {
+  "The I2C bus number, as stored in DisplaySchedule.ddcBus."
+  bus: String!
+  connector: String!
+  monitor: String!
+}
+
+type DisplayStatus {
+  mode: DisplayMode!
+  brightness: Int!
+  "False while the panel is switched off."
+  powered: Boolean!
+  overrideActive: Boolean!
+  "Unix seconds when a live override ends."
+  overrideEndsAt: Int
+}
+
+type WifiStatus {
+  connected: Boolean!
+  ssid: String!
+  signalPercent: Int!
+}
+
+input DisplayModeSettingInput {
+  mode: DisplayMode!
+  startsAtMinutes: Int!
+  brightness: Int!
+}
+
+input UpdateDisplayScheduleInput {
+  "Every mode exactly once, in ascending order around the day."
+  modes: [DisplayModeSettingInput!]!
+  powerSavingEnabled: Boolean!
+  wakeForAlerts: Boolean!
+  ddcBus: String! = ""
+}
+
+extend type Query {
+  displaySchedule: DisplaySchedule! @protected(kinds: [USER, DISPLAY])
+  displayStatus: DisplayStatus! @protected(kinds: [USER, DISPLAY])
+  wifiStatus: WifiStatus! @protected
+  "Runs a detection scan, which takes a few seconds."
+  ddcBuses: [DdcBus!]! @protected
+}
+
+extend type Mutation {
+  updateDisplaySchedule(input: UpdateDisplayScheduleInput!): DisplaySchedule! @protected
+  "Shows a mode for up to an hour, then returns to the schedule."
+  previewDisplayMode(mode: DisplayMode!, seconds: Int!): DisplayStatus! @protected
+}

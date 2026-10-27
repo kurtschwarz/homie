@@ -2,7 +2,12 @@
 
 import * as React from 'react'
 
-import { type HomieThemeSetting, useHomieTheme } from '../hooks/use-homie-theme'
+import {
+  type HomieTheme,
+  type HomieThemeSchedule,
+  type HomieThemeSetting,
+  useHomieTheme,
+} from '../hooks/use-homie-theme'
 import { cn } from '../lib/utils'
 
 const THEME_CLASSES = ['light', 'dark', 'night']
@@ -23,16 +28,22 @@ export function HomieThemeProvider({
   theme = 'auto',
   surface = 'auto',
   scope = 'document',
+  schedule,
+  override,
   className,
   children,
 }: {
   theme?: HomieThemeSetting
   surface?: HomieSurface
   scope?: 'document' | 'local'
+  /** Replaces the built-in schedule that "auto" follows. */
+  schedule?: HomieThemeSchedule
+  /** A live preview theme that wins over the schedule. */
+  override?: HomieTheme | null
   className?: string
   children: React.ReactNode
 }) {
-  const mode = useHomieTheme(theme)
+  const mode = useHomieTheme(theme, schedule, override)
 
   React.useEffect(() => {
     if (scope !== 'document') return

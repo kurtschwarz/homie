@@ -12,6 +12,7 @@ services:
       HOMIE_RIVER_DB_PATH: "/var/lib/homie/river.db"
       HOMIE_PHOTOS_PATH: "/var/lib/homie/photos"
       HOMIE_AUTH_TOKEN_PATH: "/run/homie-token/token"
+      TZ: "${TZ:-UTC}"
     env_file:
       - path: ./services/api/.env
         required: false

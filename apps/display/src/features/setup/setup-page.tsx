@@ -4,7 +4,7 @@ import { ScanQrCode, Smartphone, Wifi } from 'lucide-react'
 import QRCode from 'react-qr-code'
 import { setupCodeCharacters } from './setup-code'
 
-const MANAGE_URL = 'homie.local/manage'
+const MANAGE_URL = 'homie.local'
 
 export function SetupPage({ code }: { code: string }) {
   const characters = setupCodeCharacters(code)

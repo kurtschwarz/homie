@@ -140,7 +140,7 @@ func TestPhotosEndpoint(t *testing.T) {
 	}
 }
 
-// The manager is mounted under a prefix, so its asset paths are the ones
+// The manager owns "/" on the LAN listener, so its asset paths are the ones
 // at risk of being swallowed by the SPA index.html fallback.
 func TestManagerAssetsAreServedNotFallenBackTo(t *testing.T) {
 	manager := fstest.MapFS{
@@ -150,7 +150,7 @@ func TestManagerAssetsAreServedNotFallenBackTo(t *testing.T) {
 	// Manager is only mounted on the authenticated listener.
 	handler := server.NewLAN(server.Config{Resolver: &graph.Resolver{}, Manager: manager})
 
-	request := httptest.NewRequest(http.MethodGet, "/manage/assets/index-abc123.js", nil)
+	request := httptest.NewRequest(http.MethodGet, "/assets/index-abc123.js", nil)
 	response := httptest.NewRecorder()
 	handler.ServeHTTP(response, request)
 	if response.Code != http.StatusOK {
@@ -164,7 +164,7 @@ func TestManagerAssetsAreServedNotFallenBackTo(t *testing.T) {
 	}
 
 	// Client-side routes still need the index.html fallback.
-	for _, path := range []string{"/manage/", "/manage/settings"} {
+	for _, path := range []string{"/", "/settings"} {
 		request = httptest.NewRequest(http.MethodGet, path, nil)
 		response = httptest.NewRecorder()
 		handler.ServeHTTP(response, request)
@@ -251,15 +251,17 @@ func TestLANListenerProtectsGraphQLAndServesManagerAndSignedPhotos(t *testing.T)
 		})
 	}
 	manager := httptest.NewRecorder()
-	handler.ServeHTTP(manager, httptest.NewRequest(http.MethodGet, "/manage/", nil))
+	handler.ServeHTTP(manager, httptest.NewRequest(http.MethodGet, "/", nil))
 	if manager.Code != http.StatusOK || manager.Body.String() != "manager" {
 		t.Fatalf("manager status=%d body=%q", manager.Code, manager.Body.String())
 	}
-	for _, path := range []string{"/", "/healthz", "/playground"} {
+	// Loopback-only routes are absent here, so the manager's SPA fallback
+	// answers them rather than the real handlers.
+	for _, path := range []string{"/healthz", "/playground"} {
 		res := httptest.NewRecorder()
 		handler.ServeHTTP(res, httptest.NewRequest(http.MethodGet, path, nil))
-		if res.Code != http.StatusNotFound {
-			t.Fatalf("path=%q status=%d", path, res.Code)
+		if res.Body.String() != "manager" {
+			t.Fatalf("path=%q status=%d body=%q, want the manager fallback", path, res.Code, res.Body.String())
 		}
 	}
 	expiry := time.Now().Add(time.Hour).Unix()

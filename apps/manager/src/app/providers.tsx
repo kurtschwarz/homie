@@ -14,7 +14,7 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <HomieThemeProvider theme="auto" surface="auto">
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter basename="/manage">{children}</BrowserRouter>
+        <BrowserRouter>{children}</BrowserRouter>
         {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
       </QueryClientProvider>
     </HomieThemeProvider>

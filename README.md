@@ -25,7 +25,7 @@ your network.
 - **Timers** — start one and it takes over the whole screen.
 
 People and the calendar tags that map onto them are managed from a second web
-app at `/manage`, or from the iOS companion app.
+app at `homie.local`, or from the iOS companion app.
 
 ## How it fits together
 
@@ -39,7 +39,7 @@ is a single file copied to the Pi.
 │ PhotoKit album ─┼───────>│   GraphQL  /graphql       │<────>│ (SwiftUI)  │
 └─────────────────┘        │   SQLite + River queue    │      └────────────┘
                            │   display SPA  /          │
-  CalDAV ─────────────────>│   manager SPA  /manage    │
+  CalDAV ─────────────────>│   manager SPA  /          │
   WeatherKit ─────────────>│   photo files  /photos    │
                            └─────────────┬─────────────┘
                                          │ chromium --kiosk under cage, on tty1
@@ -55,7 +55,7 @@ photos in, so the API never calls Apple itself.
 |---|---|
 | `services/api` | Go API: GraphQL (gqlgen), SQLite store with goose migrations, River job queue, and the embedded SPAs |
 | `apps/display` | The kiosk screen. React, built with Vite |
-| `apps/manager` | Admin screen for people and calendar tags, served at `/manage` |
+| `apps/manager` | Admin screen for people and calendar tags, served at `/` on the LAN listener |
 | `apps/mobile/ios` | SwiftUI companion app |
 | `apps/photo-sync` | macOS app and LaunchAgent that pushes photos from a Photos album to the API |
 | `packages/ui` | Shared React components and design tokens used by both web apps |
@@ -78,7 +78,7 @@ connects to that browser for local UI verification. Its dedicated profile and
 | | URL |
 |---|---|
 | Display | http://localhost:5173 |
-| Manager | http://localhost:5174/manage/ |
+| Manager | http://localhost:5174/ |
 | GraphQL | http://localhost:3030/graphql |
 | Playground | http://localhost:3030/playground |
 
@@ -120,7 +120,7 @@ it into the iOS app's Settings. Configure Photo Sync with
 
 ### Manager access
 
-Opening `/manage/` for the first time shows a setup screen asking for a code,
+Opening `homie.local` for the first time shows a setup screen asking for a code,
 logged once as its own line by `sudo journalctl -u homie-api.service -b`
 (it rotates on every restart until a user account exists). After typing
 the code and choosing a username and password, the manager is reached by

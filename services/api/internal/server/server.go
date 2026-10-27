@@ -79,17 +79,19 @@ func newHandler(cfg Config, protectGraphQL, includeLocalRoutes bool) http.Handle
 		})
 	}
 
-	// Strip "/manage" and not "/manage/": the handlers below expect a
-	// rooted path, and "/manage/" alone strips down to "". The manager is
-	// reached from the network, never from the kiosk, so it is only
-	// registered on the LAN listener - serving it on loopback too would
-	// leave an unauthenticated admin UI on a port that needs no auth at all.
-	if cfg.Manager != nil && protectGraphQL {
-		mux.Handle("/manage/", http.StripPrefix("/manage", spaHandler(cfg.Manager)))
-	}
 	mux.Handle("/photos/", http.StripPrefix("/photos/", photoHandler(cfg.Photos, cfg.Signer)))
-	if includeLocalRoutes {
+
+	// "/" belongs to one SPA per listener. The display owns it wherever it
+	// is served; the manager takes it on the LAN listener, which is the only
+	// one that does not serve the display. The manager is reached from the
+	// network, never from the kiosk, so it must stay off the loopback
+	// listener - serving it there would leave an unauthenticated admin UI on
+	// a port that needs no auth at all.
+	switch {
+	case includeLocalRoutes:
 		mux.Handle("/", spaHandler(cfg.Display))
+	case cfg.Manager != nil:
+		mux.Handle("/", spaHandler(cfg.Manager))
 	}
 
 	return mux

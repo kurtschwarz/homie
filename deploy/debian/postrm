@@ -1,6 +1,15 @@
 #!/bin/sh
 set -e
 
+# The emoji font is fetched at runtime rather than unpacked by dpkg, so dpkg
+# will not clean it up. Only on purge: a remove-and-reinstall should not have
+# to download 116 MB again.
+if [ "$1" = "purge" ]; then
+    rm -f /usr/local/share/fonts/AppleColorEmoji.ttf \
+        /var/cache/homie/AppleColorEmoji.ttf.part
+    fc-cache --force /usr/local/share/fonts >/dev/null 2>&1 || true
+fi
+
 systemctl daemon-reload 2>/dev/null || true
 
 exit 0

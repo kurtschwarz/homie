@@ -169,6 +169,12 @@
 
 @theme {
   --font-sans: "Lexend Variable", "Lexend", system-ui, sans-serif;
+  /* Lexend has no emoji glyphs, so anything emoji-bearing must name an emoji
+     family itself or inherit whatever the browser falls back to — which is how
+     the kiosk ended up with Noto while a Mac showed Apple's. The kiosk installs
+     Apple Color Emoji as a system font (see the README), so first place wins
+     there and on a Mac, and the rest of the list covers other machines. */
+  --font-emoji: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", var(--font-sans);
   --ease-hm-panel: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-hm-sheet: cubic-bezier(0.2, 0.9, 0.3, 1);
   --animate-hm-blink: hm-blink 2s steps(1, end) infinite;

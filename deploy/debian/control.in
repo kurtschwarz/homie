@@ -2,7 +2,7 @@ Package: homie
 Version: @VERSION@
 Architecture: arm64
 Maintainer: Kurt Schwarz <kurt@schw.ar>
-Depends: avahi-daemon, cage, chromium, ddcutil, libnss-mdns, network-manager, systemd
+Depends: avahi-daemon, ca-certificates, cage, chromium, curl, ddcutil, fontconfig, libnss-mdns, network-manager, systemd
 Installed-Size: @INSTALLED_SIZE@
 Description: Family calendar, weather, and photo wall kiosk
  Homie runs on a Raspberry Pi behind a touchscreen: the shared calendar,

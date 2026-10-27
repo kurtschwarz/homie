@@ -78,6 +78,7 @@ Everything Homie is prefixed `hm-` so it never collides with shadcn's own names 
 | Radii | `rounded-hm-*` | `rounded-hm-panel`, `rounded-hm-control`, `rounded-hm-18` (density), `rounded-full` |
 | Shadows | `shadow-hm-*` | `shadow-hm-sheet`, `shadow-hm-float` |
 | Motion | `ease-hm-*`, `animate-hm-blink` | `ease-hm-sheet`, `ease-hm-panel` |
+| Fonts | `font-sans` (Lexend), `font-emoji` | `font-emoji` on anything rendering an emoji |
 | Raw values | `var(--hm-*)` | `var(--hm-fs-headline)`, `var(--hm-density)`, `var(--hm-kiosk-touch)` |
 
 The 22 type roles: `display-xl`, `headline`, `clock`, `display`, `title-lg`, `clock-sm`, `title`, `stat`, `title-sm`, `lead`, `item-lg`, `item`, `strong`, `body`, `body-sm`, `label-lg`, `label`, `caption`, `eyebrow-lg`, `eyebrow`, `small`, `micro`. Change a role's weight with the usual utilities (`text-hm-body font-semibold` for day names).
@@ -126,6 +127,8 @@ All are plain React (19) with Tailwind classes. Interactive ones are `"use clien
 | `HomieThemeProvider`, `useHomieTheme`, `useNow`, `useIdle` | | Theme schedule and surface, a ticking clock, and the kiosk's 60 s drift back home. |
 
 People are `{ id, name, emoji?, swatch }`, where `swatch` is one of the ten curated keys in `SWATCHES` (`clay`, `amber`, `moss`, `pine`, `teal`, `sky`, `iris`, `orchid`, `plum`, `slate`). Each theme supplies its own value for a swatch, so colour stays legible against `--hm-on-person` when the kiosk switches themes — which a stored hex could not do. Colour always comes with the emoji and the name.
+
+Anything that renders an emoji needs `font-emoji`, because Lexend has no emoji glyphs and the browser would otherwise pick a fallback per machine — the same emoji then looks different on the kiosk than on the phone that chose it. `PersonBadge` already does this. The kiosk installs Apple Color Emoji as a system font so the first family in the stack wins there too (see the root README).
 
 Time helpers in `@homie/ui` follow the content rules: `formatTime` → `5:45 pm`, `formatRange` → `3:30–4:15 pm`, `until` → `in 2 hr 17 min`, `dayLabel` → `Today` / `Tomorrow` / weekday / `Wed, Oct 28` from a week out, `formatTakenAt` → `Fri, Aug 14 · 8:12 pm`.
 

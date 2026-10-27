@@ -47,9 +47,15 @@ case "$1" in
         chmod 0770 /var/cache/homie
 
         systemctl daemon-reload
-        systemctl enable homie-api.service homie-kiosk.service
+        systemctl enable homie-api.service homie-kiosk.service homie-emoji-font.service
         systemctl restart homie-api.service
         systemctl restart homie-kiosk.service
+        # --no-block because this downloads 116 MB of font on a first install,
+        # and an upgrade should not sit waiting for it. The unit restarts the
+        # kiosk itself once the font is in place.
+        systemctl start --no-block homie-emoji-font.service
+        # The timer picks the download back up if that attempt fails.
+        systemctl enable --now homie-emoji-font.timer
         ;;
 esac
 

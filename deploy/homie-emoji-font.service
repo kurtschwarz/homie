@@ -1,0 +1,17 @@
+[Unit]
+Description=Homie Emoji Font
+Documentation=https://github.com/samuelngs/apple-emoji-ttf
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/share/homie/install-emoji-font.sh
+# A cold Pi on a slow link needs room for a 116 MB download.
+TimeoutStartSec=1800
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

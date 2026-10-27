@@ -1,0 +1,16 @@
+[Unit]
+Description=Homie Emoji Font retry
+# Nothing to retry once the font is installed, and the service itself exits
+# immediately in that case.
+ConditionPathExists=!/usr/local/share/fonts/AppleColorEmoji.ttf
+
+[Timer]
+# A 116 MB download over a home link fails often enough to need retrying, and
+# Type=oneshot services cannot use Restart=. First try shortly after boot, then
+# every 15 minutes until the font lands.
+OnBootSec=2min
+OnUnitInactiveSec=15min
+Unit=homie-emoji-font.service
+
+[Install]
+WantedBy=timers.target

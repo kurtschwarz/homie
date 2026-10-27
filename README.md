@@ -178,6 +178,37 @@ To remove Homie from the Pi, run `sudo sh /usr/share/homie/uninstall.sh`. It
 stops the services and deletes the package, config, and data. It leaves the
 `homie` user and hostname alone.
 
+### Emoji
+
+Everyone's badge is an emoji, so the kiosk has to draw the same artwork as the
+phone that picked it. Nothing in CSS can arrange that on its own: a font stack
+names families the machine already has, and a Pi has Noto where a Mac has
+Apple's. So `homie-emoji-font.service` fetches
+[Apple Color Emoji built for Linux](https://github.com/samuelngs/apple-emoji-ttf)
+into `/usr/local/share/fonts` on the first boot after an install, and the
+display asks for that family first through the `--font-emoji` token.
+
+The font is downloaded rather than packaged: the artwork is Apple's and is not
+ours to redistribute, and at 116 MB it would dwarf the rest of the `.deb`.
+Upstream ships a `.deb` of it, but `dpkg` holds its lock through our
+`postinst`, so one package cannot install another — hence the bare `.ttf` and a
+systemd unit that runs outside the `dpkg` run. The URL and its SHA-256 are
+pinned in `deploy/scripts/install-emoji-font.sh`, and re-running it once the
+font is installed does nothing. Check on it with
+`sudo journalctl -u homie-emoji-font.service -b`.
+
+A 116 MB download over a home link does not always finish, so
+`homie-emoji-font.timer` retries every 15 minutes until it does, and a failed
+attempt resumes rather than starting over. `Type=oneshot` services cannot use
+`Restart=`, which is why the retry is a timer. Both stop once the service
+succeeds. The download forces HTTP/1.1: over HTTP/2 this particular file kept
+dying mid-transfer with `PROTOCOL_ERROR`, taking twelve minutes to fail where
+HTTP/1.1 finishes in about ninety seconds.
+
+Until the download finishes, the kiosk falls back to whatever emoji font the Pi
+already had, and Chromium only rereads fonts at startup — so the unit restarts
+the kiosk itself once the font lands.
+
 Every push to `main` that touches the API, the display or manager apps,
 `packages`, or `deploy` also publishes a `homie-vX.Y.Z` GitHub release with the
 built `.deb` attached (`.github/workflows/homie-release.yml`). The version

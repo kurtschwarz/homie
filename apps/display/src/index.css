@@ -53,6 +53,12 @@ html:not([data-dev]) * {
   align-items: center;
   gap: 0.875rem;
 }
+/* The timer's emoji. Without an emoji family of its own it inherits Lexend,
+   which has no emoji glyphs, and the browser picks the fallback itself. */
+.timer-title span {
+  font-family: var(--font-emoji);
+  filter: var(--hm-emoji-filter);
+}
 .timer-title strong {
   font-size: 2.375rem;
 }

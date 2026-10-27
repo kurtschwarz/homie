@@ -37,8 +37,8 @@ main() {
         esac
     fi
 
-    systemctl stop homie-kiosk.service homie-api.service 2>/dev/null || true
-    systemctl disable homie-kiosk.service homie-api.service 2>/dev/null || true
+    systemctl stop homie-kiosk.service homie-api.service homie-emoji-font.service homie-emoji-font.timer 2>/dev/null || true
+    systemctl disable homie-kiosk.service homie-api.service homie-emoji-font.service homie-emoji-font.timer 2>/dev/null || true
     systemctl start getty@tty1.service 2>/dev/null || true
 
     if dpkg -s homie >/dev/null 2>&1; then
@@ -46,8 +46,14 @@ main() {
     else
         rm -f /usr/bin/homie-api \
             /lib/systemd/system/homie-api.service \
-            /lib/systemd/system/homie-kiosk.service
+            /lib/systemd/system/homie-kiosk.service \
+            /lib/systemd/system/homie-emoji-font.service \
+            /lib/systemd/system/homie-emoji-font.timer
     fi
+
+    # Fetched at runtime by homie-emoji-font.service, so not dpkg's to remove.
+    rm -f /usr/local/share/fonts/AppleColorEmoji.ttf
+    fc-cache --force /usr/local/share/fonts >/dev/null 2>&1 || true
 
     rm -rf /etc/homie \
         /var/lib/homie \

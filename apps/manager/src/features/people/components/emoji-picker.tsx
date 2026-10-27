@@ -41,7 +41,7 @@ export function EmojiPicker({
               setEditingCustom(false)
               onChange(emoji)
             }}
-            className={`grid size-10 place-items-center rounded-xl border-2 bg-hm-bg text-xl ${value === emoji ? 'border-hm-accent' : 'border-transparent hover:border-hm-line'}`}
+            className={`grid size-10 place-items-center rounded-xl border-2 bg-hm-bg font-emoji text-xl ${value === emoji ? 'border-hm-accent' : 'border-transparent hover:border-hm-line'}`}
           >
             {emoji}
           </button>
@@ -54,7 +54,7 @@ export function EmojiPicker({
             setEditingCustom(true)
             if (custom.trim()) onChange(custom.trim())
           }}
-          className={`grid size-10 place-items-center rounded-xl border-2 border-dashed text-xl text-hm-ink-3 ${editingCustom || isCustom ? 'border-hm-accent' : 'border-hm-line hover:border-hm-ink-3'}`}
+          className={`grid size-10 place-items-center rounded-xl border-2 border-dashed font-emoji text-xl text-hm-ink-3 ${editingCustom || isCustom ? 'border-hm-accent' : 'border-hm-line hover:border-hm-ink-3'}`}
         >
           {isCustom ? value : <SmilePlus aria-hidden="true" size={20} />}
         </button>

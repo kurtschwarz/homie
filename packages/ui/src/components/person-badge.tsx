@@ -31,7 +31,7 @@ export function PersonBadge({
       className={cn(
         varsFor(person),
         'grid flex-none place-items-center rounded-full bg-(--p) leading-none text-hm-on-person',
-        'font-[Apple_Color_Emoji,Segoe_UI_Emoji,Noto_Color_Emoji,var(--font-sans)] [filter:var(--hm-emoji-filter)]',
+        'font-emoji [filter:var(--hm-emoji-filter)]',
         SIZES[size],
         ring && 'shadow-[inset_0_0_0_calc(0.1875rem*var(--hm-density))_var(--p)]',
         className,

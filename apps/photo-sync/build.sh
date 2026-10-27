@@ -16,6 +16,10 @@ if [[ -n "${VERSION:-}" ]]; then
     plutil -replace CFBundleShortVersionString -string "$VERSION" "$APP/Contents/Info.plist"
     plutil -replace CFBundleVersion -string "$(git -C "$ROOT" rev-list --count HEAD)" "$APP/Contents/Info.plist"
 fi
+
+if commit="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null)"; then
+    plutil -replace HomieGitCommit -string "$commit" "$APP/Contents/Info.plist"
+fi
 cp "$ROOT/Resources/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
 
 if [[ -n "${CODESIGN_IDENTITY:-}" ]]; then

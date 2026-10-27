@@ -12,6 +12,7 @@ import (
 	"github.com/kurtschwarz/homie/services/api/internal/accounts"
 	"github.com/kurtschwarz/homie/services/api/internal/auth"
 	"github.com/kurtschwarz/homie/services/api/internal/calendars"
+	"github.com/kurtschwarz/homie/services/api/internal/display"
 	"github.com/kurtschwarz/homie/services/api/internal/events"
 	"github.com/kurtschwarz/homie/services/api/internal/photos"
 	"github.com/kurtschwarz/homie/services/api/internal/weather"
@@ -29,4 +30,5 @@ type Resolver struct {
 	Calendars     *calendars.Service
 	PhotoSigner   *auth.Signer
 	Accounts      *accounts.Service
+	Display       *display.Service
 }

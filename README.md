@@ -97,7 +97,7 @@ The API is configured by environment variables. On the Pi they live in
 
 | Variable | Default | Notes |
 |---|---|---|
-| `HOMIE_ADDR` | `:3000` | Listen address |
+| `HOMIE_ADDR` | `:3000` | Listen address. Ignored on the Pi, where `homie-api.socket` binds port 80 and passes it to the service. |
 | `HOMIE_LOCAL_ADDR` | *(unset)* | Optional loopback-only listener for the display (kiosk) UI. When enabled, the LAN listener requires a bearer token or a logged-in user session, and the manager is only served there, not on the loopback listener. |
 | `HOMIE_AUTH_TOKEN` | *(generated once)* | API bearer token for the display; stored at `/var/lib/homie/token` if unset. The token is logged at startup. It does not unlock the manager - see "Manager access" below. |
 | `HOMIE_AUTH_TOKEN_PATH` | `/var/lib/homie/token` | Path used for the persisted bearer token. |
@@ -221,7 +221,7 @@ Pull requests run only the checks for the area they touch
 While working on the frontend, `just kiosk-dev` points the Pi's browser at the
 Vite dev server on your Mac, and `just kiosk-prod` points it back.
 When the API is running on the Pi with LAN auth enabled, start the Vite server
-with `HOMIE_API_URL=http://homie.local:3000 HOMIE_AUTH_TOKEN=<token>`. The proxy adds
+with `HOMIE_API_URL=http://homie.local HOMIE_AUTH_TOKEN=<token>`. The proxy adds
 the token server-side; it is not included in browser code.
 
 ## iOS app

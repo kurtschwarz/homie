@@ -8,7 +8,8 @@ import {
   type Tool,
 } from './tools'
 
-const MAX_UNDO = 10
+const MAX_UNDO = 5
+const BACKING_LONG_EDGE = 2048
 
 type Brush = { tool: Tool; color: string; size: number; smooth: boolean }
 
@@ -32,10 +33,10 @@ export function usePaintCanvas(brush: Brush) {
     if (!canvas) return
     const resize = () => {
       const { width, height } = canvas.getBoundingClientRect()
-      const ratio = window.devicePixelRatio || 1
       if (!width || !height) return
-      canvas.width = Math.round(width * ratio)
-      canvas.height = Math.round(height * ratio)
+      const scale = BACKING_LONG_EDGE / Math.max(width, height)
+      canvas.width = Math.round(width * scale)
+      canvas.height = Math.round(height * scale)
       history.current = []
       setCanUndo(false)
       setDirty(false)

@@ -1,0 +1,123 @@
+name: Homie CI
+
+on:
+  pull_request:
+    paths:
+      - services/api/**
+      - apps/display/**
+      - apps/manager/**
+      - packages/**
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - turbo.json
+      - biome.jsonc
+      - .github/workflows/homie-ci.yml
+
+concurrency:
+  group: homie-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: Detect changed areas
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      api: ${{ steps.diff.outputs.api }}
+      web: ${{ steps.diff.outputs.web }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          fetch-depth: 0
+
+      - name: Diff against the base branch
+        id: diff
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          files="$(git diff --name-only "$BASE_SHA...$HEAD_SHA")"
+          printf 'Changed files:\n%s\n' "$files"
+
+          matches() { printf '%s\n' "$files" | grep -Eq "$1"; }
+
+          workflow=false
+          api=false
+          web=false
+
+          matches '^\.github/workflows/homie-ci\.yml$' && workflow=true
+          matches '^services/api/' && api=true
+          matches '^(apps/display|apps/manager|packages)/|^(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|turbo\.json|biome\.jsonc)$' && web=true
+
+          if [ "$workflow" = true ]; then
+            api=true
+            web=true
+          fi
+
+          printf 'api=%s\nweb=%s\n' "$api" "$web" | tee -a "$GITHUB_OUTPUT"
+
+  api:
+    name: Vet and test API
+    needs: changes
+    if: needs.changes.outputs.api == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+
+      - name: Vet
+        working-directory: services/api
+        run: go vet ./...
+
+      - name: Test
+        working-directory: services/api
+        run: go test ./...
+
+  web:
+    name: Check and build web apps
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check formatting
+        run: pnpm format:check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Build
+        run: pnpm build

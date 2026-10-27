@@ -3,7 +3,7 @@
 # vehicle. Extract the binary with:
 #   docker buildx build --platform linux/arm64 --target export --output dist .
 
-FROM node:22-bookworm AS frontend
+FROM --platform=$BUILDPLATFORM node:22-bookworm AS frontend
 WORKDIR /repo
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml turbo.json ./
 COPY apps apps
@@ -14,6 +14,8 @@ RUN pnpm exec turbo run build --filter=@homie/display --filter=@homie/manager
 FROM --platform=$BUILDPLATFORM golang:1.26-bookworm AS api-builder
 ARG TARGETOS
 ARG TARGETARCH
+ARG VERSION=dev
+ARG COMMIT=unknown
 WORKDIR /src
 COPY services/api/go.mod services/api/go.sum ./
 RUN go mod download
@@ -21,7 +23,7 @@ COPY services/api .
 COPY --from=frontend /repo/apps/display/dist/ ./web/display/
 COPY --from=frontend /repo/apps/manager/dist/ ./web/manager/
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
-    go build -trimpath -ldflags="-s -w" -o /out/homie-api ./cmd/homie-api
+    go build -trimpath -ldflags="-s -w -X main.version=$VERSION -X main.commit=$COMMIT" -o /out/homie-api ./cmd/homie-api
 
 FROM scratch AS export
 COPY --from=api-builder /out/homie-api /homie-api

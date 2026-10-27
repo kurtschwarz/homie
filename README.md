@@ -174,6 +174,15 @@ ssh -t raspberrypi.local "sudo apt-get install -y /tmp/homie.deb && rm /tmp/homi
 
 After that, `just deploy` installs without a password prompt.
 
+Every push to `main` that touches the API, the display or manager apps,
+`packages`, or `deploy` also publishes a `homie-vX.Y.Z` GitHub release with the
+built `.deb` attached (`.github/workflows/homie-release.yml`). The version
+comes from Conventional Commits on those paths since the previous release, and
+the same number is stamped into the API binary. Releases are not marked
+"Latest", and `just deploy` still builds and installs from your checkout.
+Pull requests run only the checks for the area they touch
+(`.github/workflows/homie-ci.yml`).
+
 While working on the frontend, `just kiosk-dev` points the Pi's browser at the
 Vite dev server on your Mac, and `just kiosk-prod` points it back.
 When the API is running on the Pi with LAN auth enabled, start the Vite server

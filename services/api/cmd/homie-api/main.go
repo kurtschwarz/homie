@@ -31,7 +31,11 @@ import (
 	"github.com/riverqueue/river"
 )
 
-const version = "dev"
+// Set at link time by the Dockerfile via -ldflags -X.
+var (
+	version = "dev"
+	commit  = "unknown"
+)
 
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
@@ -186,7 +190,7 @@ func main() {
 	}
 
 	go func() {
-		logger.Info("listening", "addr", addr, "version", version)
+		logger.Info("listening", "addr", addr, "version", version, "commit", commit)
 		if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Error("listen", "error", err)
 			os.Exit(1)

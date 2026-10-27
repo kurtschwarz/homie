@@ -2,6 +2,11 @@ node_modules
 **/node_modules
 dist
 **/dist
+# dist is excluded above, so a tsbuildinfo from a local build would leave tsc
+# believing it had already emitted files that are not in the image: it skips
+# them, and the build fails on imports of whatever it did not write.
+*.tsbuildinfo
+**/*.tsbuildinfo
 .turbo
 **/.turbo
 .scratch

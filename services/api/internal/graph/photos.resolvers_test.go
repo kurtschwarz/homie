@@ -1,8 +1,11 @@
 package graph
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"image"
+	"image/jpeg"
 	"io"
 	"log/slog"
 	"net/url"
@@ -152,8 +155,17 @@ func TestSaveDrawingResolverRejectsNonJPEG(t *testing.T) {
 	if _, err := resolver.SaveDrawing(context.Background(), input, graphql.Upload{ContentType: "image/png"}); !errors.Is(err, errUnsupportedPhotoContentType) {
 		t.Fatalf("png err=%v", err)
 	}
-	got, err := resolver.SaveDrawing(context.Background(), input, graphql.Upload{ContentType: "image/jpeg", File: strings.NewReader("jpeg")})
+	got, err := resolver.SaveDrawing(context.Background(), input, graphql.Upload{ContentType: "image/jpeg", File: bytes.NewReader(tinyJPEG(t))})
 	if err != nil || got.Focus != nil || got.Coordinate != nil || got.TakenAt != 100 {
 		t.Fatalf("save: %+v err=%v", got, err)
 	}
+}
+
+func tinyJPEG(t *testing.T) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	if err := jpeg.Encode(&buf, image.NewRGBA(image.Rect(0, 0, 8, 8)), nil); err != nil {
+		t.Fatal(err)
+	}
+	return buf.Bytes()
 }

@@ -327,6 +327,17 @@ func (s *Service) ListLocations(ctx context.Context) ([]Location, error) {
 	return s.repo.ListLocations(ctx)
 }
 
+// Home returns the location Homie treats as home: the weather location with
+// the lowest order. ListLocations sorts by order, so it is the first one.
+// ok is false when no location is configured.
+func (s *Service) Home(ctx context.Context) (location Location, ok bool, err error) {
+	locations, err := s.repo.ListLocations(ctx)
+	if err != nil || len(locations) == 0 {
+		return Location{}, false, err
+	}
+	return locations[0], true, nil
+}
+
 func (s *Service) CreateLocation(ctx context.Context, location Location) (Location, error) {
 	location.ID = uuid.Must(uuid.NewV7())
 	if err := validateLocation(location); err != nil {

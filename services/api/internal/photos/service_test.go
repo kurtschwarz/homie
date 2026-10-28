@@ -1,8 +1,11 @@
 package photos_test
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"image"
+	"image/jpeg"
 	"io"
 	"io/fs"
 	"path/filepath"
@@ -131,11 +134,11 @@ func TestServiceSaveDrawing(t *testing.T) {
 	if _, err := service.SaveDrawing(ctx, photos.Drawing{Width: 0, Height: 10, DrawnAt: drawnAt}, strings.NewReader("x")); err == nil {
 		t.Fatal("expected size error")
 	}
-	first, err := service.SaveDrawing(ctx, photos.Drawing{Width: 20, Height: 10, DrawnAt: drawnAt}, strings.NewReader("jpeg"))
+	first, err := service.SaveDrawing(ctx, photos.Drawing{Width: 20, Height: 10, DrawnAt: drawnAt}, bytes.NewReader(tinyJPEG(t)))
 	if err != nil {
 		t.Fatal(err)
 	}
-	second, err := service.SaveDrawing(ctx, photos.Drawing{Width: 20, Height: 10, DrawnAt: drawnAt}, strings.NewReader("jpeg"))
+	second, err := service.SaveDrawing(ctx, photos.Drawing{Width: 20, Height: 10, DrawnAt: drawnAt}, bytes.NewReader(tinyJPEG(t)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -169,7 +172,7 @@ func TestServiceDrawingPushTracking(t *testing.T) {
 		t.Fatalf("empty pushed ids: %#v err=%v", ids, err)
 	}
 
-	drawing, err := service.SaveDrawing(ctx, photos.Drawing{Width: 20, Height: 10, DrawnAt: time.Unix(1_761_000_000, 0)}, strings.NewReader("jpeg"))
+	drawing, err := service.SaveDrawing(ctx, photos.Drawing{Width: 20, Height: 10, DrawnAt: time.Unix(1_761_000_000, 0)}, bytes.NewReader(tinyJPEG(t)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -196,4 +199,50 @@ func TestServiceDrawingPushTracking(t *testing.T) {
 	if err := service.MarkDrawingPushed(ctx, drawing.ID, ""); err == nil {
 		t.Fatal("expected error for empty asset id")
 	}
+}
+
+func TestServiceSaveDrawingHomeLocation(t *testing.T) {
+	jpegBytes := tinyJPEG(t)
+	newService := func(home photos.HomeFunc) *photos.Service {
+		library, err := photos.NewLibrary(filepath.Join(t.TempDir(), "photos"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		service := photos.New(photos.NewSQLiteRepository(openDB(t)), library)
+		service.Home = home
+		return service
+	}
+	ctx := context.Background()
+	drawing := photos.Drawing{Width: 8, Height: 8, DrawnAt: time.Unix(1_761_000_000, 0)}
+
+	withHome := newService(func(context.Context) (photos.Coordinate, string, bool, error) {
+		return photos.Coordinate{Latitude: 45.4215, Longitude: -75.6972}, "Ottawa", true, nil
+	})
+	photo, err := withHome.SaveDrawing(ctx, drawing, bytes.NewReader(jpegBytes))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if photo.Coordinate == nil || photo.Coordinate.Latitude != 45.4215 || photo.Place != "Ottawa" {
+		t.Fatalf("home not applied: %+v", photo)
+	}
+
+	noHome := newService(func(context.Context) (photos.Coordinate, string, bool, error) {
+		return photos.Coordinate{}, "", false, nil
+	})
+	photo, err = noHome.SaveDrawing(ctx, drawing, bytes.NewReader(jpegBytes))
+	if err != nil {
+		t.Fatalf("saving without a weather location must work: %v", err)
+	}
+	if photo.Coordinate != nil || photo.Place != "" {
+		t.Fatalf("unexpected location: %+v", photo)
+	}
+}
+
+func tinyJPEG(t *testing.T) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	if err := jpeg.Encode(&buf, image.NewRGBA(image.Rect(0, 0, 8, 8)), nil); err != nil {
+		t.Fatal(err)
+	}
+	return buf.Bytes()
 }

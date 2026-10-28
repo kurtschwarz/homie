@@ -115,9 +115,16 @@ final class PhotoUploader: ObservableObject {
         return true
     }
 
+    nonisolated static func uploadable<Asset: Identifiable>(
+        _ assets: [Asset],
+        excluding drawingAssetIDs: Set<String>
+    ) -> [Asset] where Asset.ID == String {
+        assets.filter { !drawingAssetIDs.contains($0.id) }
+    }
+
     private func syncAlbums(_ albumIDs: [String], excluding drawingAssetIDs: Set<String>) async {
         let batches = albumIDs.map { id in
-            (id, library.assets(inAlbum: id).filter { !drawingAssetIDs.contains($0.id) })
+            (id, Self.uploadable(library.assets(inAlbum: id), excluding: drawingAssetIDs))
         }
         states.removeAll()
         albumProgress = Dictionary(uniqueKeysWithValues: batches.map { ($0.0, AlbumProgress(total: $0.1.count)) })

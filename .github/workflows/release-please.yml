@@ -24,13 +24,14 @@ jobs:
           client-id: ${{ secrets.RELEASE_PLEASE_APP_CLIENT_ID }}
           private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
 
-      - name: Run release-please
+      - name: Create releases
         id: release-please
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
           token: ${{ steps.app-token.outputs.token }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+          skip-github-pull-request: true
 
       # release-please cuts draft releases, and a draft carries no Git tag. Push the
       # tag here: it starts the release workflows, which attach their artifacts while
@@ -71,3 +72,16 @@ jobs:
           done <<EOF
           $releases
           EOF
+
+      # Kept out of the run above because release-please ignores draft releases when it
+      # looks for the last one: a release PR built in the same run as a release compares
+      # against nothing and proposes the whole history as the next version. The next push
+      # to main builds it instead, which is also the first point it has anything to say.
+      - name: Update release pull requests
+        if: steps.release-please.outputs.releases_created != 'true'
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          skip-github-release: true

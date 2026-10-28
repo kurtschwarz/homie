@@ -209,12 +209,12 @@ Until the download finishes, the kiosk falls back to whatever emoji font the Pi
 already had, and Chromium only rereads fonts at startup — so the unit restarts
 the kiosk itself once the font lands.
 
-Every push to `main` that touches the API, the display or manager apps,
-`packages`, or `deploy` also publishes a `homie-vX.Y.Z` GitHub release with the
-built `.deb` attached (`.github/workflows/homie-release.yml`). The version
-comes from Conventional Commits on those paths since the previous release, and
-the same number is stamped into the API binary. Releases are not marked
-"Latest", and `just deploy` still builds and installs from your checkout.
+Releases are driven by release-please (`.github/workflows/release-please.yml`).
+Every push to `main` updates a release PR with the version and changelog from
+Conventional Commits; merging it creates the `homie-vX.Y.Z` tag and GitHub
+release, and the tag triggers `.github/workflows/homie-release.yml`, which
+attaches the built `.deb`. The same number is stamped into the API binary.
+`just deploy` still builds and installs from your checkout.
 Pull requests run only the checks for the area they touch
 (`.github/workflows/homie-ci.yml`).
 

@@ -3,26 +3,22 @@ import SwiftUI
 
 @main
 struct PhotoSyncApp: App {
-    @StateObject private var hostStore = HomieHostStore()
+    @StateObject private var model = AppModel()
 
     var body: some Scene {
-        WindowGroup("Homie Photos") {
-            ContentView(hostStore: hostStore)
-                .id(hostStore.contentIdentity)
+        MenuBarExtra {
+            MenuBarContent(
+                session: model.session,
+                launchAtLogin: model.launchAtLogin,
+                onAbout: showAbout,
+                onReset: confirmReset
+            )
+        } label: {
+            MenuBarIcon(session: model.session)
         }
-        .windowStyle(.titleBar)
-        .defaultSize(width: 560, height: 680)
-        .commands {
-            CommandGroup(replacing: .appInfo) {
-                Button("About Homie Photos") {
-                    showAbout()
-                }
-                Divider()
-                Button("Reset Homie Photos…") {
-                    confirmReset()
-                }
-            }
-        }
+        .menuBarExtraStyle(.menu)
+
+        MainWindow(model: model)
     }
 
     private func showAbout() {
@@ -31,10 +27,12 @@ struct PhotoSyncApp: App {
         if let commit = Bundle.main.object(forInfoDictionaryKey: "HomieGitCommit") as? String {
             options[.version] = commit
         }
+        NSApp.activate(ignoringOtherApps: true)
         NSApp.orderFrontStandardAboutPanel(options: options)
     }
 
     private func confirmReset() {
+        NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
         alert.messageText = "Reset Homie Photos?"
         alert.informativeText = "This removes saved hosts, sessions, upload history, and cached places. Your macOS Photos permission is unchanged."
@@ -42,6 +40,55 @@ struct PhotoSyncApp: App {
         alert.addButton(withTitle: "Reset").hasDestructiveAction = true
         alert.addButton(withTitle: "Cancel")
         guard alert.runModal() == .alertFirstButtonReturn else { return }
+        let hostStore = model.hostStore
         Task { await OnboardingReset().run(hostStore: hostStore) }
+    }
+}
+
+private struct MainWindow: Scene {
+    @ObservedObject var model: AppModel
+
+    var body: some Scene {
+        Window("Homie Photos", id: "main") {
+            ContentView(hostStore: model.hostStore, session: model.session)
+                .id(model.hostStore.contentIdentity)
+                .hidingLaunchWindowBeforeMacOS15()
+        }
+        .windowStyle(.titleBar)
+        .defaultSize(width: 560, height: 680)
+        .launchSuppressed()
+    }
+}
+
+private extension Scene {
+    func launchSuppressed() -> some Scene {
+        if #available(macOS 15, *) {
+            return defaultLaunchBehavior(.suppressed)
+        }
+        return self
+    }
+}
+
+private struct LaunchWindowHider: ViewModifier {
+    @Environment(\.dismissWindow) private var dismissWindow
+    @State private var handled = false
+
+    func body(content: Content) -> some View {
+        content.onAppear {
+            guard !handled else { return }
+            handled = true
+            dismissWindow(id: "main")
+        }
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func hidingLaunchWindowBeforeMacOS15() -> some View {
+        if #available(macOS 15, *) {
+            self
+        } else {
+            modifier(LaunchWindowHider())
+        }
     }
 }

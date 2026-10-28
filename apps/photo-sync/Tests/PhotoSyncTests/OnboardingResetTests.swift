@@ -12,6 +12,7 @@ final class OnboardingResetTests: XCTestCase {
         defaults.set(["photo": "version"], forKey: "photo-sync.uploadedVersions")
         defaults.set(["coordinate": "place"], forKey: "photo-sync.geocodedPlaces")
         defaults.set(["album"], forKey: "photo-sync.selectedAlbums")
+        defaults.set("artwork", forKey: "photo-sync.artworkAlbum")
         let store = HomieHostStore(defaults: defaults)
         var didClearSessions = false
         var logout: (endpoint: URL, token: String)?
@@ -31,5 +32,6 @@ final class OnboardingResetTests: XCTestCase {
         XCTAssertNil(defaults.object(forKey: "photo-sync.uploadedVersions"))
         XCTAssertNil(defaults.object(forKey: "photo-sync.geocodedPlaces"))
         XCTAssertNil(defaults.object(forKey: "photo-sync.selectedAlbums"))
+        XCTAssertNil(defaults.object(forKey: "photo-sync.artworkAlbum"))
     }
 }

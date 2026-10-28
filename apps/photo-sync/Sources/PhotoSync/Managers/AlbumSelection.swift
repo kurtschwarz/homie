@@ -6,7 +6,9 @@ final class AlbumSelection: ObservableObject {
     private static let albumsKey = "photo-sync.selectedAlbums"
     private static let keepSyncingKey = "photo-sync.keepSyncing"
     private static let lastSyncedKey = "photo-sync.lastSyncedAt"
+    private static let artworkAlbumKey = "photo-sync.artworkAlbum"
 
+    @Published private(set) var artworkAlbumID: String?
     @Published private(set) var albumIDs: Set<String>
     @Published private(set) var keepSyncing: Bool
     @Published private(set) var lastSyncedAt: Date?
@@ -18,6 +20,12 @@ final class AlbumSelection: ObservableObject {
         albumIDs = Set(defaults.stringArray(forKey: Self.albumsKey) ?? [])
         keepSyncing = defaults.object(forKey: Self.keepSyncingKey) as? Bool ?? true
         lastSyncedAt = defaults.object(forKey: Self.lastSyncedKey) as? Date
+        artworkAlbumID = defaults.string(forKey: Self.artworkAlbumKey)
+    }
+
+    func setArtworkAlbum(_ id: String?) {
+        artworkAlbumID = id
+        if let id { defaults.set(id, forKey: Self.artworkAlbumKey) } else { defaults.removeObject(forKey: Self.artworkAlbumKey) }
     }
 
     var hasSelection: Bool { !albumIDs.isEmpty }
@@ -48,5 +56,6 @@ final class AlbumSelection: ObservableObject {
         defaults.removeObject(forKey: albumsKey)
         defaults.removeObject(forKey: keepSyncingKey)
         defaults.removeObject(forKey: lastSyncedKey)
+        defaults.removeObject(forKey: artworkAlbumKey)
     }
 }

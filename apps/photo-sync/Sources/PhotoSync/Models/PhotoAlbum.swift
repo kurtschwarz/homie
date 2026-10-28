@@ -5,5 +5,8 @@ struct PhotoAlbum: Identifiable, Hashable {
     let title: String
     let count: Int
     let isShared: Bool
+    let canAddContent: Bool
+
+    var isArtworkCandidate: Bool { !isShared && canAddContent }
     let cover: PHAsset?
 }

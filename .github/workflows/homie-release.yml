@@ -95,3 +95,9 @@ jobs:
           gh release upload "$GITHUB_REF_NAME" "dist/homie_${VERSION}_arm64.deb" \
             --repo "$GITHUB_REPOSITORY" \
             --clobber
+
+          # Publishing seals the release: immutable releases reject later uploads,
+          # so the package has to be attached while the release is still a draft.
+          gh release edit "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --draft=false

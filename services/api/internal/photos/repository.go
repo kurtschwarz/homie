@@ -96,6 +96,9 @@ type Repository interface {
 	NextPhoto(context.Context, uuid.UUID) (Photo, bool, error)
 	AdvanceShowing(context.Context, *uuid.UUID, Showing, time.Time, ShowingSource) error
 	PruneShowings(context.Context, time.Time) error
+	UnpushedDrawings(context.Context) ([]Photo, error)
+	MarkDrawingPushed(context.Context, uuid.UUID, string, time.Time) (bool, error)
+	PushedAssetIDs(context.Context) ([]string, error)
 }
 
 // SQLiteRepository implements Repository with SQLite.
@@ -431,6 +434,59 @@ func (r *SQLiteRepository) NextPhoto(ctx context.Context, last uuid.UUID) (Photo
 func (r *SQLiteRepository) PruneShowings(ctx context.Context, before time.Time) error {
 	_, err := r.db.ExecContext(ctx, `DELETE FROM photo_showings WHERE started_at < ?`, before.Unix())
 	return err
+}
+
+// UnpushedDrawings returns drawings not yet pushed to Photos, oldest first.
+func (r *SQLiteRepository) UnpushedDrawings(ctx context.Context) ([]Photo, error) {
+	var rows []photoRow
+	if err := r.db.SelectContext(ctx, &rows, `
+		SELECT id, asset_id, version, file, width, height, taken_at, latitude, longitude, place, focus, kind, imported_at
+		FROM photos
+		WHERE kind = 'DRAWING' AND pushed_asset_id IS NULL
+		ORDER BY taken_at ASC, id ASC`); err != nil {
+		return nil, err
+	}
+	result := make([]Photo, 0, len(rows))
+	for _, row := range rows {
+		photo, err := row.photo()
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, photo)
+	}
+	return result, nil
+}
+
+// MarkDrawingPushed records the Photos asset created for a drawing. The first
+// mark wins; repeating it changes nothing. It reports whether the drawing exists.
+func (r *SQLiteRepository) MarkDrawingPushed(ctx context.Context, id uuid.UUID, assetID string, at time.Time) (bool, error) {
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return false, err
+	}
+	defer func() { _ = tx.Rollback() }()
+	var exists int
+	if err := tx.GetContext(ctx, &exists, `SELECT COUNT(*) FROM photos WHERE id = ? AND kind = 'DRAWING'`, id[:]); err != nil {
+		return false, err
+	}
+	if exists == 0 {
+		return false, nil
+	}
+	if _, err := tx.ExecContext(ctx, `
+		UPDATE photos SET pushed_asset_id = ?, pushed_at = ?
+		WHERE id = ? AND kind = 'DRAWING' AND pushed_asset_id IS NULL`, assetID, at.Unix(), id[:]); err != nil {
+		return false, err
+	}
+	return true, tx.Commit()
+}
+
+// PushedAssetIDs returns the Photos asset identifiers recorded for drawings.
+func (r *SQLiteRepository) PushedAssetIDs(ctx context.Context) ([]string, error) {
+	ids := []string{}
+	if err := r.db.SelectContext(ctx, &ids, `SELECT pushed_asset_id FROM photos WHERE pushed_asset_id IS NOT NULL ORDER BY pushed_at ASC, id ASC`); err != nil {
+		return nil, err
+	}
+	return ids, nil
 }
 
 func nullableUnix(value *time.Time) any {

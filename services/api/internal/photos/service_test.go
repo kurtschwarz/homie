@@ -2,6 +2,7 @@ package photos_test
 
 import (
 	"context"
+	"errors"
 	"io"
 	"io/fs"
 	"path/filepath"
@@ -9,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/kurtschwarz/homie/services/api/internal/photos"
 )
 
@@ -148,5 +150,50 @@ func TestServiceSaveDrawing(t *testing.T) {
 		if p.Kind != photos.KindDrawing || p.Focus != nil || p.Coordinate != nil || !p.TakenAt.Equal(drawnAt) {
 			t.Fatalf("drawing mismatch: %+v", p)
 		}
+	}
+}
+
+func TestServiceDrawingPushTracking(t *testing.T) {
+	db := openDB(t)
+	library, err := photos.NewLibrary(filepath.Join(t.TempDir(), "photos"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	service := photos.New(photos.NewSQLiteRepository(db), library)
+	ctx := context.Background()
+
+	if pending, err := service.UnpushedDrawings(ctx); err != nil || len(pending) != 0 {
+		t.Fatalf("empty unpushed: %+v err=%v", pending, err)
+	}
+	if ids, err := service.PushedAssetIDs(ctx); err != nil || ids == nil || len(ids) != 0 {
+		t.Fatalf("empty pushed ids: %#v err=%v", ids, err)
+	}
+
+	drawing, err := service.SaveDrawing(ctx, photos.Drawing{Width: 20, Height: 10, DrawnAt: time.Unix(1_761_000_000, 0)}, strings.NewReader("jpeg"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pending, err := service.UnpushedDrawings(ctx); err != nil || len(pending) != 1 || pending[0].ID != drawing.ID {
+		t.Fatalf("unpushed after save: %+v err=%v", pending, err)
+	}
+
+	if err := service.MarkDrawingPushed(ctx, drawing.ID, "asset-1"); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.MarkDrawingPushed(ctx, drawing.ID, "asset-2"); err != nil {
+		t.Fatalf("repeat mark: %v", err)
+	}
+	if pending, err := service.UnpushedDrawings(ctx); err != nil || len(pending) != 0 {
+		t.Fatalf("unpushed after mark: %+v err=%v", pending, err)
+	}
+	if ids, err := service.PushedAssetIDs(ctx); err != nil || len(ids) != 1 || ids[0] != "asset-1" {
+		t.Fatalf("pushed ids: %v err=%v", ids, err)
+	}
+
+	if err := service.MarkDrawingPushed(ctx, uuid.New(), "asset-x"); !errors.Is(err, photos.ErrUnknownDrawing) {
+		t.Fatalf("unknown drawing err=%v", err)
+	}
+	if err := service.MarkDrawingPushed(ctx, drawing.ID, ""); err == nil {
+		t.Fatal("expected error for empty asset id")
 	}
 }

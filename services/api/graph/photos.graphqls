@@ -81,6 +81,17 @@ extend type Query {
     photos(limit: Int = 60): [Photo!]! @protected(kinds: [USER, DISPLAY])
     photoShowing: PhotoShowingState! @protected(kinds: [USER, DISPLAY])
     photoShowingHistory(limit: Int = 50): [PhotoShowing!]! @protected
+
+    """
+    Drawings not yet pushed to Photos, oldest first. Photo Sync only.
+    """
+    unpushedDrawings: [Photo!]! @protected(kinds: [USER])
+
+    """
+    Photos asset identifiers Homie already knows are pushed drawings, so
+    Photo Sync does not upload them back as ordinary photos.
+    """
+    pushedDrawingAssetIDs: [String!]! @protected(kinds: [USER])
 }
 
 type Mutation {
@@ -105,4 +116,11 @@ type Mutation {
     """
     saveDrawing(input: DrawingInput!, file: Upload!): Photo!
         @protected(kinds: [DISPLAY])
+
+    """
+    Records the Photos asset created for a drawing. Safe to repeat: the first
+    recorded asset is kept. Fails for an unknown drawing id.
+    """
+    markDrawingPushed(id: ID!, assetID: ID!): Boolean!
+        @protected(kinds: [USER])
 }

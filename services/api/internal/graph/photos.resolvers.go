@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/99designs/gqlgen/graphql"
+	"github.com/google/uuid"
 	"github.com/kurtschwarz/homie/services/api/internal/graph/model"
 	"github.com/kurtschwarz/homie/services/api/internal/photos"
 )
@@ -78,6 +79,21 @@ func (r *mutationResolver) SaveDrawing(ctx context.Context, input model.DrawingI
 	return &result, nil
 }
 
+// MarkDrawingPushed is the resolver for the markDrawingPushed field.
+func (r *mutationResolver) MarkDrawingPushed(ctx context.Context, id string, assetID string) (bool, error) {
+	if r.Resolver.Photos == nil {
+		return false, errors.New("photos are not configured")
+	}
+	drawingID, err := uuid.Parse(id)
+	if err != nil {
+		return false, fmt.Errorf("invalid drawing id %q", id)
+	}
+	if err := r.Resolver.Photos.MarkDrawingPushed(ctx, drawingID, assetID); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 // Photos is the resolver for the photos field.
 func (r *queryResolver) Photos(ctx context.Context, limit *int) ([]model.Photo, error) {
 	if r.Resolver.Photos == nil {
@@ -128,6 +144,30 @@ func (r *queryResolver) PhotoShowingHistory(ctx context.Context, limit *int) ([]
 		result = append(result, toModelShowing(showing, r.Resolver.PhotoSigner))
 	}
 	return result, nil
+}
+
+// UnpushedDrawings is the resolver for the unpushedDrawings field.
+func (r *queryResolver) UnpushedDrawings(ctx context.Context) ([]model.Photo, error) {
+	if r.Resolver.Photos == nil {
+		return nil, errors.New("photos are not configured")
+	}
+	list, err := r.Resolver.Photos.UnpushedDrawings(ctx)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]model.Photo, 0, len(list))
+	for _, photo := range list {
+		result = append(result, toModelPhoto(photo, r.Resolver.PhotoSigner))
+	}
+	return result, nil
+}
+
+// PushedDrawingAssetIDs is the resolver for the pushedDrawingAssetIDs field.
+func (r *queryResolver) PushedDrawingAssetIDs(ctx context.Context) ([]string, error) {
+	if r.Resolver.Photos == nil {
+		return nil, errors.New("photos are not configured")
+	}
+	return r.Resolver.Photos.PushedAssetIDs(ctx)
 }
 
 // Mutation returns MutationResolver implementation.

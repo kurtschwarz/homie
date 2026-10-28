@@ -17,6 +17,30 @@ struct UploadedPhoto: Decodable {
     let url: String
 }
 
+struct HomieDrawing: Decodable, Equatable {
+    struct Coordinate: Decodable, Equatable {
+        let latitude: Double
+        let longitude: Double
+    }
+
+    let id: String
+    let url: String
+    let takenAt: Int
+    let coordinate: Coordinate?
+}
+
+struct DrawingsPayload: Decodable {
+    let unpushedDrawings: [HomieDrawing]?
+}
+
+struct PushedIDsPayload: Decodable {
+    let pushedDrawingAssetIDs: [String]?
+}
+
+struct MarkPushedPayload: Decodable {
+    let markDrawingPushed: Bool?
+}
+
 struct HomieRole: Decodable, Equatable {
     static let admin = HomieRole(rawValue: "ADMIN")
     let rawValue: String
@@ -169,6 +193,59 @@ struct HomieAPI {
         let result = try decode(GraphQLResponse<UploadPayload>.self, from: data, response: response)
         guard let photo = result.data?.uploadPhoto else { throw HomieAPIError.invalidResponse }
         return photo
+    }
+
+    func unpushedDrawings() async throws -> [HomieDrawing] {
+        guard let token = sessionToken(), !token.isEmpty else { throw HomieAPIError.unauthorized }
+        let (data, response) = try await perform(
+            query: "query UnpushedDrawings { unpushedDrawings { id url takenAt coordinate { latitude longitude } } }",
+            variables: [:],
+            token: token
+        )
+        try validate(data: data, response: response)
+        guard let drawings = try decode(GraphQLResponse<DrawingsPayload>.self, from: data, response: response).data?.unpushedDrawings else {
+            throw HomieAPIError.invalidResponse
+        }
+        return drawings
+    }
+
+    func pushedDrawingAssetIDs() async throws -> Set<String> {
+        guard let token = sessionToken(), !token.isEmpty else { throw HomieAPIError.unauthorized }
+        let (data, response) = try await perform(
+            query: "query PushedDrawingAssetIDs { pushedDrawingAssetIDs }",
+            variables: [:],
+            token: token
+        )
+        try validate(data: data, response: response)
+        guard let ids = try decode(GraphQLResponse<PushedIDsPayload>.self, from: data, response: response).data?.pushedDrawingAssetIDs else {
+            throw HomieAPIError.invalidResponse
+        }
+        return Set(ids)
+    }
+
+    func downloadDrawing(_ drawing: HomieDrawing) async throws -> Data {
+        guard let token = sessionToken(), !token.isEmpty else { throw HomieAPIError.unauthorized }
+        guard let url = URL(string: drawing.url, relativeTo: endpoint)?.absoluteURL else { throw HomieAPIError.invalidResponse }
+        var request = URLRequest(url: url)
+        request.setValue("PhotoSync/1", forHTTPHeaderField: "User-Agent")
+        request.setValue("homie_session=\(token)", forHTTPHeaderField: "Cookie")
+        let (data, response) = try await send(request)
+        if response.statusCode == 401 { throw HomieAPIError.unauthorized }
+        guard (200..<300).contains(response.statusCode) else { throw HomieAPIError.http(response.statusCode) }
+        return data
+    }
+
+    func markDrawingPushed(id: String, assetID: String) async throws {
+        guard let token = sessionToken(), !token.isEmpty else { throw HomieAPIError.unauthorized }
+        let (data, response) = try await perform(
+            query: "mutation MarkDrawingPushed($id: ID!, $assetID: ID!) { markDrawingPushed(id: $id, assetID: $assetID) }",
+            variables: ["id": id, "assetID": assetID],
+            token: token
+        )
+        try validate(data: data, response: response)
+        guard try decode(GraphQLResponse<MarkPushedPayload>.self, from: data, response: response).data?.markDrawingPushed == true else {
+            throw HomieAPIError.invalidResponse
+        }
     }
 
     static func sessionToken(fromSetCookieHeader header: String) -> String? {

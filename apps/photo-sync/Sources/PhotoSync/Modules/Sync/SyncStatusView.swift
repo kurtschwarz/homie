@@ -51,7 +51,13 @@ struct SyncStatusView: View {
                         SyncAlbumRow(album: album, library: library, progress: uploader.albumProgress[album.id], isUploading: uploader.isUploading)
                     }
                     if let artworkAlbum {
-                        ArtworkAlbumRow(album: artworkAlbum, library: library, isUploading: uploader.isUploading)
+                        ArtworkAlbumRow(album: artworkAlbum, library: library, progress: uploader.drawingProgress, isUploading: uploader.isUploading)
+                    }
+                    if let message = uploader.drawingMessage {
+                        Text(message)
+                            .font(.system(size: 12))
+                            .foregroundStyle(.orange)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
                 .padding(.horizontal, 32)
@@ -173,7 +179,21 @@ private struct SyncAlbumRow: View {
 private struct ArtworkAlbumRow: View {
     let album: PhotoAlbum
     @ObservedObject var library: PhotoLibrary
+    let progress: AlbumProgress?
     let isUploading: Bool
+
+    private var status: String {
+        guard let progress else { return isUploading ? "Checking for new paintings" : "Saved to “\(album.title)”" }
+        if progress.failed > 0 { return "\(progress.failed) failed" }
+        if isUploading { return "\(progress.completed.formatted()) of \(progress.total.formatted())" }
+        return "Saved to “\(album.title)”"
+    }
+
+    private var fraction: Double {
+        guard let progress else { return isUploading ? 0 : 1 }
+        guard progress.total > 0 else { return 1 }
+        return Double(progress.completed) / Double(progress.total)
+    }
 
     var body: some View {
         HStack(spacing: 18) {
@@ -183,13 +203,12 @@ private struct ArtworkAlbumRow: View {
                     Text("\(album.count.formatted()) \(album.count == 1 ? "painting" : "paintings") from Homie")
                         .font(.system(size: 14, weight: .semibold))
                     Spacer()
-                    Text(isUploading ? "After the photos" : "Saved to “\(album.title)”")
+                    Text(status)
                         .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(isUploading ? Color.secondary : Color.homieGreenDark)
+                        .foregroundStyle((progress?.failed ?? 0) > 0 ? Color.orange : Color.homieGreenDark)
                 }
-                ProgressView(value: isUploading ? 0 : 1).tint(.homieGreen)
+                ProgressView(value: fraction).tint(.homieGreen)
             }
         }
-        .opacity(isUploading ? 0.5 : 1)
     }
 }

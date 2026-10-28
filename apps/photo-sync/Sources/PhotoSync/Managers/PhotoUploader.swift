@@ -23,6 +23,8 @@ final class PhotoUploader: ObservableObject {
     @Published private(set) var total = 0
     @Published private(set) var isUploading = false
     @Published private(set) var albumProgress: [String: AlbumProgress] = [:]
+    @Published private(set) var drawingProgress: AlbumProgress?
+    @Published private(set) var drawingMessage: String?
 
     private let library: PhotoLibrary
     private let api: HomieAPI
@@ -36,18 +38,87 @@ final class PhotoUploader: ObservableObject {
         self.onAuthenticationRequired = onAuthenticationRequired
     }
 
-    func sync(albumIDs: [String], onFinished: @escaping () -> Void = {}) {
+    func sync(albumIDs: [String], artworkAlbumID: String? = nil, onFinished: @escaping () -> Void = {}) {
         guard !isUploading else { return }
+        isUploading = true
         Task {
-            await syncAlbums(albumIDs)
+            await syncAll(albumIDs, artworkAlbumID: artworkAlbumID)
+            isUploading = false
             onFinished()
         }
     }
 
-    private func syncAlbums(_ albumIDs: [String]) async {
-        let batches = albumIDs.map { ($0, library.assets(inAlbum: $0)) }
-        isUploading = true
-        defer { isUploading = false }
+    private func syncAll(_ albumIDs: [String], artworkAlbumID: String?) async {
+        drawingProgress = nil
+        drawingMessage = nil
+        let shouldContinue = await pushDrawings(toAlbum: artworkAlbumID)
+        guard shouldContinue else { return }
+        let drawingAssetIDs: Set<String>
+        do {
+            drawingAssetIDs = try await api.pushedDrawingAssetIDs()
+        } catch {
+            if case HomieAPIError.unauthorized = error { onAuthenticationRequired() }
+            return
+        }
+        await syncAlbums(albumIDs, excluding: drawingAssetIDs)
+    }
+
+    private func pushDrawings(toAlbum albumID: String?) async -> Bool {
+        guard let albumID, library.canAddDrawings(toAlbum: albumID) else {
+            drawingMessage = "Choose an artwork album to save Homie drawings to Photos."
+            return true
+        }
+        let drawings: [HomieDrawing]
+        do {
+            drawings = try await api.unpushedDrawings()
+        } catch {
+            drawingMessage = error.localizedDescription
+            if case HomieAPIError.unauthorized = error {
+                onAuthenticationRequired()
+                return false
+            }
+            return true
+        }
+        guard !drawings.isEmpty else { return true }
+
+        var progress = AlbumProgress(total: drawings.count)
+        drawingProgress = progress
+        for drawing in drawings {
+            do {
+                let assetID: String
+                if let known = ledger.pushedAssetID(forDrawing: drawing.id) {
+                    assetID = known
+                } else {
+                    let jpeg = try await api.downloadDrawing(drawing)
+                    assetID = try await library.addDrawing(
+                        jpeg,
+                        createdAt: Date(timeIntervalSince1970: TimeInterval(drawing.takenAt)),
+                        toAlbum: albumID
+                    )
+                    ledger.savePushedDrawing(drawing.id, assetID: assetID)
+                }
+                try await api.markDrawingPushed(id: drawing.id, assetID: assetID)
+                ledger.forgetPushedDrawing(drawing.id)
+                progress.completed += 1
+            } catch {
+                progress.completed += 1
+                progress.failed += 1
+                drawingMessage = "Drawing didn't sync: \(error.localizedDescription)"
+                if case HomieAPIError.unauthorized = error {
+                    drawingProgress = progress
+                    onAuthenticationRequired()
+                    return false
+                }
+            }
+            drawingProgress = progress
+        }
+        return true
+    }
+
+    private func syncAlbums(_ albumIDs: [String], excluding drawingAssetIDs: Set<String>) async {
+        let batches = albumIDs.map { id in
+            (id, library.assets(inAlbum: id).filter { !drawingAssetIDs.contains($0.id) })
+        }
         states.removeAll()
         albumProgress = Dictionary(uniqueKeysWithValues: batches.map { ($0.0, AlbumProgress(total: $0.1.count)) })
         total = batches.reduce(0) { $0 + $1.1.count }

@@ -159,6 +159,7 @@ type ComplexityRoot struct {
 		ReorderPeople             func(childComplexity int, ids []string) int
 		ResumeTimer               func(childComplexity int) int
 		RevokeSession             func(childComplexity int, id string) int
+		SaveDrawing               func(childComplexity int, input model.DrawingInput, file graphql.Upload) int
 		SavePerson                func(childComplexity int, input model.PersonInput) int
 		Setup                     func(childComplexity int, code string, username string, password string) int
 		StartTimer                func(childComplexity int, title string, emoji string, durationSeconds int) int
@@ -297,6 +298,7 @@ type ComplexityRoot struct {
 type MutationResolver interface {
 	UploadPhoto(ctx context.Context, input model.PhotoUploadInput, file graphql.Upload) (*model.Photo, error)
 	TrackPhotoShowing(ctx context.Context, source model.PhotoShowingSource) (*model.PhotoShowingState, error)
+	SaveDrawing(ctx context.Context, input model.DrawingInput, file graphql.Upload) (*model.Photo, error)
 	Login(ctx context.Context, username string, password string) (*model.User, error)
 	Logout(ctx context.Context) (bool, error)
 	RevokeSession(ctx context.Context, id string) (bool, error)
@@ -970,6 +972,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.RevokeSession(childComplexity, args["id"].(string)), true
+	case "Mutation.saveDrawing":
+		if e.ComplexityRoot.Mutation.SaveDrawing == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_saveDrawing_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.SaveDrawing(childComplexity, args["input"].(model.DrawingInput), args["file"].(graphql.Upload)), true
 	case "Mutation.savePerson":
 		if e.ComplexityRoot.Mutation.SavePerson == nil {
 			break
@@ -1629,6 +1642,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputCreateWeatherLocationInput,
 		ec.unmarshalInputCreateWeatherProviderInput,
 		ec.unmarshalInputDisplayModeSettingInput,
+		ec.unmarshalInputDrawingInput,
 		ec.unmarshalInputEventInput,
 		ec.unmarshalInputFocalRegionInput,
 		ec.unmarshalInputPersonInput,
@@ -2060,80 +2074,112 @@ extend type Mutation {
 }
 `, BuiltIn: false},
 	{Name: "../../graph/photos.graphqls", Input: `type Coordinate {
-  latitude: Float!
-  longitude: Float!
+    latitude: Float!
+    longitude: Float!
 }
 
-"""A normalized region of interest, with top-left origin."""
+"""
+A normalized region of interest, with top-left origin.
+"""
 type FocalRegion {
-  x: Float!
-  y: Float!
-  width: Float!
-  height: Float!
+    x: Float!
+    y: Float!
+    width: Float!
+    height: Float!
 }
 
 input FocalRegionInput {
-  x: Float!
-  y: Float!
-  width: Float!
-  height: Float!
-  source: String!
+    x: Float!
+    y: Float!
+    width: Float!
+    height: Float!
+    source: String!
 }
 
 type Photo {
-  id: ID!
-  url: String!
-  width: Int!
-  height: Int!
-  takenAt: Int!
-  coordinate: Coordinate
-  place: String
-  focus: FocalRegion
+    id: ID!
+    url: String!
+    width: Int!
+    height: Int!
+    takenAt: Int!
+    coordinate: Coordinate
+    place: String
+    focus: FocalRegion
 }
 
 enum PhotoShowingSource {
-  SCHEDULE
-  TAP
+    SCHEDULE
+    TAP
 }
 
 type PhotoShowing {
-  id: ID!
-  photo: Photo!
-  startedAt: Int!
-  endsAt: Int!
-  endedAt: Int
-  source: PhotoShowingSource!
+    id: ID!
+    photo: Photo!
+    startedAt: Int!
+    endsAt: Int!
+    endedAt: Int
+    source: PhotoShowingSource!
 }
 
 type PhotoShowingState {
-  current: PhotoShowing
-  next: PhotoShowing
+    current: PhotoShowing
+    next: PhotoShowing
 }
 
-"""Metadata accompanying a photo upload."""
+"""
+Metadata accompanying a photo upload.
+"""
 input PhotoUploadInput {
-  assetID: ID!
-  version: String!
-  takenAt: Int!
-  width: Int!
-  height: Int!
-  latitude: Float
-  longitude: Float
-  place: String
-  focus: FocalRegionInput
+    assetID: ID!
+    version: String!
+    takenAt: Int!
+    width: Int!
+    height: Int!
+    latitude: Float
+    longitude: Float
+    place: String
+    focus: FocalRegionInput
+}
+
+"""
+Metadata accompanying a saved drawing.
+"""
+input DrawingInput {
+    width: Int!
+    height: Int!
+    drawnAt: Int!
 }
 
 scalar Upload
 
 extend type Query {
-  photos(limit: Int = 60): [Photo!]! @protected(kinds: [USER, DISPLAY])
-  photoShowing: PhotoShowingState! @protected(kinds: [USER, DISPLAY])
-  photoShowingHistory(limit: Int = 50): [PhotoShowing!]! @protected
+    photos(limit: Int = 60): [Photo!]! @protected(kinds: [USER, DISPLAY])
+    photoShowing: PhotoShowingState! @protected(kinds: [USER, DISPLAY])
+    photoShowingHistory(limit: Int = 50): [PhotoShowing!]! @protected
 }
 
 type Mutation {
-  uploadPhoto(input: PhotoUploadInput!, file: Upload!): Photo! @protected
-  trackPhotoShowing(source: PhotoShowingSource! = SCHEDULE): PhotoShowingState! @protected(kinds: [USER, DISPLAY])
+    """
+    Imports an Apple photo from Photo Sync, keeping the same id across
+    re-uploads of a known asset. JPEG only.
+    """
+    uploadPhoto(input: PhotoUploadInput!, file: Upload!): Photo! @protected
+
+    """
+    Records that the display moved to the next photo, and returns the updated
+    rotation.
+    """
+    trackPhotoShowing(
+        source: PhotoShowingSource! = SCHEDULE
+    ): PhotoShowingState! @protected(kinds: [USER, DISPLAY])
+
+    """
+    Saves a drawing from the display as a new photo of kind DRAWING. JPEG
+    only, display only. The drawing has no focal region or coordinate, and its
+    drawn-at time becomes its taken-at time.
+    """
+    saveDrawing(input: DrawingInput!, file: Upload!): Photo!
+        @protected(kinds: [DISPLAY])
 }
 `, BuiltIn: false},
 	{Name: "../../graph/schema.graphqls", Input: `enum HealthStatus {
@@ -3041,6 +3087,28 @@ func (ec *executionContext) field_Mutation_revokeSession_args(ctx context.Contex
 		return nil, err
 	}
 	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_saveDrawing_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input",
+		func(ctx context.Context, v any) (model.DrawingInput, error) {
+			return ec.unmarshalNDrawingInput2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐDrawingInput(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "file",
+		func(ctx context.Context, v any) (graphql.Upload, error) {
+			return ec.unmarshalNUpload2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚐUpload(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["file"] = arg1
 	return args, nil
 }
 
@@ -4929,6 +4997,50 @@ func (ec *executionContext) fieldContext_Mutation_trackPhotoShowing(ctx context.
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_trackPhotoShowing_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_saveDrawing(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_saveDrawing(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().SaveDrawing(ctx, fc.Args["input"].(model.DrawingInput), fc.Args["file"].(graphql.Upload))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Photo) graphql.Marshaler {
+			return ec.marshalNPhoto2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPhoto(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_saveDrawing(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Photo(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_saveDrawing_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -9872,6 +9984,50 @@ func (ec *executionContext) unmarshalInputDisplayModeSettingInput(ctx context.Co
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputDrawingInput(ctx context.Context, obj any) (model.DrawingInput, error) {
+	var it model.DrawingInput
+	if obj == nil {
+		return it, nil
+	}
+
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"width", "height", "drawnAt"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "width":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("width"))
+			data, err := ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Width = data
+		case "height":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("height"))
+			data, err := ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Height = data
+		case "drawnAt":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("drawnAt"))
+			data, err := ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.DrawnAt = data
+		}
+	}
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputEventInput(ctx context.Context, obj any) (model.EventInput, error) {
 	var it model.EventInput
 	if obj == nil {
@@ -11543,6 +11699,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "trackPhotoShowing":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_trackPhotoShowing(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "saveDrawing":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_saveDrawing(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -13704,6 +13867,11 @@ func (ec *executionContext) marshalNDisplayStatus2ᚖgithubᚗcomᚋkurtschwarz�
 		return graphql.Null
 	}
 	return ec._DisplayStatus(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNDrawingInput2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐDrawingInput(ctx context.Context, v any) (model.DrawingInput, error) {
+	res, err := ec.unmarshalInputDrawingInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalNEvent2githubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐEvent(ctx context.Context, sel ast.SelectionSet, v model.Event) graphql.Marshaler {

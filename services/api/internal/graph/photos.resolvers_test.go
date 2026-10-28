@@ -132,3 +132,28 @@ func TestUploadPhotoResolver(t *testing.T) {
 		t.Fatalf("content type error=%v, want %v", err, errUnsupportedPhotoContentType)
 	}
 }
+
+func TestSaveDrawingResolverRejectsNonJPEG(t *testing.T) {
+	resolver := &mutationResolver{Resolver: &Resolver{}}
+	if _, err := resolver.SaveDrawing(context.Background(), model.DrawingInput{}, graphql.Upload{ContentType: "image/jpeg"}); err == nil || err.Error() != "photos are not configured" {
+		t.Fatalf("unconfigured err=%v", err)
+	}
+	db, err := store.Open(filepath.Join(t.TempDir(), "d.db"), slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	library, err := photos.NewLibrary(filepath.Join(t.TempDir(), "photos"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resolver.Resolver.Photos = photos.New(photos.NewSQLiteRepository(db), library)
+	input := model.DrawingInput{Width: 10, Height: 10, DrawnAt: 100}
+	if _, err := resolver.SaveDrawing(context.Background(), input, graphql.Upload{ContentType: "image/png"}); !errors.Is(err, errUnsupportedPhotoContentType) {
+		t.Fatalf("png err=%v", err)
+	}
+	got, err := resolver.SaveDrawing(context.Background(), input, graphql.Upload{ContentType: "image/jpeg", File: strings.NewReader("jpeg")})
+	if err != nil || got.Focus != nil || got.Coordinate != nil || got.TakenAt != 100 {
+		t.Fatalf("save: %+v err=%v", got, err)
+	}
+}

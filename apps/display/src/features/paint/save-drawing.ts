@@ -4,7 +4,15 @@ const MUTATION = `
   }
 `
 
-/** Flattens the transparent canvas onto white and encodes it as JPEG. */
+/**
+ * Flattens the transparent canvas onto a white background and encodes it as
+ * JPEG. JPEG has no alpha channel, so without the white fill the transparent
+ * pixels would encode as black. The source canvas is left untouched.
+ *
+ * @param canvas - The paint canvas to encode.
+ * @returns The drawing as a JPEG blob at the canvas's backing resolution.
+ * @throws If a 2D context is unavailable or the browser cannot encode the image.
+ */
 export async function canvasToJpeg(canvas: HTMLCanvasElement): Promise<Blob> {
   const flat = document.createElement('canvas')
   flat.width = canvas.width
@@ -23,12 +31,22 @@ export async function canvasToJpeg(canvas: HTMLCanvasElement): Promise<Blob> {
     flat.toBlob(
       (blob) => (blob ? resolve(blob) : reject(new Error('Could not encode the drawing'))),
       'image/jpeg',
-      0.92,
+      1,
     )
   })
 }
 
-/** Uploads a JPEG drawing using the GraphQL multipart request spec. */
+/**
+ * Uploads a JPEG drawing to the API's `saveDrawing` mutation using the GraphQL
+ * multipart request spec. This bypasses the shared `graphql` helper, which
+ * only sends JSON.
+ *
+ * @param jpeg - The encoded drawing, as returned by `canvasToJpeg`.
+ * @param size - Pixel dimensions of the encoded image.
+ * @param drawnAt - When the drawing was finished; the API stores it as the
+ * photo's taken-at time.
+ * @throws If the request fails, the response is not OK, or it contains errors.
+ */
 export async function uploadDrawing(
   jpeg: Blob,
   size: { width: number; height: number },

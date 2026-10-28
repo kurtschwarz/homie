@@ -11,3 +11,17 @@
 - A fresh manager profile may show the account setup screen. The setup code is logged by the API; inspect the API container logs with `docker compose logs api`.
 - The Firefox profile is disposable local state, ignored by Git under `.scratch/*`. Keep it separate from any personal Firefox profile. `just dev` closes the dev Firefox when it exits.
 - Firefox writes its own output to `.scratch/firefox-dev-profile/firefox.log` instead of the terminal, which `just dev` leaves to the compose logs. Read that file when the browser fails to start.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in GitHub Issues (`kurtschwarz/homie`), via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Multi-context: root `GLOSSARY-MAP.md` points at per-context `GLOSSARY.md` files. See `docs/agents/domain.md`.

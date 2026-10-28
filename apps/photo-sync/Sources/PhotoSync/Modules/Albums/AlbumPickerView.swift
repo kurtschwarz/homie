@@ -18,6 +18,77 @@ struct AlbumPickerView: View {
         ByteCountFormatter.string(fromByteCount: Int64(Double(photoCount) * Self.estimatedBytesPerPhoto), countStyle: .file)
     }
 
+    private var artworkCandidates: [PhotoAlbum] { library.albums.filter(\.isArtworkCandidate) }
+
+    private var artworkAlbum: PhotoAlbum? {
+        selection.artworkAlbumID.flatMap { id in library.albums.first { $0.id == id } }
+    }
+
+    private var artworkAlbumUnavailable: Bool {
+        guard let id = selection.artworkAlbumID else { return false }
+        return !(library.albums.first { $0.id == id }?.isArtworkCandidate ?? false)
+    }
+
+    @ViewBuilder
+    private var artworkAlbumSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 14) {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color.homieGreen.opacity(0.18))
+                    .frame(width: 34, height: 34)
+                    .overlay {
+                        Image(systemName: "paintbrush.pointed.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color.homieGreenDark)
+                    }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Save paintings to").font(.system(size: 14, weight: .semibold))
+                    Text("Pictures painted on Homie are added to this album.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                if !artworkCandidates.isEmpty {
+                    Menu {
+                        Button("None") { selection.setArtworkAlbum(nil) }
+                        Divider()
+                        ForEach(artworkCandidates) { album in
+                            Button(album.title) { selection.setArtworkAlbum(album.id) }
+                        }
+                    } label: {
+                        HStack {
+                            Text(artworkAlbum?.title ?? "Choose album")
+                                .font(.system(size: 14))
+                                .lineLimit(1)
+                            Spacer(minLength: 8)
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.horizontal, 12)
+                        .frame(width: 220, height: 34)
+                        .background(RoundedRectangle(cornerRadius: 8).fill(Color(nsColor: .controlBackgroundColor)))
+                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.secondary.opacity(0.3), lineWidth: 1))
+                        .contentShape(Rectangle())
+                    }
+                    .menuStyle(.borderlessButton)
+                    .menuIndicator(.hidden)
+                    .fixedSize()
+                }
+            }
+            if artworkCandidates.isEmpty {
+                Text("No albums can be used for artwork yet. Create an album in Photos, then reopen Photo Sync.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+            }
+            if artworkAlbumUnavailable {
+                Text("The selected artwork album is no longer available or can't be written to. Choose another album.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.red)
+            }
+        }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             ScrollView {
@@ -56,7 +127,8 @@ struct AlbumPickerView: View {
             }
 
             Divider()
-            VStack(spacing: 14) {
+            VStack(spacing: 22) {
+                artworkAlbumSection
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Keep syncing new photos").font(.system(size: 14, weight: .semibold))

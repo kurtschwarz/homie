@@ -25,6 +25,29 @@ final class AlbumSelectionTests: XCTestCase {
         XCTAssertEqual(second.lastSyncedAt, date)
     }
 
+    func testArtworkAlbumPersistsAndIsIndependentOfSources() {
+        let defaults = makeDefaults()
+        let first = AlbumSelection(defaults: defaults)
+        first.select(["a"])
+        first.setArtworkAlbum("a")
+
+        let second = AlbumSelection(defaults: defaults)
+        XCTAssertEqual(second.artworkAlbumID, "a")
+        XCTAssertTrue(second.contains("a"))
+
+        second.setArtworkAlbum(nil)
+        XCTAssertNil(AlbumSelection(defaults: defaults).artworkAlbumID)
+    }
+
+    func testClearRemovesArtworkAlbum() {
+        let defaults = makeDefaults()
+        AlbumSelection(defaults: defaults).setArtworkAlbum("a")
+
+        AlbumSelection.clear(defaults: defaults)
+
+        XCTAssertNil(AlbumSelection(defaults: defaults).artworkAlbumID)
+    }
+
     func testKeepSyncingDefaultsToOn() {
         XCTAssertTrue(AlbumSelection(defaults: makeDefaults()).keepSyncing)
     }

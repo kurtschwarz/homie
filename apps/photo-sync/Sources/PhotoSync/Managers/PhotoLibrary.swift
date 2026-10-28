@@ -40,6 +40,7 @@ final class PhotoLibrary: ObservableObject {
                 title: title,
                 count: count,
                 isShared: collection.assetCollectionSubtype == .albumCloudShared,
+                canAddContent: collection.canPerform(.addContent),
                 cover: cover
             ))
         }

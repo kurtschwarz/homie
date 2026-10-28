@@ -8,6 +8,9 @@ struct SyncStatusView: View {
     let onChangeAlbums: () -> Void
 
     private var albums: [PhotoAlbum] { library.albums.filter { selection.contains($0.id) } }
+    private var artworkAlbum: PhotoAlbum? {
+        library.albums.first { $0.id == selection.artworkAlbumID && $0.isArtworkCandidate }
+    }
     private var failedCount: Int { uploader.albumProgress.values.reduce(0) { $0 + $1.failed } }
     private var photoTotal: Int { uploader.isUploading || uploader.total > 0 ? uploader.total : albums.reduce(0) { $0 + $1.count } }
     private var photoDone: Int { uploader.total > 0 ? uploader.completed : (selection.lastSyncedAt == nil ? 0 : photoTotal) }
@@ -33,7 +36,9 @@ struct SyncStatusView: View {
 
     private var subtitle: String {
         let albumsText = "\(albums.count) \(albums.count == 1 ? "album" : "albums")"
-        return "\(photoTotal.formatted()) photos from \(albumsText) \(phase == .upToDate ? "are in the slideshow." : "will be in the slideshow.")"
+        var text = "\(photoTotal.formatted()) photos from \(albumsText) \(phase == .upToDate ? "are in the slideshow." : "will be in the slideshow.")"
+        if let artworkAlbum { text += "\nNew paintings go to “\(artworkAlbum.title)”." }
+        return text
     }
 
     var body: some View {
@@ -44,6 +49,9 @@ struct SyncStatusView: View {
                 VStack(spacing: 20) {
                     ForEach(albums) { album in
                         SyncAlbumRow(album: album, library: library, progress: uploader.albumProgress[album.id], isUploading: uploader.isUploading)
+                    }
+                    if let artworkAlbum {
+                        ArtworkAlbumRow(album: artworkAlbum, library: library, isUploading: uploader.isUploading)
                     }
                 }
                 .padding(.horizontal, 32)
@@ -68,7 +76,11 @@ struct SyncStatusView: View {
                 .frame(width: 76, height: 76)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title).font(.system(size: 24, weight: .bold))
-                    Text(subtitle).font(.system(size: 13)).foregroundStyle(.secondary)
+                    Text(subtitle)
+                        .font(.system(size: 13))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             ProgressView(value: fraction).tint(.homieGreen)
@@ -155,5 +167,29 @@ private struct SyncAlbumRow: View {
                 ProgressView(value: progress == nil ? 1 : fraction).tint(.homieGreen)
             }
         }
+    }
+}
+
+private struct ArtworkAlbumRow: View {
+    let album: PhotoAlbum
+    @ObservedObject var library: PhotoLibrary
+    let isUploading: Bool
+
+    var body: some View {
+        HStack(spacing: 18) {
+            AlbumCover(album: album, library: library, size: 70)
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("\(album.count.formatted()) \(album.count == 1 ? "painting" : "paintings") from Homie")
+                        .font(.system(size: 14, weight: .semibold))
+                    Spacer()
+                    Text(isUploading ? "After the photos" : "Saved to “\(album.title)”")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(isUploading ? Color.secondary : Color.homieGreenDark)
+                }
+                ProgressView(value: isUploading ? 0 : 1).tint(.homieGreen)
+            }
+        }
+        .opacity(isUploading ? 0.5 : 1)
     }
 }

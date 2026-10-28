@@ -1,6 +1,7 @@
 package photos
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
@@ -15,6 +16,9 @@ import (
 type Service struct {
 	repository Repository
 	library    *Library
+
+	// Home, when set, supplies the location stamped on saved drawings.
+	Home HomeFunc
 }
 
 // New creates a photo service backed by repository and library.
@@ -106,8 +110,14 @@ type Drawing struct {
 	DrawnAt time.Time
 }
 
+// HomeFunc reports where Homie lives, as the coordinate and place name of the
+// lowest-order weather location. ok is false when none is configured.
+type HomeFunc func(ctx context.Context) (coordinate Coordinate, place string, ok bool, err error)
+
 // SaveDrawing stores a drawing as a new photo of kind drawing, with no focal
-// region or coordinate.
+// region. When Home is set and reports a location, that location becomes the
+// drawing's coordinate and place. The EXIF block is inserted into the JPEG
+// bytes without decoding the image.
 func (s *Service) SaveDrawing(ctx context.Context, drawing Drawing, src io.Reader) (Photo, error) {
 	if drawing.Width <= 0 || drawing.Height <= 0 {
 		return Photo{}, errInvalidSize
@@ -122,14 +132,38 @@ func (s *Service) SaveDrawing(ctx context.Context, drawing Drawing, src io.Reade
 		return Photo{}, err
 	}
 
+	var coordinate *Coordinate
+	var place string
+	if s.Home != nil {
+		home, homePlace, ok, err := s.Home(ctx)
+		if err != nil {
+			return Photo{}, err
+		}
+		if ok {
+			coordinate, place = &home, homePlace
+		}
+	}
+
+	jpeg, err := io.ReadAll(src)
+	if err != nil {
+		return Photo{}, err
+	}
+	tagged, err := embedExif(jpeg, exifMetadata{
+		DrawnAt: drawing.DrawnAt, Description: drawingDescription(drawing.DrawnAt, place), Coordinate: coordinate,
+	})
+	if err != nil {
+		return Photo{}, err
+	}
+
 	name := s.library.Name(id)
-	if err := s.library.Save(name, src); err != nil {
+	if err := s.library.Save(name, bytes.NewReader(tagged)); err != nil {
 		return Photo{}, err
 	}
 
 	photo := Photo{
 		ID: id, AssetID: "drawing:" + id.String(), Version: strconv.FormatInt(drawing.DrawnAt.Unix(), 10), File: name,
 		Width: drawing.Width, Height: drawing.Height, TakenAt: drawing.DrawnAt, Kind: KindDrawing,
+		Coordinate: coordinate, Place: place,
 	}
 
 	if err := s.repository.Upsert(ctx, photo); err != nil {

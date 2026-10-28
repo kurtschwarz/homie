@@ -93,6 +93,15 @@ func main() {
 		if err != nil {
 			logger.Error("configure weather; weather will be unavailable", "error", err)
 		}
+		if weatherService != nil && photosService != nil {
+			photosService.Home = func(ctx context.Context) (photos.Coordinate, string, bool, error) {
+				home, ok, err := weatherService.Home(ctx)
+				if err != nil || !ok {
+					return photos.Coordinate{}, "", false, err
+				}
+				return photos.Coordinate{Latitude: home.Latitude, Longitude: home.Longitude}, home.Label, true, nil
+			}
+		}
 	}
 
 	var refresher weatherjobs.Refresher

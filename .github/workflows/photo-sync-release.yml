@@ -2,11 +2,8 @@ name: Photo Sync Release
 
 on:
   push:
-    branches:
-      - main
-    paths:
-      - apps/photo-sync/**
-      - .github/workflows/photo-sync-release.yml
+    tags:
+      - photo-sync-v*
   workflow_dispatch:
 
 permissions:
@@ -30,11 +27,11 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Compute version
+      - name: Read version from tag
         id: version
         run: |
-          version="$(./apps/photo-sync/version.sh)"
-          printf 'Next version: %s\n' "$version"
+          version="${GITHUB_REF_NAME#photo-sync-v}"
+          printf 'Version: %s\n' "$version"
           printf 'version=%s\n' "$version" >> "$GITHUB_OUTPUT"
 
       - name: Show Swift version
@@ -181,13 +178,11 @@ jobs:
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ needs.build.outputs.version }}
         run: |
-          ./apps/photo-sync/version.sh notes > notes.md
-
-          gh release create "photo-sync-v$VERSION" dist/HomiePhotos.dmg \
+          gh release upload "$GITHUB_REF_NAME" dist/HomiePhotos.dmg \
             --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" \
-            --title "Homie Photos $VERSION" \
-            --notes-file notes.md \
+            --clobber
+
+          gh release edit "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
             --latest=false

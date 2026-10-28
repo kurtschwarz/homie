@@ -100,7 +100,7 @@ struct ContentView: View {
 
     private func startSync() {
         let ids = library.albums.map(\.id).filter { selection.contains($0) }
-        uploader.sync(albumIDs: ids) { selection.markSynced() }
+        uploader.sync(albumIDs: ids, artworkAlbumID: selection.artworkAlbumID) { selection.markSynced() }
     }
 }
 

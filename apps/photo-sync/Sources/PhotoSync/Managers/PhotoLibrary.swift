@@ -85,6 +85,36 @@ final class PhotoLibrary: ObservableObject {
         return jpeg
     }
 
+    func canAddDrawings(toAlbum id: String) -> Bool {
+        guard let collection = PHAssetCollection.fetchAssetCollections(withLocalIdentifiers: [id], options: nil).firstObject else {
+            return false
+        }
+        return collection.canPerform(.addContent)
+    }
+
+    func addDrawing(_ jpeg: Data, createdAt: Date, toAlbum albumID: String) async throws -> String {
+        guard let collection = PHAssetCollection.fetchAssetCollections(withLocalIdentifiers: [albumID], options: nil).firstObject else {
+            throw PhotoLibraryError.albumUnavailable
+        }
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).jpg")
+        try jpeg.write(to: file)
+        defer { try? FileManager.default.removeItem(at: file) }
+
+        var identifier: String?
+        try await PHPhotoLibrary.shared().performChanges {
+            let request = PHAssetCreationRequest.forAsset()
+            let options = PHAssetResourceCreationOptions()
+            options.shouldMoveFile = false
+            request.addResource(with: .photo, fileURL: file, options: options)
+            request.creationDate = createdAt
+            guard let placeholder = request.placeholderForCreatedAsset else { return }
+            identifier = placeholder.localIdentifier
+            PHAssetCollectionChangeRequest(for: collection)?.addAssets([placeholder] as NSArray)
+        }
+        guard let identifier else { throw PhotoLibraryError.assetNotCreated }
+        return identifier
+    }
+
     private func requestImage(for photo: PhotoAsset, targetSize: CGSize) async throws -> NSImage {
         try await withCheckedThrowingContinuation { continuation in
             let options = PHImageRequestOptions()
@@ -121,9 +151,13 @@ enum PhotoLibraryError: LocalizedError {
     case imageUnavailable
     case jpegEncodingFailed
     case jpegTooLarge
+    case albumUnavailable
+    case assetNotCreated
 
     var errorDescription: String? {
         switch self {
+        case .albumUnavailable: "The artwork album no longer exists in Photos."
+        case .assetNotCreated: "Photos did not create the drawing."
         case .imageUnavailable: "PhotoKit did not return an image."
         case .jpegEncodingFailed: "Could not encode the preview as JPEG."
         case .jpegTooLarge: "The JPEG is larger than the server's 20 MB upload limit."

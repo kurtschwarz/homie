@@ -40,9 +40,23 @@ The workflow requires these repository secrets:
 
 To install a build, download `HomiePhotos.dmg` from the [latest release](https://github.com/kurtschwarz/homie/releases/latest) (or directly from `https://github.com/kurtschwarz/homie/releases/latest/download/HomiePhotos.dmg`), open it, and drag **Homie Photos** to Applications. Each run also uploads the image as a workflow artifact, which GitHub retains for 30 days; artifacts are served inside an extra zip wrapper, so prefer the release for a plain download.
 
-The app does not modify the Photos library. PhotoKit's macOS authorization API uses the `.readWrite` access level. It defaults to the album named `Homie`, shows other albums in the picker, and allows iCloud downloads when an asset is not stored locally. The local ledger is stored in UserDefaults and can be reset by clearing the app's defaults. If the API database is reset, clear the ledger too so photos can be uploaded again.
+The app only adds to the Photos library: it never edits or deletes existing photos, and only adds drawings to the artwork album (see [Drawings](#drawings)). PhotoKit's macOS authorization API uses the `.readWrite` access level. It defaults to the album named `Homie`, shows other albums in the picker, and allows iCloud downloads when an asset is not stored locally. The local ledger is stored in UserDefaults and can be reset by clearing the app's defaults. If the API database is reset, clear the ledger too so photos can be uploaded again.
 
 Choose **Homie Photos → Reset Homie Photos…** to return the app to onboarding. The reset removes saved hosts, sessions, upload history, and cached places, but macOS keeps the Photos permission. It also removes the local API override set by `just dev photo-sync`; run that recipe again to restore the development endpoint.
+
+## Drawings
+
+Each sync first adds drawings saved on the display to the artwork album, then uploads photos. For every drawing Photo Sync downloads the JPEG, creates a Photos asset from those bytes with the drawn-at time as its creation date, adds it to the artwork album, and only then tells Homie it was pushed. Pushed assets are skipped when photos are uploaded, so an artwork album that is also synced does not send drawings back. Nothing is pushed until an artwork album is chosen.
+
+What survives the import into Photos, checked on a real drawing:
+
+| Field                   | Result                                            |
+| ----------------------- | ------------------------------------------------- |
+| Creation date           | Kept; shown as the drawn-at time                  |
+| `ImageDescription`      | Kept; shown as the caption                        |
+| Camera make and model   | Kept; shown as "Homie Display"                    |
+| GPS                     | Not shown in Photos for the drawing checked       |
+| `Artist`                | Not shown in Photos; the Info panel has no field  |
 
 ## API endpoint
 

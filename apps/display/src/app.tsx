@@ -8,6 +8,7 @@ import {
 import { EventList, EventRow } from '@homie/ui/components/event-row'
 import { HomeEvents, HomeLayout } from '@homie/ui/components/layout'
 import { NextUp } from '@homie/ui/components/next-up'
+import { PaintButton } from '@homie/ui/components/paint-button'
 import { PhotoPanel } from '@homie/ui/components/photo-panel'
 import { WeatherGlance } from '@homie/ui/components/weather-glance'
 import { useNow } from '@homie/ui/hooks/use-now'
@@ -15,6 +16,7 @@ import { formatShortDate } from '@homie/ui/lib/time'
 import * as React from 'react'
 import { splitEvents, toRows } from './features/events/calendar-event'
 import { useEvents } from './features/events/use-events'
+import { PaintPage } from './features/paint/paint-page'
 import { usePhotoShowing } from './features/photos/use-photo-showing'
 import { usePhotos } from './features/photos/use-photos'
 import { SetupPage } from './features/setup/setup-page'
@@ -35,6 +37,7 @@ export function App() {
   const photoShowing = usePhotoShowing()
   const events = useEvents()
   const [sheetOpen, setSheetOpen] = React.useState(false)
+  const [painting, setPainting] = React.useState(false)
   const eventsColumnRef = React.useRef<HTMLDivElement>(null)
 
   const allEvents = events.data ?? []
@@ -55,6 +58,7 @@ export function App() {
         cancel={timer.cancel}
       />
     )
+  if (painting) return <PaintPage onClose={() => setPainting(false)} />
 
   return (
     <HomeLayout>
@@ -77,7 +81,11 @@ export function App() {
           )}
           currentSrc={photoShowing.showing.current.photo.url}
           onAdvance={() => void photoShowing.advance('TAP')}
+          action={<PaintButton onClick={() => setPainting(true)} />}
         />
+      )}
+      {photos.data && !(photos.data.length > 0 && photoShowing.showing?.current) && (
+        <PhotoPanel photos={[]} action={<PaintButton onClick={() => setPainting(true)} />} />
       )}
       <HomeEvents ref={eventsColumnRef}>
         <div className="flex flex-col gap-hm-8">

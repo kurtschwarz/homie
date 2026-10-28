@@ -35,12 +35,14 @@ export function PhotoPanel({
   photos,
   currentSrc,
   onAdvance,
+  action,
   className,
   ...props
 }: React.ComponentProps<'section'> & {
   photos: Photo[]
   currentSrc?: string
   onAdvance?: () => void
+  action?: React.ReactNode
 }) {
   const [aspectRatios, setAspectRatios] = React.useState<Record<string, number>>({})
   const [panelHeight, setPanelHeight] = React.useState(0)
@@ -143,6 +145,7 @@ export function PhotoPanel({
           </div>
         </div>
       )}
+      {action}
     </section>
   )
 }

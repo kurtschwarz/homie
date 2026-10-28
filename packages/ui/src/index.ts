@@ -13,6 +13,7 @@ export {
 export { HomieAnimation } from './components/homie-animation'
 export { HomeEvents, HomeLayout, Screen, WeatherLayout } from './components/layout'
 export { NextUp } from './components/next-up'
+export { PaintButton } from './components/paint-button'
 export { PersonBadge, PersonBadges, PersonLegend } from './components/person-badge'
 export { type Photo, PhotoPanel } from './components/photo-panel'
 export { ReminderChip } from './components/reminder-chip'

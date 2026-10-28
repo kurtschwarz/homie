@@ -21,6 +21,7 @@ if commit="$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null)"; then
     plutil -replace HomieGitCommit -string "$commit" "$APP/Contents/Info.plist"
 fi
 cp "$ROOT/Resources/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
+cp "$ROOT"/Resources/HomieMenuTemplate*.png "$APP/Contents/Resources/"
 
 if [[ -n "${CODESIGN_IDENTITY:-}" ]]; then
     codesign \

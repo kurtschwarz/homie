@@ -4,14 +4,25 @@ import SwiftUI
 struct MenuBarIcon: View {
     @ObservedObject var session: SyncSession
 
-    private var name: String {
+    private var symbol: String? {
         if session.uploader.isUploading { return "arrow.triangle.2.circlepath" }
         if session.needsSignIn || session.needsSetup || session.failedCount > 0 { return "exclamationmark.triangle" }
-        return "photo.on.rectangle"
+        return nil
+    }
+
+    private static func template(_ image: NSImage) -> NSImage {
+        image.isTemplate = true
+        return image
     }
 
     var body: some View {
-        Image(systemName: name)
+        if let symbol {
+            Image(systemName: symbol)
+        } else if let icon = Bundle.main.image(forResource: "HomieMenuTemplate") {
+            Image(nsImage: Self.template(icon))
+        } else {
+            Image(systemName: "photo.on.rectangle")
+        }
     }
 }
 

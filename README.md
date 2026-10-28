@@ -211,9 +211,13 @@ the kiosk itself once the font lands.
 
 Releases are driven by release-please (`.github/workflows/release-please.yml`).
 Every push to `main` updates a release PR with the version and changelog from
-Conventional Commits; merging it creates the `homie-vX.Y.Z` tag and GitHub
-release, and the tag triggers `.github/workflows/homie-release.yml`, which
-attaches the built `.deb`. The same number is stamped into the API binary.
+Conventional Commits; merging it creates a *draft* GitHub release, and the same
+workflow then pushes the `homie-vX.Y.Z` tag, because a draft carries no tag of
+its own. The tag triggers `.github/workflows/homie-release.yml`, which attaches
+the built `.deb` to the draft and publishes it last. The order matters: this
+repository has immutable releases turned on, so publishing freezes a release
+and GitHub rejects any asset uploaded after that. The same number is stamped
+into the API binary.
 `just deploy` still builds and installs from your checkout.
 Pull requests run only the checks for the area they touch
 (`.github/workflows/homie-ci.yml`).

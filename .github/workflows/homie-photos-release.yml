@@ -183,6 +183,9 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --clobber
 
+          # Publishing seals the release: immutable releases reject later uploads,
+          # so the DMG has to be attached while the release is still a draft.
           gh release edit "$GITHUB_REF_NAME" \
             --repo "$GITHUB_REPOSITORY" \
+            --draft=false \
             --latest=false

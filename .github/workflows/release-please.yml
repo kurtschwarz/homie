@@ -25,8 +25,49 @@ jobs:
           private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
 
       - name: Run release-please
+        id: release-please
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
           token: ${{ steps.app-token.outputs.token }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+
+      # release-please cuts draft releases, and a draft carries no Git tag. Push the
+      # tag here: it starts the release workflows, which attach their artifacts while
+      # the release is still a draft and publish it afterwards.
+      - name: Push release tags
+        if: steps.release-please.outputs.releases_created == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PATHS_RELEASED: ${{ steps.release-please.outputs.paths_released }}
+          RELEASE_OUTPUTS: ${{ toJSON(steps.release-please.outputs) }}
+        run: |
+          # Outputs for the root package are unprefixed; every other path is "<path>--<key>".
+          releases="$(
+            jq -nr --argjson outputs "$RELEASE_OUTPUTS" --argjson paths "$PATHS_RELEASED" '
+              $paths[]
+              | if . == "." then "" else "\(.)--" end
+              | "\($outputs["\(.)tag_name"]) \($outputs["\(.)sha"])"
+            '
+          )"
+
+          if [ -z "$releases" ]; then
+            printf 'release-please created releases but reported no paths\n' >&2
+            exit 1
+          fi
+
+          while read -r tag sha; do
+            if [ -z "$tag" ] || [ -z "$sha" ] || [ "$tag" = null ] || [ "$sha" = null ]; then
+              printf 'Release is missing a tag or a commit: %s %s\n' "$tag" "$sha" >&2
+              exit 1
+            fi
+
+            printf 'Tagging %s at %s\n' "$tag" "$sha"
+            gh api "repos/$GITHUB_REPOSITORY/git/refs" \
+              --method POST \
+              --field "ref=refs/tags/$tag" \
+              --field "sha=$sha" \
+              --silent
+          done <<EOF
+          $releases
+          EOF

@@ -151,6 +151,13 @@ type DisplayStatus struct {
 	OverrideEndsAt *int `json:"overrideEndsAt,omitempty"`
 }
 
+// Metadata accompanying a saved drawing.
+type DrawingInput struct {
+	Width   int `json:"width"`
+	Height  int `json:"height"`
+	DrawnAt int `json:"drawnAt"`
+}
+
 type Event struct {
 	ID         string   `json:"id"`
 	CalendarID string   `json:"calendarId"`

@@ -1,76 +1,108 @@
 type Coordinate {
-  latitude: Float!
-  longitude: Float!
+    latitude: Float!
+    longitude: Float!
 }
 
-"""A normalized region of interest, with top-left origin."""
+"""
+A normalized region of interest, with top-left origin.
+"""
 type FocalRegion {
-  x: Float!
-  y: Float!
-  width: Float!
-  height: Float!
+    x: Float!
+    y: Float!
+    width: Float!
+    height: Float!
 }
 
 input FocalRegionInput {
-  x: Float!
-  y: Float!
-  width: Float!
-  height: Float!
-  source: String!
+    x: Float!
+    y: Float!
+    width: Float!
+    height: Float!
+    source: String!
 }
 
 type Photo {
-  id: ID!
-  url: String!
-  width: Int!
-  height: Int!
-  takenAt: Int!
-  coordinate: Coordinate
-  place: String
-  focus: FocalRegion
+    id: ID!
+    url: String!
+    width: Int!
+    height: Int!
+    takenAt: Int!
+    coordinate: Coordinate
+    place: String
+    focus: FocalRegion
 }
 
 enum PhotoShowingSource {
-  SCHEDULE
-  TAP
+    SCHEDULE
+    TAP
 }
 
 type PhotoShowing {
-  id: ID!
-  photo: Photo!
-  startedAt: Int!
-  endsAt: Int!
-  endedAt: Int
-  source: PhotoShowingSource!
+    id: ID!
+    photo: Photo!
+    startedAt: Int!
+    endsAt: Int!
+    endedAt: Int
+    source: PhotoShowingSource!
 }
 
 type PhotoShowingState {
-  current: PhotoShowing
-  next: PhotoShowing
+    current: PhotoShowing
+    next: PhotoShowing
 }
 
-"""Metadata accompanying a photo upload."""
+"""
+Metadata accompanying a photo upload.
+"""
 input PhotoUploadInput {
-  assetID: ID!
-  version: String!
-  takenAt: Int!
-  width: Int!
-  height: Int!
-  latitude: Float
-  longitude: Float
-  place: String
-  focus: FocalRegionInput
+    assetID: ID!
+    version: String!
+    takenAt: Int!
+    width: Int!
+    height: Int!
+    latitude: Float
+    longitude: Float
+    place: String
+    focus: FocalRegionInput
+}
+
+"""
+Metadata accompanying a saved drawing.
+"""
+input DrawingInput {
+    width: Int!
+    height: Int!
+    drawnAt: Int!
 }
 
 scalar Upload
 
 extend type Query {
-  photos(limit: Int = 60): [Photo!]! @protected(kinds: [USER, DISPLAY])
-  photoShowing: PhotoShowingState! @protected(kinds: [USER, DISPLAY])
-  photoShowingHistory(limit: Int = 50): [PhotoShowing!]! @protected
+    photos(limit: Int = 60): [Photo!]! @protected(kinds: [USER, DISPLAY])
+    photoShowing: PhotoShowingState! @protected(kinds: [USER, DISPLAY])
+    photoShowingHistory(limit: Int = 50): [PhotoShowing!]! @protected
 }
 
 type Mutation {
-  uploadPhoto(input: PhotoUploadInput!, file: Upload!): Photo! @protected
-  trackPhotoShowing(source: PhotoShowingSource! = SCHEDULE): PhotoShowingState! @protected(kinds: [USER, DISPLAY])
+    """
+    Imports an Apple photo from Photo Sync, keeping the same id across
+    re-uploads of a known asset. JPEG only.
+    """
+    uploadPhoto(input: PhotoUploadInput!, file: Upload!): Photo! @protected
+
+    """
+    Records that the display moved to the next photo, and returns the updated
+    rotation.
+    """
+    trackPhotoShowing(
+        source: PhotoShowingSource! = SCHEDULE
+    ): PhotoShowingState! @protected(kinds: [USER, DISPLAY])
+
+    """
+    Saves a drawing from the display as a new photo of kind DRAWING. JPEG
+    only, display only. The drawing has no focal region or coordinate, and its
+    drawn-at time becomes its taken-at time.
+    """
+    saveDrawing(input: DrawingInput!, file: Upload!): Photo!
+        @protected(kinds: [DISPLAY])
 }

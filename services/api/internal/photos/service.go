@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"math"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -95,6 +96,47 @@ func (s *Service) Import(ctx context.Context, upload Upload, src io.Reader) (Pho
 		}
 		return Photo{}, err
 	}
+	return photo, nil
+}
+
+// Drawing is the metadata accompanying a saved drawing's bytes.
+type Drawing struct {
+	Width   int
+	Height  int
+	DrawnAt time.Time
+}
+
+// SaveDrawing stores a drawing as a new photo of kind drawing, with no focal
+// region or coordinate.
+func (s *Service) SaveDrawing(ctx context.Context, drawing Drawing, src io.Reader) (Photo, error) {
+	if drawing.Width <= 0 || drawing.Height <= 0 {
+		return Photo{}, errInvalidSize
+	}
+
+	if drawing.DrawnAt.IsZero() {
+		return Photo{}, errMissingTakenAt
+	}
+
+	id, err := uuid.NewV7()
+	if err != nil {
+		return Photo{}, err
+	}
+
+	name := s.library.Name(id)
+	if err := s.library.Save(name, src); err != nil {
+		return Photo{}, err
+	}
+
+	photo := Photo{
+		ID: id, AssetID: "drawing:" + id.String(), Version: strconv.FormatInt(drawing.DrawnAt.Unix(), 10), File: name,
+		Width: drawing.Width, Height: drawing.Height, TakenAt: drawing.DrawnAt, Kind: KindDrawing,
+	}
+
+	if err := s.repository.Upsert(ctx, photo); err != nil {
+		_ = s.library.Remove(name)
+		return Photo{}, err
+	}
+
 	return photo, nil
 }
 

@@ -60,6 +60,24 @@ func (r *mutationResolver) TrackPhotoShowing(ctx context.Context, source model.P
 	return toModelRotation(current, next, r.Resolver.PhotoSigner), nil
 }
 
+// SaveDrawing is the resolver for the saveDrawing field.
+func (r *mutationResolver) SaveDrawing(ctx context.Context, input model.DrawingInput, file graphql.Upload) (*model.Photo, error) {
+	if r.Resolver.Photos == nil {
+		return nil, errors.New("photos are not configured")
+	}
+	if file.ContentType != "image/jpeg" {
+		return nil, errUnsupportedPhotoContentType
+	}
+	photo, err := r.Resolver.Photos.SaveDrawing(ctx, photos.Drawing{
+		Width: input.Width, Height: input.Height, DrawnAt: time.Unix(int64(input.DrawnAt), 0),
+	}, file.File)
+	if err != nil {
+		return nil, fmt.Errorf("save drawing: %w", err)
+	}
+	result := toModelPhoto(photo, r.Resolver.PhotoSigner)
+	return &result, nil
+}
+
 // Photos is the resolver for the photos field.
 func (r *queryResolver) Photos(ctx context.Context, limit *int) ([]model.Photo, error) {
 	if r.Resolver.Photos == nil {

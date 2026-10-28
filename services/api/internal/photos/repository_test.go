@@ -234,3 +234,41 @@ func mustOpen(t *testing.T, filesystem interface {
 	}
 	return f
 }
+
+func TestDeleteMissingAndHelpersIgnoreDrawings(t *testing.T) {
+	db := openDB(t)
+	repo := photos.NewSQLiteRepository(db)
+	ctx := context.Background()
+	drawing := photos.Photo{ID: uuid.MustParse("0192a780-0a00-7000-8000-000000000051"), AssetID: "drawing:1", Version: "1", File: "drawing.jpg", Width: 10, Height: 10, TakenAt: time.Unix(100, 0), Kind: photos.KindDrawing}
+	apple := photos.Photo{ID: uuid.MustParse("0192a780-0a00-7000-8000-000000000052"), AssetID: "apple", Version: "1", File: "apple.jpg", Width: 10, Height: 10, TakenAt: time.Unix(90, 0)}
+	for _, p := range []photos.Photo{drawing, apple} {
+		if err := repo.Upsert(ctx, p); err != nil {
+			t.Fatal(err)
+		}
+	}
+	manifest, err := repo.Manifest(ctx)
+	if err != nil || len(manifest) != 1 || manifest["apple"].ID != apple.ID {
+		t.Fatalf("manifest must hold only apple photos: %+v err=%v", manifest, err)
+	}
+	if _, found, err := repo.IDForAsset(ctx, drawing.AssetID); err != nil || found {
+		t.Fatalf("drawing must not resolve as an apple asset: found=%v err=%v", found, err)
+	}
+	for _, keep := range [][]string{nil, {"apple"}, {"other"}} {
+		if _, err := repo.DeleteMissing(ctx, keep); err != nil {
+			t.Fatal(err)
+		}
+		list, err := repo.List(ctx, 10)
+		if err != nil {
+			t.Fatal(err)
+		}
+		found := false
+		for _, p := range list {
+			if p.ID == drawing.ID {
+				found = p.Kind == photos.KindDrawing
+			}
+		}
+		if !found {
+			t.Fatalf("drawing deleted by reconcile keeping %v", keep)
+		}
+	}
+}

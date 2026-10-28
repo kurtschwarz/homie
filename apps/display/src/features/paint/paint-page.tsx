@@ -4,6 +4,7 @@ import { useIdle } from '@homie/ui/hooks/use-idle'
 import { cn } from '@homie/ui/lib/utils'
 import {
   Check,
+  Download,
   Eraser,
   Paintbrush,
   Rainbow,
@@ -14,6 +15,7 @@ import {
   X,
 } from 'lucide-react'
 import * as React from 'react'
+import { canvasToJpeg, uploadDrawing } from './save-drawing'
 import { COLOURS, SIZE_PX, type SizeName, type Tool } from './tools'
 import { usePaintCanvas } from './use-paint-canvas'
 
@@ -60,6 +62,26 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
     size: SIZE_PX[size],
     smooth,
   })
+
+  const [saveState, setSaveState] = React.useState<'idle' | 'saving' | 'saved' | 'failed'>('idle')
+
+  React.useEffect(() => {
+    if (dirty) setSaveState((state) => (state === 'saved' ? 'idle' : state))
+  }, [dirty])
+
+  const save = async () => {
+    const canvas = canvasRef.current
+    if (!canvas || saveState === 'saving') return
+    setSaveState('saving')
+    try {
+      const jpeg = await canvasToJpeg(canvas)
+      await uploadDrawing(jpeg, { width: canvas.width, height: canvas.height }, new Date())
+      clear()
+      setSaveState('saved')
+    } catch {
+      setSaveState('failed')
+    }
+  }
 
   useIdle(true, onClose, IDLE_MS)
 
@@ -234,6 +256,19 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
         </section>
 
         <div className="mt-auto flex flex-col gap-hm-12">
+          {saveState !== 'idle' && (
+            <p
+              role="status"
+              className={cn(
+                'm-0 text-center text-hm-label-lg font-medium',
+                saveState === 'failed' ? 'text-hm-accent' : 'text-hm-ink-2',
+              )}
+            >
+              {saveState === 'saving' && 'Saving…'}
+              {saveState === 'saved' && 'Saved! It will show up with the photos.'}
+              {saveState === 'failed' && "Couldn't save. Your drawing is still here, try again."}
+            </p>
+          )}
           <div className="grid grid-cols-2 gap-hm-12">
             <Button variant="outline" disabled={!canUndo} onClick={undo}>
               <Undo2 aria-hidden />
@@ -244,6 +279,15 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
               Clear
             </Button>
           </div>
+          <Button
+            variant="outline"
+            block
+            disabled={!dirty || saveState === 'saving'}
+            onClick={save}
+          >
+            <Download aria-hidden />
+            Save
+          </Button>
           <Button variant="solid" block onClick={onClose}>
             <Check aria-hidden />
             Done

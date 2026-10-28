@@ -115,3 +115,38 @@ func TestServiceImportRemovesOrphanFileOnUpsertFailure(t *testing.T) {
 		t.Fatalf("orphan file left behind: %v", entries)
 	}
 }
+
+func TestServiceSaveDrawing(t *testing.T) {
+	db := openDB(t)
+	library, err := photos.NewLibrary(filepath.Join(t.TempDir(), "photos"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	service := photos.New(photos.NewSQLiteRepository(db), library)
+	ctx := context.Background()
+	drawnAt := time.Unix(1_761_000_000, 0)
+
+	if _, err := service.SaveDrawing(ctx, photos.Drawing{Width: 0, Height: 10, DrawnAt: drawnAt}, strings.NewReader("x")); err == nil {
+		t.Fatal("expected size error")
+	}
+	first, err := service.SaveDrawing(ctx, photos.Drawing{Width: 20, Height: 10, DrawnAt: drawnAt}, strings.NewReader("jpeg"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := service.SaveDrawing(ctx, photos.Drawing{Width: 20, Height: 10, DrawnAt: drawnAt}, strings.NewReader("jpeg"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.ID == second.ID {
+		t.Fatal("each drawing needs its own identity")
+	}
+	list, err := service.List(ctx, 10)
+	if err != nil || len(list) != 2 {
+		t.Fatalf("list: %+v err=%v", list, err)
+	}
+	for _, p := range list {
+		if p.Kind != photos.KindDrawing || p.Focus != nil || p.Coordinate != nil || !p.TakenAt.Equal(drawnAt) {
+			t.Fatalf("drawing mismatch: %+v", p)
+		}
+	}
+}

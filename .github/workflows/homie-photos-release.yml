@@ -1,9 +1,9 @@
-name: Photo Sync Release
+name: Homie Photos Release
 
 on:
   push:
     tags:
-      - photo-sync-v*
+      - homie-photos-v*
   workflow_dispatch:
 
 permissions:
@@ -30,7 +30,7 @@ jobs:
       - name: Read version from tag
         id: version
         run: |
-          version="${GITHUB_REF_NAME#photo-sync-v}"
+          version="${GITHUB_REF_NAME#homie-photos-v}"
           printf 'Version: %s\n' "$version"
           printf 'version=%s\n' "$version" >> "$GITHUB_OUTPUT"
 

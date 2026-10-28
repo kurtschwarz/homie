@@ -9,7 +9,7 @@
       "exclude-paths": ["apps/photo-sync"]
     },
     "apps/photo-sync": {
-      "component": "photo-sync",
+      "component": "homie-photos",
       "release-type": "simple",
       "extra-files": [
         {

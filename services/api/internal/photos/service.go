@@ -140,4 +140,33 @@ func (s *Service) SaveDrawing(ctx context.Context, drawing Drawing, src io.Reade
 	return photo, nil
 }
 
+// ErrUnknownDrawing is returned when a drawing id does not match a saved drawing.
+var ErrUnknownDrawing = errors.New("unknown drawing")
+
+// UnpushedDrawings returns drawings that have not yet been pushed to Photos.
+func (s *Service) UnpushedDrawings(ctx context.Context) ([]Photo, error) {
+	return s.repository.UnpushedDrawings(ctx)
+}
+
+// MarkDrawingPushed records the Photos asset created for a drawing. Repeating
+// the call is safe and keeps the first recorded asset.
+func (s *Service) MarkDrawingPushed(ctx context.Context, id uuid.UUID, assetID string) error {
+	if assetID == "" {
+		return errMissingAssetID
+	}
+	found, err := s.repository.MarkDrawingPushed(ctx, id, assetID, time.Now())
+	if err != nil {
+		return err
+	}
+	if !found {
+		return ErrUnknownDrawing
+	}
+	return nil
+}
+
+// PushedAssetIDs returns the Photos asset identifiers known to be drawings.
+func (s *Service) PushedAssetIDs(ctx context.Context) ([]string, error) {
+	return s.repository.PushedAssetIDs(ctx)
+}
+
 func finite(value float64) bool { return !math.IsNaN(value) && !math.IsInf(value, 0) }

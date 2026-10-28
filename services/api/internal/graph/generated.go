@@ -152,6 +152,7 @@ type ComplexityRoot struct {
 		DiscoverCalendars         func(childComplexity int, accountID string) int
 		Login                     func(childComplexity int, username string, password string) int
 		Logout                    func(childComplexity int) int
+		MarkDrawingPushed         func(childComplexity int, id string, assetID string) int
 		PauseTimer                func(childComplexity int) int
 		PreviewDisplayMode        func(childComplexity int, mode model.DisplayMode, seconds int) int
 		RefreshCalendar           func(childComplexity int, id string) int
@@ -209,27 +210,29 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		CalendarAccounts     func(childComplexity int) int
-		CalendarAssociations func(childComplexity int, calendarID *string, personID *string) int
-		CalendarTags         func(childComplexity int, calendarID string) int
-		Calendars            func(childComplexity int, accountID *string) int
-		DdcBuses             func(childComplexity int) int
-		DisplaySchedule      func(childComplexity int) int
-		DisplayStatus        func(childComplexity int) int
-		Events               func(childComplexity int, days *int) int
-		Health               func(childComplexity int) int
-		People               func(childComplexity int) int
-		PhotoShowing         func(childComplexity int) int
-		PhotoShowingHistory  func(childComplexity int, limit *int) int
-		Photos               func(childComplexity int, limit *int) int
-		Session              func(childComplexity int) int
-		Sessions             func(childComplexity int) int
-		SetupCode            func(childComplexity int) int
-		Timer                func(childComplexity int) int
-		Weather              func(childComplexity int) int
-		WeatherLocations     func(childComplexity int) int
-		WeatherProviders     func(childComplexity int) int
-		WifiStatus           func(childComplexity int) int
+		CalendarAccounts      func(childComplexity int) int
+		CalendarAssociations  func(childComplexity int, calendarID *string, personID *string) int
+		CalendarTags          func(childComplexity int, calendarID string) int
+		Calendars             func(childComplexity int, accountID *string) int
+		DdcBuses              func(childComplexity int) int
+		DisplaySchedule       func(childComplexity int) int
+		DisplayStatus         func(childComplexity int) int
+		Events                func(childComplexity int, days *int) int
+		Health                func(childComplexity int) int
+		People                func(childComplexity int) int
+		PhotoShowing          func(childComplexity int) int
+		PhotoShowingHistory   func(childComplexity int, limit *int) int
+		Photos                func(childComplexity int, limit *int) int
+		PushedDrawingAssetIDs func(childComplexity int) int
+		Session               func(childComplexity int) int
+		Sessions              func(childComplexity int) int
+		SetupCode             func(childComplexity int) int
+		Timer                 func(childComplexity int) int
+		UnpushedDrawings      func(childComplexity int) int
+		Weather               func(childComplexity int) int
+		WeatherLocations      func(childComplexity int) int
+		WeatherProviders      func(childComplexity int) int
+		WifiStatus            func(childComplexity int) int
 	}
 
 	SessionInfo struct {
@@ -299,6 +302,7 @@ type MutationResolver interface {
 	UploadPhoto(ctx context.Context, input model.PhotoUploadInput, file graphql.Upload) (*model.Photo, error)
 	TrackPhotoShowing(ctx context.Context, source model.PhotoShowingSource) (*model.PhotoShowingState, error)
 	SaveDrawing(ctx context.Context, input model.DrawingInput, file graphql.Upload) (*model.Photo, error)
+	MarkDrawingPushed(ctx context.Context, id string, assetID string) (bool, error)
 	Login(ctx context.Context, username string, password string) (*model.User, error)
 	Logout(ctx context.Context) (bool, error)
 	RevokeSession(ctx context.Context, id string) (bool, error)
@@ -352,6 +356,8 @@ type QueryResolver interface {
 	Photos(ctx context.Context, limit *int) ([]model.Photo, error)
 	PhotoShowing(ctx context.Context) (*model.PhotoShowingState, error)
 	PhotoShowingHistory(ctx context.Context, limit *int) ([]model.PhotoShowing, error)
+	UnpushedDrawings(ctx context.Context) ([]model.Photo, error)
+	PushedDrawingAssetIDs(ctx context.Context) ([]string, error)
 	SetupCode(ctx context.Context) (*string, error)
 	Weather(ctx context.Context) (*model.Weather, error)
 	WeatherProviders(ctx context.Context) ([]model.WeatherProvider, error)
@@ -910,6 +916,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.Logout(childComplexity), true
+	case "Mutation.markDrawingPushed":
+		if e.ComplexityRoot.Mutation.MarkDrawingPushed == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_markDrawingPushed_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Mutation.MarkDrawingPushed(childComplexity, args["id"].(string), args["assetID"].(string)), true
 	case "Mutation.pauseTimer":
 		if e.ComplexityRoot.Mutation.PauseTimer == nil {
 			break
@@ -1366,6 +1383,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.Photos(childComplexity, args["limit"].(*int)), true
+	case "Query.pushedDrawingAssetIDs":
+		if e.ComplexityRoot.Query.PushedDrawingAssetIDs == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Query.PushedDrawingAssetIDs(childComplexity), true
 	case "Query.session":
 		if e.ComplexityRoot.Query.Session == nil {
 			break
@@ -1390,6 +1413,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.Timer(childComplexity), true
+	case "Query.unpushedDrawings":
+		if e.ComplexityRoot.Query.UnpushedDrawings == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Query.UnpushedDrawings(childComplexity), true
 	case "Query.weather":
 		if e.ComplexityRoot.Query.Weather == nil {
 			break
@@ -2156,6 +2185,17 @@ extend type Query {
     photos(limit: Int = 60): [Photo!]! @protected(kinds: [USER, DISPLAY])
     photoShowing: PhotoShowingState! @protected(kinds: [USER, DISPLAY])
     photoShowingHistory(limit: Int = 50): [PhotoShowing!]! @protected
+
+    """
+    Drawings not yet pushed to Photos, oldest first. Photo Sync only.
+    """
+    unpushedDrawings: [Photo!]! @protected(kinds: [USER])
+
+    """
+    Photos asset identifiers Homie already knows are pushed drawings, so
+    Photo Sync does not upload them back as ordinary photos.
+    """
+    pushedDrawingAssetIDs: [String!]! @protected(kinds: [USER])
 }
 
 type Mutation {
@@ -2180,6 +2220,13 @@ type Mutation {
     """
     saveDrawing(input: DrawingInput!, file: Upload!): Photo!
         @protected(kinds: [DISPLAY])
+
+    """
+    Records the Photos asset created for a drawing. Safe to repeat: the first
+    recorded asset is kept. Fails for an unknown drawing id.
+    """
+    markDrawingPushed(id: ID!, assetID: ID!): Boolean!
+        @protected(kinds: [USER])
 }
 `, BuiltIn: false},
 	{Name: "../../graph/schema.graphqls", Input: `enum HealthStatus {
@@ -3023,6 +3070,28 @@ func (ec *executionContext) field_Mutation_login_args(ctx context.Context, rawAr
 		return nil, err
 	}
 	args["password"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_markDrawingPushed_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "assetID",
+		func(ctx context.Context, v any) (string, error) {
+			return ec.unmarshalNID2string(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["assetID"] = arg1
 	return args, nil
 }
 
@@ -5041,6 +5110,50 @@ func (ec *executionContext) fieldContext_Mutation_saveDrawing(ctx context.Contex
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_saveDrawing_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_markDrawingPushed(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_markDrawingPushed(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().MarkDrawingPushed(ctx, fc.Args["id"].(string), fc.Args["assetID"].(string))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_markDrawingPushed(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_markDrawingPushed_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -7586,6 +7699,61 @@ func (ec *executionContext) fieldContext_Query_photoShowingHistory(ctx context.C
 		return fc, err
 	}
 	return fc, nil
+}
+
+func (ec *executionContext) _Query_unpushedDrawings(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_unpushedDrawings(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Query().UnpushedDrawings(ctx)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []model.Photo) graphql.Marshaler {
+			return ec.marshalNPhoto2ᚕgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐPhotoᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_unpushedDrawings(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Photo(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_pushedDrawingAssetIDs(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_pushedDrawingAssetIDs(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Query().PushedDrawingAssetIDs(ctx)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []string) graphql.Marshaler {
+			return ec.marshalNString2ᚕstringᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_pushedDrawingAssetIDs(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Query", field, true, true, errors.New("field of type String does not have child fields"))
 }
 
 func (ec *executionContext) _Query_setupCode(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -11710,6 +11878,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "markDrawingPushed":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_markDrawingPushed(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "login":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_login(ctx, field)
@@ -12588,6 +12763,50 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_photoShowingHistory(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "unpushedDrawings":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_unpushedDrawings(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "pushedDrawingAssetIDs":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_pushedDrawingAssetIDs(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}

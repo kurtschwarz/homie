@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.1](https://github.com/kurtschwarz/homie/compare/homie-v0.8.0...homie-v0.8.1) (2026-10-28)
+
+
+### Bug Fixes
+
+* **ci:** attach release assets while releases are still drafts ([#41](https://github.com/kurtschwarz/homie/issues/41)) ([77c5cb2](https://github.com/kurtschwarz/homie/commit/77c5cb248d2969f8c183475a0314bb0b739c8cb1))
+
 ## [0.8.0](https://github.com/kurtschwarz/homie/compare/homie-v0.7.0...homie-v0.8.0) (2026-10-28)
 
 

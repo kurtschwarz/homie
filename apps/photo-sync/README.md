@@ -55,8 +55,8 @@ What survives the import into Photos, checked on a real drawing:
 | Creation date           | Kept; shown as the drawn-at time                  |
 | `ImageDescription`      | Kept; shown as the caption                        |
 | Camera make and model   | Kept; shown as "Homie Display"                    |
-| GPS                     | Not shown in Photos for the drawing checked       |
-| `Artist`                | Not shown in Photos; the Info panel has no field  |
+| GPS                     | Not checked; the drawing tested had no location   |
+| `Artist`                | Not checked; present in the file, but Photos' Info panel has no field for it |
 
 ## API endpoint
 

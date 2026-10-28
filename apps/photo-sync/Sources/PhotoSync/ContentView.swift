@@ -4,25 +4,17 @@ import SwiftUI
 
 struct ContentView: View {
     @ObservedObject private var hostStore: HomieHostStore
-    @StateObject private var auth: AuthModel
-    @StateObject private var library: PhotoLibrary
-    @StateObject private var uploader: PhotoUploader
-    @StateObject private var selection = AlbumSelection()
+    @ObservedObject private var session: SyncSession
     @State private var isPickingAlbums = false
 
-    init(hostStore: HomieHostStore) {
+    private var auth: AuthModel { session.auth }
+    private var library: PhotoLibrary { session.library }
+    private var uploader: PhotoUploader { session.uploader }
+    private var selection: AlbumSelection { session.selection }
+
+    init(hostStore: HomieHostStore, session: SyncSession) {
         self.hostStore = hostStore
-        let endpoint = hostStore.selected.graphQLURL
-        let api = HomieAPI(endpoint: endpoint, sessionToken: { HomieSession.token(for: endpoint) })
-        let auth = AuthModel(api: api)
-        let library = PhotoLibrary()
-        _auth = StateObject(wrappedValue: auth)
-        _library = StateObject(wrappedValue: library)
-        _uploader = StateObject(wrappedValue: PhotoUploader(
-            library: library,
-            api: api,
-            onAuthenticationRequired: { auth.sessionExpired() }
-        ))
+        self.session = session
     }
 
     var body: some View {
@@ -40,7 +32,7 @@ struct ContentView: View {
         .hidingWindowTitle()
         .toolbar { WindowTitleToolbar() }
         .task {
-            await auth.restoreSession()
+            await session.start()
         }
     }
 
@@ -99,8 +91,7 @@ struct ContentView: View {
     }
 
     private func startSync() {
-        let ids = library.albums.map(\.id).filter { selection.contains($0) }
-        uploader.sync(albumIDs: ids, artworkAlbumID: selection.artworkAlbumID) { selection.markSynced() }
+        session.startSync()
     }
 }
 

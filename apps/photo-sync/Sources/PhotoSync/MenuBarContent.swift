@@ -1,0 +1,46 @@
+import AppKit
+import SwiftUI
+
+struct MenuBarIcon: View {
+    @ObservedObject var session: SyncSession
+
+    private var name: String {
+        if session.uploader.isUploading { return "arrow.triangle.2.circlepath" }
+        if session.needsSignIn || session.needsSetup || session.failedCount > 0 { return "exclamationmark.triangle" }
+        return "photo.on.rectangle"
+    }
+
+    var body: some View {
+        Image(systemName: name)
+    }
+}
+
+struct MenuBarContent: View {
+    @ObservedObject var session: SyncSession
+    @ObservedObject var launchAtLogin: LaunchAtLogin
+    let onAbout: () -> Void
+    let onReset: () -> Void
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Text(session.statusLine)
+        Divider()
+        Button("Open Homie Photos…") {
+            openWindow(id: "main")
+            NSApp.activate(ignoringOtherApps: true)
+        }
+        Button("Sync Now") { session.startSync() }
+            .disabled(!session.isSignedIn || !session.hasPhotosAccess || !session.selection.hasSelection || session.uploader.isUploading)
+        Divider()
+        Toggle("Start at Login", isOn: Binding(get: { launchAtLogin.isEnabled }, set: { launchAtLogin.set($0) }))
+        if let error = launchAtLogin.errorMessage {
+            Text(error)
+        }
+        Divider()
+        Button("About Homie Photos", action: onAbout)
+        Button("Reset Homie Photos…", action: onReset)
+        Divider()
+        Button("Quit Homie Photos") { NSApp.terminate(nil) }
+            .keyboardShortcut("q")
+    }
+}

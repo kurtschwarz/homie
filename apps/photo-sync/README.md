@@ -44,6 +44,12 @@ The app only adds to the Photos library: it never edits or deletes existing phot
 
 Choose **Homie Photos → Reset Homie Photos…** to return the app to onboarding. The reset removes saved hosts, sessions, upload history, and cached places, but macOS keeps the Photos permission. It also removes the local API override set by `just dev photo-sync`; run that recipe again to restore the development endpoint.
 
+## Background sync
+
+Homie Photos runs from the menu bar with no Dock icon. While it runs it syncs every 5 minutes without a window, so drawings reach the artwork album on their own. Sync is skipped until you are signed in, Photos access is granted, and albums are chosen; the menu then reads "Sign in needed" or "Open Homie Photos to finish setup". Two syncs never overlap: the timer and **Sync Now** both skip while one is running. Turning off "keep syncing" stops the timer.
+
+The menu bar shows the last sync time or current progress, and **Open Homie Photos…** opens the window for album selection and sign-in. **Start at Login** registers the app as a login item. Login items need a signed build in Applications; macOS may refuse for an unsigned local build.
+
 ## Drawings
 
 Each sync first adds drawings saved on the display to the artwork album, then uploads photos. For every drawing Photo Sync downloads the JPEG, creates a Photos asset from those bytes with the drawn-at time as its creation date, adds it to the artwork album, and only then tells Homie it was pushed. Pushed assets are skipped when photos are uploaded, so an artwork album that is also synced does not send drawings back. Nothing is pushed until an artwork album is chosen.

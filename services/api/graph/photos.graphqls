@@ -21,6 +21,14 @@ input FocalRegionInput {
     source: String!
 }
 
+"""
+The person credited with a drawing.
+"""
+type Artist {
+    id: ID!
+    name: String!
+}
+
 type Photo {
     id: ID!
     url: String!
@@ -30,6 +38,7 @@ type Photo {
     coordinate: Coordinate
     place: String
     focus: FocalRegion
+    artist: Artist
 }
 
 enum PhotoShowingSource {
@@ -73,6 +82,7 @@ input DrawingInput {
     width: Int!
     height: Int!
     drawnAt: Int!
+    artistId: ID
 }
 
 scalar Upload

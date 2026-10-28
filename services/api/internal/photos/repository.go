@@ -57,6 +57,13 @@ type Photo struct {
 	Place      string
 	Focus      *FocalRegion
 	Kind       Kind
+	Artist     *Artist
+}
+
+// Artist is the person credited with a drawing.
+type Artist struct {
+	ID   uuid.UUID
+	Name string
 }
 
 // Showing records one interval during which a photo was displayed.
@@ -124,6 +131,8 @@ type photoRow struct {
 	Place      sql.NullString  `db:"place"`
 	Focus      sql.NullString  `db:"focus"`
 	Kind       string          `db:"kind"`
+	ArtistID   []byte          `db:"artist_id"`
+	ArtistName sql.NullString  `db:"artist_name"`
 	ImportedAt int64           `db:"imported_at"`
 }
 
@@ -134,23 +143,25 @@ type manifestRow struct {
 }
 
 type showingRow struct {
-	ID        []byte          `db:"id"`
-	PhotoID   []byte          `db:"photo_id"`
-	StartedAt int64           `db:"started_at"`
-	EndsAt    int64           `db:"ends_at"`
-	EndedAt   sql.NullInt64   `db:"ended_at"`
-	Source    string          `db:"source"`
-	AssetID   string          `db:"asset_id"`
-	Version   string          `db:"version"`
-	File      string          `db:"file"`
-	Width     int             `db:"width"`
-	Height    int             `db:"height"`
-	TakenAt   int64           `db:"taken_at"`
-	Latitude  sql.NullFloat64 `db:"latitude"`
-	Longitude sql.NullFloat64 `db:"longitude"`
-	Place     sql.NullString  `db:"place"`
-	Focus     sql.NullString  `db:"focus"`
-	Kind      string          `db:"kind"`
+	ID         []byte          `db:"id"`
+	PhotoID    []byte          `db:"photo_id"`
+	StartedAt  int64           `db:"started_at"`
+	EndsAt     int64           `db:"ends_at"`
+	EndedAt    sql.NullInt64   `db:"ended_at"`
+	Source     string          `db:"source"`
+	AssetID    string          `db:"asset_id"`
+	Version    string          `db:"version"`
+	File       string          `db:"file"`
+	Width      int             `db:"width"`
+	Height     int             `db:"height"`
+	TakenAt    int64           `db:"taken_at"`
+	Latitude   sql.NullFloat64 `db:"latitude"`
+	Longitude  sql.NullFloat64 `db:"longitude"`
+	Place      sql.NullString  `db:"place"`
+	Focus      sql.NullString  `db:"focus"`
+	Kind       string          `db:"kind"`
+	ArtistID   []byte          `db:"artist_id"`
+	ArtistName sql.NullString  `db:"artist_name"`
 }
 
 var _ Repository = (*SQLiteRepository)(nil)
@@ -159,7 +170,7 @@ var _ Repository = (*SQLiteRepository)(nil)
 func (r *SQLiteRepository) List(ctx context.Context, limit int) ([]Photo, error) {
 	var rows []photoRow
 	if err := r.db.SelectContext(ctx, &rows, `
-		SELECT id, asset_id, version, file, width, height, taken_at, latitude, longitude, place, focus, kind, imported_at
+		SELECT id, asset_id, version, file, width, height, taken_at, latitude, longitude, place, focus, kind, artist_id, (SELECT name FROM people WHERE id = photos.artist_id) AS artist_name, imported_at
 		FROM photos
 		ORDER BY taken_at DESC, id DESC
 		LIMIT ?`, limit); err != nil {
@@ -235,9 +246,12 @@ func (r *SQLiteRepository) Upsert(ctx context.Context, photo Photo) error {
 		Kind:       string(photo.Kind.orPhoto()),
 		ImportedAt: time.Now().Unix(),
 	}
+	if photo.Artist != nil {
+		row.ArtistID = photo.Artist.ID[:]
+	}
 	_, err := r.db.NamedExecContext(ctx, `
-		INSERT INTO photos (id, asset_id, version, file, width, height, taken_at, latitude, longitude, place, focus, kind, imported_at)
-		VALUES (:id, :asset_id, :version, :file, :width, :height, :taken_at, :latitude, :longitude, :place, :focus, :kind, :imported_at)
+		INSERT INTO photos (id, asset_id, version, file, width, height, taken_at, latitude, longitude, place, focus, kind, artist_id, imported_at)
+		VALUES (:id, :asset_id, :version, :file, :width, :height, :taken_at, :latitude, :longitude, :place, :focus, :kind, :artist_id, :imported_at)
 		ON CONFLICT(asset_id) DO UPDATE SET
 			version = excluded.version,
 			file = excluded.file,
@@ -312,7 +326,8 @@ func (r *SQLiteRepository) Rotation(ctx context.Context) (*Showing, *Showing, er
 	rows, err := r.queryShowings(ctx, `
 		SELECT s.id, s.photo_id, s.started_at, s.ends_at, s.ended_at, s.source,
 		       p.asset_id, p.version, p.file, p.width, p.height, p.taken_at,
-		       p.latitude, p.longitude, p.place, p.focus, p.kind
+		       p.latitude, p.longitude, p.place, p.focus, p.kind,
+		       p.artist_id, (SELECT name FROM people WHERE id = p.artist_id) AS artist_name
 		FROM photo_showings s JOIN photos p ON p.id = s.photo_id
 		WHERE s.ended_at IS NULL ORDER BY s.started_at ASC, s.id ASC LIMIT 2`)
 	if err != nil {
@@ -337,7 +352,8 @@ func (r *SQLiteRepository) Showings(ctx context.Context, limit int) ([]Showing, 
 	return r.queryShowings(ctx, `
 		SELECT s.id, s.photo_id, s.started_at, s.ends_at, s.ended_at, s.source,
 		       p.asset_id, p.version, p.file, p.width, p.height, p.taken_at,
-		       p.latitude, p.longitude, p.place, p.focus, p.kind
+		       p.latitude, p.longitude, p.place, p.focus, p.kind,
+		       p.artist_id, (SELECT name FROM people WHERE id = p.artist_id) AS artist_name
 		FROM photo_showings s JOIN photos p ON p.id = s.photo_id
 		ORDER BY s.started_at DESC, s.id DESC LIMIT ?`, limit)
 }
@@ -351,7 +367,8 @@ func (r *SQLiteRepository) queryShowings(ctx context.Context, query string, args
 	for _, row := range rows {
 		photo, err := (photoRow{ID: row.PhotoID, AssetID: row.AssetID, Version: row.Version, File: row.File,
 			Width: row.Width, Height: row.Height, TakenAt: row.TakenAt, Latitude: row.Latitude,
-			Longitude: row.Longitude, Place: row.Place, Focus: row.Focus, Kind: row.Kind}).photo()
+			Longitude: row.Longitude, Place: row.Place, Focus: row.Focus, Kind: row.Kind,
+			ArtistID: row.ArtistID, ArtistName: row.ArtistName}).photo()
 		if err != nil {
 			return nil, err
 		}
@@ -414,11 +431,11 @@ func (r *SQLiteRepository) AdvanceShowing(ctx context.Context, expectedCurrent *
 func (r *SQLiteRepository) NextPhoto(ctx context.Context, last uuid.UUID) (Photo, bool, error) {
 	var row photoRow
 	err := r.db.GetContext(ctx, &row, `
-		SELECT id, asset_id, version, file, width, height, taken_at, latitude, longitude, place, focus, kind, imported_at
+		SELECT id, asset_id, version, file, width, height, taken_at, latitude, longitude, place, focus, kind, artist_id, (SELECT name FROM people WHERE id = photos.artist_id) AS artist_name, imported_at
 		FROM photos WHERE (taken_at, id) < (SELECT taken_at, id FROM photos WHERE id = ?)
 		ORDER BY taken_at DESC, id DESC LIMIT 1`, last[:])
 	if err == sql.ErrNoRows {
-		err = r.db.GetContext(ctx, &row, `SELECT id, asset_id, version, file, width, height, taken_at, latitude, longitude, place, focus, kind, imported_at FROM photos ORDER BY taken_at DESC, id DESC LIMIT 1`)
+		err = r.db.GetContext(ctx, &row, `SELECT id, asset_id, version, file, width, height, taken_at, latitude, longitude, place, focus, kind, artist_id, (SELECT name FROM people WHERE id = photos.artist_id) AS artist_name, imported_at FROM photos ORDER BY taken_at DESC, id DESC LIMIT 1`)
 	}
 	if err == sql.ErrNoRows {
 		return Photo{}, false, nil
@@ -440,7 +457,7 @@ func (r *SQLiteRepository) PruneShowings(ctx context.Context, before time.Time) 
 func (r *SQLiteRepository) UnpushedDrawings(ctx context.Context) ([]Photo, error) {
 	var rows []photoRow
 	if err := r.db.SelectContext(ctx, &rows, `
-		SELECT id, asset_id, version, file, width, height, taken_at, latitude, longitude, place, focus, kind, imported_at
+		SELECT id, asset_id, version, file, width, height, taken_at, latitude, longitude, place, focus, kind, artist_id, (SELECT name FROM people WHERE id = photos.artist_id) AS artist_name, imported_at
 		FROM photos
 		WHERE kind = 'DRAWING' AND pushed_asset_id IS NULL
 		ORDER BY taken_at ASC, id ASC`); err != nil {
@@ -515,9 +532,17 @@ func (row photoRow) photo() (Photo, error) {
 			return Photo{}, fmt.Errorf("decode focal region for photo %q: %w", row.AssetID, err)
 		}
 	}
+	var artist *Artist
+	if row.ArtistID != nil {
+		artistID, err := uuid.FromBytes(row.ArtistID)
+		if err != nil {
+			return Photo{}, fmt.Errorf("decode artist id for photo %q: %w", row.AssetID, err)
+		}
+		artist = &Artist{ID: artistID, Name: row.ArtistName.String}
+	}
 	return Photo{
 		ID: id, AssetID: row.AssetID, Version: row.Version, File: row.File,
 		Width: row.Width, Height: row.Height, TakenAt: time.Unix(row.TakenAt, 0),
-		Coordinate: coordinate, Place: row.Place.String, Focus: focus, Kind: Kind(row.Kind),
+		Coordinate: coordinate, Place: row.Place.String, Focus: focus, Kind: Kind(row.Kind), Artist: artist,
 	}, nil
 }

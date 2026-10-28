@@ -1,10 +1,10 @@
 import homieIdleUrl from '@homie/ui/assets/homie-idle.svg?url'
 import { Button } from '@homie/ui/components/button'
+import { PersonBadge } from '@homie/ui/components/person-badge'
 import { useIdle } from '@homie/ui/hooks/use-idle'
 import { cn } from '@homie/ui/lib/utils'
 import {
   Check,
-  Download,
   Eraser,
   Paintbrush,
   Rainbow,
@@ -17,6 +17,7 @@ import {
 import * as React from 'react'
 import { canvasToJpeg, uploadDrawing } from './save-drawing'
 import { COLOURS, SIZE_PX, type SizeName, type Tool } from './tools'
+import { useArtists } from './use-artists'
 import { usePaintCanvas } from './use-paint-canvas'
 
 const IDLE_MS = 3 * 60_000
@@ -63,21 +64,45 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
     smooth,
   })
 
-  const [saveState, setSaveState] = React.useState<'idle' | 'saving' | 'saved' | 'failed'>('idle')
+  const { data: artists = [] } = useArtists()
+  const [artistId, setArtistId] = React.useState<string | null>(null)
+  const [review, setReview] = React.useState<{ jpeg: Blob; url: string } | null>(null)
+  const [saveState, setSaveState] = React.useState<'idle' | 'saving' | 'failed'>('idle')
 
   React.useEffect(() => {
-    if (dirty) setSaveState((state) => (state === 'saved' ? 'idle' : state))
-  }, [dirty])
+    if (!review) return
+    return () => URL.revokeObjectURL(review.url)
+  }, [review])
 
-  const save = async () => {
+  const finish = async () => {
     const canvas = canvasRef.current
-    if (!canvas || saveState === 'saving') return
-    setSaveState('saving')
+    if (!canvas || !dirty) return onClose()
+    setSaveState('idle')
     try {
       const jpeg = await canvasToJpeg(canvas)
-      await uploadDrawing(jpeg, { width: canvas.width, height: canvas.height }, new Date())
-      clear()
-      setSaveState('saved')
+      setReview({ jpeg, url: URL.createObjectURL(jpeg) })
+    } catch {
+      setSaveState('failed')
+    }
+  }
+
+  const keepPainting = () => {
+    setReview(null)
+    setSaveState('idle')
+  }
+
+  const addToSlideshow = async () => {
+    const canvas = canvasRef.current
+    if (!canvas || !review || saveState === 'saving') return
+    setSaveState('saving')
+    try {
+      await uploadDrawing(
+        review.jpeg,
+        { width: canvas.width, height: canvas.height },
+        new Date(),
+        artistId ?? undefined,
+      )
+      onClose()
     } catch {
       setSaveState('failed')
     }
@@ -256,19 +281,6 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
         </section>
 
         <div className="mt-auto flex flex-col gap-hm-12">
-          {saveState !== 'idle' && (
-            <p
-              role="status"
-              className={cn(
-                'm-0 text-center text-hm-label-lg font-medium',
-                saveState === 'failed' ? 'text-hm-accent' : 'text-hm-ink-2',
-              )}
-            >
-              {saveState === 'saving' && 'Saving…'}
-              {saveState === 'saved' && 'Saved! It will show up with the photos.'}
-              {saveState === 'failed' && "Couldn't save. Your drawing is still here, try again."}
-            </p>
-          )}
           <div className="grid grid-cols-2 gap-hm-12">
             <Button variant="outline" disabled={!canUndo} onClick={undo}>
               <Undo2 aria-hidden />
@@ -279,21 +291,102 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
               Clear
             </Button>
           </div>
-          <Button
-            variant="outline"
-            block
-            disabled={!dirty || saveState === 'saving'}
-            onClick={save}
-          >
-            <Download aria-hidden />
-            Save
-          </Button>
-          <Button variant="solid" block onClick={onClose}>
+          <Button variant="solid" block onClick={finish}>
             <Check aria-hidden />
             Done
           </Button>
         </div>
       </aside>
+
+      {review && (
+        <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/45 p-hm-screen">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="paint-review-title"
+            className="flex w-full max-w-[calc(70rem*var(--hm-density))] items-center gap-hm-56 rounded-hm-panel bg-hm-surface p-hm-56 shadow-hm-float"
+          >
+            <div className="relative w-2/5 flex-none">
+              <img
+                src={review.url}
+                alt="Your painting"
+                className="block w-full -rotate-1 rounded-hm-control bg-white shadow-hm-float"
+              />
+              <img
+                src={homieIdleUrl}
+                alt=""
+                className="absolute -bottom-hm-24 -left-hm-24 h-hm-128 w-auto"
+              />
+            </div>
+            <div className="flex min-w-0 flex-1 flex-col gap-hm-20">
+              <h2
+                id="paint-review-title"
+                className="m-0 text-hm-title font-semibold tracking-[-0.035em]"
+              >
+                Nice painting!
+              </h2>
+              <p className="m-0 text-hm-lead text-hm-ink-2">
+                Add it to the photo slideshow?{artists.length > 0 && ' Who painted it?'}
+              </p>
+              {artists.length > 0 && (
+                <div className="flex flex-wrap gap-hm-12">
+                  {artists.map((person) => (
+                    <button
+                      key={person.id}
+                      type="button"
+                      aria-pressed={artistId === person.id}
+                      onClick={() =>
+                        setArtistId((current) => (current === person.id ? null : person.id))
+                      }
+                      className={cn(
+                        'flex h-hm-64 cursor-pointer items-center gap-hm-12 rounded-full border-2 bg-hm-surface pr-hm-24 pl-hm-8 text-hm-label-lg font-medium [-webkit-tap-highlight-color:transparent] active:scale-(--hm-press-scale)',
+                        artistId === person.id
+                          ? 'border-hm-accent bg-hm-accent-soft text-hm-accent'
+                          : 'border-hm-line text-hm-ink',
+                      )}
+                    >
+                      <PersonBadge person={person} size="md" title={undefined} aria-hidden />
+                      {person.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {saveState === 'failed' && (
+                <p role="status" className="m-0 text-hm-label-lg font-medium text-hm-accent">
+                  Couldn't save. Your drawing is still here, try again.
+                </p>
+              )}
+              <div className="flex flex-wrap gap-hm-16">
+                <Button
+                  variant="outline"
+                  className="px-hm-20"
+                  onClick={keepPainting}
+                  disabled={saveState === 'saving'}
+                >
+                  Keep painting
+                </Button>
+                <Button
+                  variant="solid"
+                  className="px-hm-20"
+                  onClick={addToSlideshow}
+                  disabled={saveState === 'saving'}
+                >
+                  <Check aria-hidden />
+                  {saveState === 'saving' ? 'Saving…' : 'Add to slideshow'}
+                </Button>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={saveState === 'saving'}
+                className="cursor-pointer self-start border-0 bg-transparent p-0 text-hm-label-lg font-medium text-hm-ink-2"
+              >
+                Don't save it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }

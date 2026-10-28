@@ -13,6 +13,7 @@ import (
 	"time"
 	_ "time/tzdata" // a minimal Raspberry Pi image may have no system zoneinfo
 
+	"github.com/google/uuid"
 	assets "github.com/kurtschwarz/homie/services/api"
 	"github.com/kurtschwarz/homie/services/api/internal/accounts"
 	"github.com/kurtschwarz/homie/services/api/internal/auth"
@@ -92,6 +93,20 @@ func main() {
 		weatherService, err = weather.New(weather.Config{Repository: weather.NewSQLiteRepository(db), Box: secretBox, Logger: logger})
 		if err != nil {
 			logger.Error("configure weather; weather will be unavailable", "error", err)
+		}
+		if photosService != nil {
+			photosService.Artist = func(ctx context.Context, id uuid.UUID) (string, bool, error) {
+				people, err := eventsService.ListPeople(ctx)
+				if err != nil {
+					return "", false, err
+				}
+				for _, person := range people {
+					if person.ID == id && !person.IsFamily {
+						return person.Name, true, nil
+					}
+				}
+				return "", false, nil
+			}
 		}
 		if weatherService != nil && photosService != nil {
 			photosService.Home = func(ctx context.Context) (photos.Coordinate, string, bool, error) {

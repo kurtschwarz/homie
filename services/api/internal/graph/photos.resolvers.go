@@ -69,9 +69,15 @@ func (r *mutationResolver) SaveDrawing(ctx context.Context, input model.DrawingI
 	if file.ContentType != "image/jpeg" {
 		return nil, errUnsupportedPhotoContentType
 	}
-	photo, err := r.Resolver.Photos.SaveDrawing(ctx, photos.Drawing{
-		Width: input.Width, Height: input.Height, DrawnAt: time.Unix(int64(input.DrawnAt), 0),
-	}, file.File)
+	drawing := photos.Drawing{Width: input.Width, Height: input.Height, DrawnAt: time.Unix(int64(input.DrawnAt), 0)}
+	if input.ArtistID != nil {
+		artistID, err := uuid.Parse(*input.ArtistID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid artist id %q", *input.ArtistID)
+		}
+		drawing.ArtistID = &artistID
+	}
+	photo, err := r.Resolver.Photos.SaveDrawing(ctx, drawing, file.File)
 	if err != nil {
 		return nil, fmt.Errorf("save drawing: %w", err)
 	}

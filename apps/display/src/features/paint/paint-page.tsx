@@ -1,3 +1,4 @@
+import goldFrameUrl from '@homie/ui/assets/gold-frame.svg?url'
 import homieIdleUrl from '@homie/ui/assets/homie-idle.svg?url'
 import { Button } from '@homie/ui/components/button'
 import { PersonBadge } from '@homie/ui/components/person-badge'
@@ -15,6 +16,7 @@ import {
   X,
 } from 'lucide-react'
 import * as React from 'react'
+import { Confetti } from './confetti'
 import { canvasToJpeg, uploadDrawing } from './save-drawing'
 import { COLOURS, SIZE_PX, type SizeName, type Tool } from './tools'
 import { useArtists } from './use-artists'
@@ -66,6 +68,7 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
 
   const { data: artists = [] } = useArtists()
   const [artistId, setArtistId] = React.useState<string | null>(null)
+  const chosen = artists.find((person) => person.id === artistId)
   const [review, setReview] = React.useState<{ jpeg: Blob; url: string } | null>(null)
   const [saveState, setSaveState] = React.useState<'idle' | 'saving' | 'failed'>('idle')
 
@@ -299,91 +302,105 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
       </aside>
 
       {review && (
-        <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/45 p-hm-screen">
+        <div className="fixed inset-0 z-20 grid place-items-center overflow-hidden bg-[radial-gradient(ellipse_at_50%_40%,rgba(34,38,48,.95),rgba(8,9,12,.99))]">
+          <Confetti />
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby="paint-review-title"
-            className="flex w-full max-w-[calc(70rem*var(--hm-density))] items-center gap-hm-56 rounded-hm-panel bg-hm-surface p-hm-56 shadow-hm-float"
+            className="relative z-10 flex flex-col items-center gap-hm-26 text-white"
           >
-            <div className="relative w-2/5 flex-none">
+            <div className="flex flex-col items-center gap-hm-6 text-center">
+              <h2
+                id="paint-review-title"
+                className="m-0 text-[calc(5.25rem*var(--hm-density))] leading-none font-semibold tracking-[-0.03em]"
+              >
+                Ta-da!
+              </h2>
+              <p className="m-0 text-hm-lead text-white/75">
+                Add it to the photo slideshow?{artists.length > 0 && ' Who painted it?'}
+              </p>
+            </div>
+
+            <div className="relative w-[calc(40rem*var(--hm-density))] rotate-2 aspect-[880/600]">
               <img
                 src={review.url}
                 alt="Your painting"
-                className="block w-full -rotate-1 rounded-hm-control bg-white shadow-hm-float"
+                className="absolute top-[16%] left-[15.9%] h-[68%] w-[68.2%] bg-white object-cover shadow-[inset_0_0_0_1px_rgba(0,0,0,.2)]"
               />
               <img
-                src={homieIdleUrl}
+                src={goldFrameUrl}
                 alt=""
-                className="absolute -bottom-hm-24 -left-hm-24 h-hm-128 w-auto"
+                className="pointer-events-none absolute -top-[10%] -left-[6.82%] h-[120%] w-[113.64%] max-w-none"
               />
+              <span className="absolute top-[86.6%] left-1/2 z-1 -translate-x-1/2 -translate-y-1/2 rounded-[0.25rem] bg-[linear-gradient(180deg,#FBE9A8,#D9AE4E_55%,#B8862C)] px-hm-18 py-[0.3125rem] text-[calc(1.0625rem*var(--hm-density))] font-semibold tracking-[.04em] whitespace-nowrap text-[#4A3208] shadow-[inset_0_1px_0_rgba(255,255,255,.6),0_0_0_1px_rgba(90,58,10,.6),0_3px_6px_rgba(0,0,0,.35)]">
+                {chosen ? `Painted by ${chosen.name}` : 'Painted on Homie'}
+              </span>
             </div>
-            <div className="flex min-w-0 flex-1 flex-col gap-hm-20">
-              <h2
-                id="paint-review-title"
-                className="m-0 text-hm-title font-semibold tracking-[-0.035em]"
-              >
-                Nice painting!
-              </h2>
-              <p className="m-0 text-hm-lead text-hm-ink-2">
-                Add it to the photo slideshow?{artists.length > 0 && ' Who painted it?'}
-              </p>
-              {artists.length > 0 && (
-                <div className="flex flex-wrap gap-hm-12">
-                  {artists.map((person) => (
-                    <button
-                      key={person.id}
-                      type="button"
-                      aria-pressed={artistId === person.id}
-                      onClick={() =>
-                        setArtistId((current) => (current === person.id ? null : person.id))
-                      }
-                      className={cn(
-                        'flex h-hm-64 cursor-pointer items-center gap-hm-12 rounded-full border-2 bg-hm-surface pr-hm-24 pl-hm-8 text-hm-label-lg font-medium [-webkit-tap-highlight-color:transparent] active:scale-(--hm-press-scale)',
-                        artistId === person.id
-                          ? 'border-hm-accent bg-hm-accent-soft text-hm-accent'
-                          : 'border-hm-line text-hm-ink',
-                      )}
-                    >
-                      <PersonBadge person={person} size="md" title={undefined} aria-hidden />
-                      {person.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-              {saveState === 'failed' && (
-                <p role="status" className="m-0 text-hm-label-lg font-medium text-hm-accent">
-                  Couldn't save. Your drawing is still here, try again.
-                </p>
-              )}
-              <div className="flex flex-wrap gap-hm-16">
-                <Button
-                  variant="outline"
-                  className="px-hm-20"
-                  onClick={keepPainting}
-                  disabled={saveState === 'saving'}
-                >
-                  Keep painting
-                </Button>
-                <Button
-                  variant="solid"
-                  className="px-hm-20"
-                  onClick={addToSlideshow}
-                  disabled={saveState === 'saving'}
-                >
-                  <Check aria-hidden />
-                  {saveState === 'saving' ? 'Saving…' : 'Add to slideshow'}
-                </Button>
+
+            {artists.length > 0 && (
+              <div className="flex flex-wrap justify-center gap-hm-10">
+                {artists.map((person) => (
+                  <button
+                    key={person.id}
+                    type="button"
+                    aria-pressed={artistId === person.id}
+                    onClick={() =>
+                      setArtistId((current) => (current === person.id ? null : person.id))
+                    }
+                    className={cn(
+                      'flex h-[calc(5.5rem*var(--hm-density))] cursor-pointer items-center gap-hm-12 rounded-full border-0 bg-hm-surface pr-hm-24 pl-hm-12 text-hm-label-lg font-semibold text-hm-ink [-webkit-tap-highlight-color:transparent] active:scale-(--hm-press-scale)',
+                      artistId === person.id &&
+                        'shadow-[0_0_0_calc(0.25rem*var(--hm-density))_var(--hm-surface),0_0_0_calc(0.4375rem*var(--hm-density))_var(--hm-accent)]',
+                    )}
+                  >
+                    <PersonBadge
+                      person={person}
+                      size="md"
+                      title={undefined}
+                      aria-hidden
+                      className="size-hm-64 text-[length:calc(2.25rem*var(--hm-density))]"
+                    />
+                    {person.name}
+                  </button>
+                ))}
               </div>
-              <button
-                type="button"
-                onClick={onClose}
+            )}
+
+            {saveState === 'failed' && (
+              <p role="status" className="m-0 text-hm-label-lg font-medium text-white">
+                Couldn't save. Your drawing is still here, try again.
+              </p>
+            )}
+
+            <div className="flex w-[calc(38.75rem*var(--hm-density))] gap-hm-16">
+              <Button
+                variant="outline"
+                className="h-[calc(6rem*var(--hm-density))] flex-none px-hm-28"
+                onClick={keepPainting}
                 disabled={saveState === 'saving'}
-                className="cursor-pointer self-start border-0 bg-transparent p-0 text-hm-label-lg font-medium text-hm-ink-2"
               >
-                Don't save it
-              </button>
+                Keep painting
+              </Button>
+              <Button
+                variant="solid"
+                className="h-[calc(6rem*var(--hm-density))] flex-1 px-hm-24"
+                onClick={addToSlideshow}
+                disabled={saveState === 'saving'}
+              >
+                <Check aria-hidden />
+                {saveState === 'saving' ? 'Saving…' : 'Add to slideshow'}
+              </Button>
             </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={saveState === 'saving'}
+              className="-mt-hm-10 h-hm-56 cursor-pointer border-0 bg-transparent p-0 text-hm-label-lg font-medium text-white/70"
+            >
+              Don't save it
+            </button>
           </div>
         </div>
       )}

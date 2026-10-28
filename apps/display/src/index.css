@@ -124,3 +124,27 @@ html:not([data-dev]) * {
   background: var(--hm-accent);
   color: var(--hm-on-accent);
 }
+
+/* Confetti for the paint save dialog. */
+.paint-confetti span {
+  position: absolute;
+  top: -2.5rem;
+  border-radius: 0.1875rem;
+  opacity: 0.95;
+  animation: paint-fall linear infinite;
+}
+
+@keyframes paint-fall {
+  from {
+    transform: translateY(0) rotate(0);
+  }
+  to {
+    transform: translateY(73rem) rotate(var(--spin));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .paint-confetti {
+    display: none;
+  }
+}

@@ -28,7 +28,7 @@ defaults delete ar.schw.homie.photo-sync HomieAPIDiscovered
 
 ## Download a signed build
 
-The **Photo Sync** GitHub Actions workflow tests the app. Builds from `main` and manually dispatched builds publish `HomiePhotos.dmg` as a new `photo-sync-vX.Y.Z` release. `apps/photo-sync/version.sh` derives the version from the Conventional Commits that touch `apps/photo-sync` since the previous release: `feat` and breaking changes bump the minor version (the major version stays 0), and anything else bumps the patch version. The app and the disk image are both signed with the Developer ID identity for team `P9DZH3LW75`, and the image is notarized by Apple and stapled so it can be opened normally after download. Pull requests test and build the app with an ad-hoc signature, but do not publish a distribution build.
+The **Homie Photos Release** GitHub Actions workflow tests the app. release-please opens a release PR for `apps/photo-sync` from the Conventional Commits that touch it: `feat` and breaking changes bump the minor version (the major version stays 0), and anything else bumps the patch version. Merging that PR creates the `homie-photos-vX.Y.Z` release, and the tag triggers a build that attaches `HomiePhotos.dmg` to it. The app and the disk image are both signed with the Developer ID identity for team `P9DZH3LW75`, and the image is notarized by Apple and stapled so it can be opened normally after download. Pull requests test and build the app with an ad-hoc signature, but do not publish a distribution build.
 
 The workflow requires these repository secrets:
 

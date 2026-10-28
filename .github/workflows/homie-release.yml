@@ -2,19 +2,8 @@ name: Homie Release
 
 on:
   push:
-    branches:
-      - main
-    paths:
-      - services/api/**
-      - apps/display/**
-      - apps/manager/**
-      - packages/**
-      - deploy/**
-      - Dockerfile
-      - justfile
-      - pnpm-lock.yaml
-      - scripts/version.sh
-      - .github/workflows/homie-release.yml
+    tags:
+      - homie-v*
   workflow_dispatch:
 
 concurrency:
@@ -25,8 +14,6 @@ permissions:
   contents: read
 
 env:
-  # The paths that end up in homie.deb. Keep in step with the push filter above.
-  HOMIE_PATHS: services/api apps/display apps/manager packages deploy Dockerfile justfile pnpm-lock.yaml
   JUST_VERSION: 1.59.0
   JUST_SHA256: 23871b1702bfd550fb5f901778fd4290ecf2ee034a45a889fbe96d89b188086d
 
@@ -45,12 +32,11 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Compute version
+      - name: Read version from tag
         id: version
         run: |
-          # shellcheck disable=SC2086
-          version="$(./scripts/version.sh homie-v 0.0.0 version $HOMIE_PATHS)"
-          printf 'Next version: %s\n' "$version"
+          version="${GITHUB_REF_NAME#homie-v}"
+          printf 'Version: %s\n' "$version"
           printf 'version=%s\n' "$version" >> "$GITHUB_OUTPUT"
 
       - name: Install just
@@ -104,14 +90,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.build.outputs.version }}
         run: |
-          # shellcheck disable=SC2086
-          ./scripts/version.sh homie-v 0.0.0 notes $HOMIE_PATHS > notes.md
-
           mv dist/homie.deb "dist/homie_${VERSION}_arm64.deb"
 
-          gh release create "homie-v$VERSION" "dist/homie_${VERSION}_arm64.deb" \
+          gh release upload "$GITHUB_REF_NAME" "dist/homie_${VERSION}_arm64.deb" \
             --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" \
-            --title "Homie $VERSION" \
-            --notes-file notes.md \
-            --latest=true
+            --clobber

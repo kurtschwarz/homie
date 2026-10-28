@@ -1,0 +1,23 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "bump-minor-pre-major": true,
+  "separate-pull-requests": true,
+  "packages": {
+    ".": {
+      "component": "homie",
+      "release-type": "go",
+      "exclude-paths": ["apps/photo-sync"]
+    },
+    "apps/photo-sync": {
+      "component": "homie-photos",
+      "release-type": "simple",
+      "extra-files": [
+        {
+          "type": "xml",
+          "path": "Info.plist",
+          "xpath": "//plist/dict/key[.='CFBundleShortVersionString']/following-sibling::string[1]"
+        }
+      ]
+    }
+  }
+}

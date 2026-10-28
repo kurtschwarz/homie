@@ -44,6 +44,11 @@ type ComplexityRoot struct {
 		UserAgent  func(childComplexity int) int
 	}
 
+	Artist struct {
+		ID   func(childComplexity int) int
+		Name func(childComplexity int) int
+	}
+
 	CalDAVConnection struct {
 		Timezone func(childComplexity int) int
 		URL      func(childComplexity int) int
@@ -185,6 +190,7 @@ type ComplexityRoot struct {
 	}
 
 	Photo struct {
+		Artist     func(childComplexity int) int
 		Coordinate func(childComplexity int) int
 		Focus      func(childComplexity int) int
 		Height     func(childComplexity int) int
@@ -412,6 +418,19 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.ActiveSession.UserAgent(childComplexity), true
+
+	case "Artist.id":
+		if e.ComplexityRoot.Artist.ID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Artist.ID(childComplexity), true
+	case "Artist.name":
+		if e.ComplexityRoot.Artist.Name == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Artist.Name(childComplexity), true
 
 	case "CalDAVConnection.timezone":
 		if e.ComplexityRoot.CalDAVConnection.Timezone == nil {
@@ -1175,6 +1194,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.Person.Swatch(childComplexity), true
 
+	case "Photo.artist":
+		if e.ComplexityRoot.Photo.Artist == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Photo.Artist(childComplexity), true
 	case "Photo.coordinate":
 		if e.ComplexityRoot.Photo.Coordinate == nil {
 			break
@@ -2080,7 +2105,7 @@ input EventInput {
 
 extend type Query {
   events(days: Int = 21): [Event!]! @protected(kinds: [USER, DISPLAY])
-  people: [Person!]! @protected
+  people: [Person!]! @protected(kinds: [USER, DISPLAY])
   calendarAssociations(calendarId: ID, personId: ID): [CalendarAssociation!]! @protected
   calendarTags(calendarId: ID!): [String!]! @protected
 }
@@ -2125,6 +2150,14 @@ input FocalRegionInput {
     source: String!
 }
 
+"""
+The person credited with a drawing.
+"""
+type Artist {
+    id: ID!
+    name: String!
+}
+
 type Photo {
     id: ID!
     url: String!
@@ -2134,6 +2167,7 @@ type Photo {
     coordinate: Coordinate
     place: String
     focus: FocalRegion
+    artist: Artist
 }
 
 enum PhotoShowingSource {
@@ -2177,6 +2211,7 @@ input DrawingInput {
     width: Int!
     height: Int!
     drawnAt: Int!
+    artistId: ID
 }
 
 scalar Upload
@@ -2421,6 +2456,16 @@ func (ec *executionContext) childFields_ActiveSession(ctx context.Context, field
 	return nil, fmt.Errorf("no field named %q was found under type ActiveSession", field.Name)
 }
 
+func (ec *executionContext) childFields_Artist(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "id":
+		return ec.fieldContext_Artist_id(ctx, field)
+	case "name":
+		return ec.fieldContext_Artist_name(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type Artist", field.Name)
+}
+
 func (ec *executionContext) childFields_Calendar(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "id":
@@ -2625,6 +2670,8 @@ func (ec *executionContext) childFields_Photo(ctx context.Context, field graphql
 		return ec.fieldContext_Photo_place(ctx, field)
 	case "focus":
 		return ec.fieldContext_Photo_focus(ctx, field)
+	case "artist":
+		return ec.fieldContext_Photo_artist(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type Photo", field.Name)
 }
@@ -3690,6 +3737,52 @@ func (ec *executionContext) _ActiveSession_current(ctx context.Context, field gr
 }
 func (ec *executionContext) fieldContext_ActiveSession_current(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("ActiveSession", field, false, false, errors.New("field of type Boolean does not have child fields"))
+}
+
+func (ec *executionContext) _Artist_id(ctx context.Context, field graphql.CollectedField, obj *model.Artist) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Artist_id(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNID2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Artist_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Artist", field, false, false, errors.New("field of type ID does not have child fields"))
+}
+
+func (ec *executionContext) _Artist_name(ctx context.Context, field graphql.CollectedField, obj *model.Artist) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Artist_name(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Name, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
+			return ec.marshalNString2string(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Artist_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("Artist", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
 func (ec *executionContext) _CalDAVConnection_url(ctx context.Context, field graphql.CollectedField, obj *model.CalDAVConnection) (ret graphql.Marshaler) {
@@ -6869,6 +6962,38 @@ func (ec *executionContext) fieldContext_Photo_focus(_ context.Context, field gr
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return ec.childFields_FocalRegion(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Photo_artist(ctx context.Context, field graphql.CollectedField, obj *model.Photo) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Photo_artist(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Artist, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Artist) graphql.Marshaler {
+			return ec.marshalOArtist2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐArtist(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_Photo_artist(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Photo",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_Artist(ctx, field)
 		},
 	}
 	return fc, nil
@@ -10163,7 +10288,7 @@ func (ec *executionContext) unmarshalInputDrawingInput(ctx context.Context, obj 
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"width", "height", "drawnAt"}
+	fieldsInOrder := [...]string{"width", "height", "drawnAt", "artistId"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -10191,6 +10316,13 @@ func (ec *executionContext) unmarshalInputDrawingInput(ctx context.Context, obj 
 				return it, err
 			}
 			it.DrawnAt = data
+		case "artistId":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("artistId"))
+			data, err := ec.unmarshalOID2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ArtistID = data
 		}
 	}
 	return it, nil
@@ -11142,6 +11274,49 @@ func (ec *executionContext) _ActiveSession(ctx context.Context, sel ast.Selectio
 			}
 		case "current":
 			out.Values[i] = ec._ActiveSession_current(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferLabelToView), math.MaxInt32)))
+
+	ec.ProcessDeferredGroup(graphql.DeferredGroup{
+		Defers:   deferLabelToView,
+		Path:     graphql.GetPath(ctx),
+		FieldSet: deferredFieldSet,
+		Context:  ctx,
+	})
+
+	return out
+}
+
+var artistImplementors = []string{"Artist"}
+
+func (ec *executionContext) _Artist(ctx context.Context, sel ast.SelectionSet, obj *model.Artist) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, artistImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferredFieldSet := graphql.NewFieldSet(nil)
+	deferLabelToView := make(map[string]*graphql.FieldSetView)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Artist")
+		case "id":
+			out.Values[i] = ec._Artist_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "name":
+			out.Values[i] = ec._Artist_name(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -12251,6 +12426,11 @@ func (ec *executionContext) _Photo(ctx context.Context, sel ast.SelectionSet, ob
 			}
 		case "focus":
 			out.Values[i] = ec._Photo_focus(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		case "artist":
+			out.Values[i] = ec._Photo_artist(ctx, field, obj)
 			if out.Values[i] == graphql.RequiredNull {
 				out.Invalids++
 			}
@@ -14704,6 +14884,13 @@ func (ec *executionContext) marshalN__TypeKind2string(ctx context.Context, sel a
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) marshalOArtist2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐArtist(ctx context.Context, sel ast.SelectionSet, v *model.Artist) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Artist(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOAssociationScope2ᚖgithubᚗcomᚋkurtschwarzᚋhomieᚋservicesᚋapiᚋinternalᚋgraphᚋmodelᚐAssociationScope(ctx context.Context, v any) (*model.AssociationScope, error) {

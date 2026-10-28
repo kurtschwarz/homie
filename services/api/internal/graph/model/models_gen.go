@@ -26,6 +26,12 @@ type ActiveSession struct {
 	Current    bool    `json:"current"`
 }
 
+// The person credited with a drawing.
+type Artist struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
 type CalDAVConnection struct {
 	URL      string `json:"url"`
 	Username string `json:"username"`
@@ -153,9 +159,10 @@ type DisplayStatus struct {
 
 // Metadata accompanying a saved drawing.
 type DrawingInput struct {
-	Width   int `json:"width"`
-	Height  int `json:"height"`
-	DrawnAt int `json:"drawnAt"`
+	Width    int     `json:"width"`
+	Height   int     `json:"height"`
+	DrawnAt  int     `json:"drawnAt"`
+	ArtistID *string `json:"artistId,omitempty"`
 }
 
 type Event struct {
@@ -229,6 +236,7 @@ type Photo struct {
 	Coordinate *Coordinate  `json:"coordinate,omitempty"`
 	Place      *string      `json:"place,omitempty"`
 	Focus      *FocalRegion `json:"focus,omitempty"`
+	Artist     *Artist      `json:"artist,omitempty"`
 }
 
 type PhotoShowing struct {

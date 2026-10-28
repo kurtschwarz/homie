@@ -164,3 +164,22 @@ func TestEmbedExifRejectsNonJPEG(t *testing.T) {
 		t.Fatal("expected error")
 	}
 }
+
+func TestEmbedExifArtist(t *testing.T) {
+	drawnAt := time.Date(2026, 10, 28, 15, 4, 5, 0, time.UTC)
+	with, err := embedExif(testJPEG(t), exifMetadata{DrawnAt: drawnAt, Description: "d", Artist: "Ada"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := ascii(parseExif(t, with).ifd0[0x013B]); got != "Ada" {
+		t.Fatalf("artist = %q", got)
+	}
+
+	without, err := embedExif(testJPEG(t), exifMetadata{DrawnAt: drawnAt, Description: "d"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := parseExif(t, without).ifd0[0x013B]; ok {
+		t.Fatal("artist must be absent when none was chosen")
+	}
+}

@@ -26,6 +26,10 @@ func toModelPhoto(photo photos.Photo, signer *auth.Signer) model.Photo {
 	if photo.Focus != nil {
 		focus = &model.FocalRegion{X: photo.Focus.X, Y: photo.Focus.Y, Width: photo.Focus.Width, Height: photo.Focus.Height}
 	}
+	var artist *model.Artist
+	if photo.Artist != nil {
+		artist = &model.Artist{ID: photo.Artist.ID.String(), Name: photo.Artist.Name}
+	}
 	expiry := auth.Expiry(time.Now())
 	query := url.Values{"v": {photo.Version}, "exp": {strconv.FormatInt(expiry, 10)}}
 	if signer != nil {
@@ -34,7 +38,7 @@ func toModelPhoto(photo photos.Photo, signer *auth.Signer) model.Photo {
 	return model.Photo{
 		ID: photo.ID.String(), URL: "/photos/" + photo.File + "?" + query.Encode(),
 		Width: photo.Width, Height: photo.Height, TakenAt: int(photo.TakenAt.Unix()),
-		Coordinate: coordinate, Place: place, Focus: focus,
+		Coordinate: coordinate, Place: place, Focus: focus, Artist: artist,
 	}
 }
 

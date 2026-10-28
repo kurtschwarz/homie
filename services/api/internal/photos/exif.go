@@ -20,6 +20,7 @@ var errNotJPEG = errors.New("not a JPEG")
 type exifMetadata struct {
 	DrawnAt     time.Time
 	Description string
+	Artist      string
 	Coordinate  *Coordinate
 }
 
@@ -125,6 +126,9 @@ func buildExif(meta exifMetadata) []byte {
 		asciiEntry(0x0131, exifSoftware),
 		asciiEntry(0x0132, drawn),
 		longEntry(0x8769, 0),
+	}
+	if meta.Artist != "" {
+		ifd0 = append(ifd0, asciiEntry(0x013B, meta.Artist))
 	}
 	exifIFD := []exifEntry{
 		asciiEntry(0x9003, drawn),

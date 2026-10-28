@@ -69,7 +69,7 @@ input EventInput {
 
 extend type Query {
   events(days: Int = 21): [Event!]! @protected(kinds: [USER, DISPLAY])
-  people: [Person!]! @protected
+  people: [Person!]! @protected(kinds: [USER, DISPLAY])
   calendarAssociations(calendarId: ID, personId: ID): [CalendarAssociation!]! @protected
   calendarTags(calendarId: ID!): [String!]! @protected
 }

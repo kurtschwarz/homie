@@ -45,12 +45,14 @@ export async function canvasToJpeg(canvas: HTMLCanvasElement): Promise<Blob> {
  * @param size - Pixel dimensions of the encoded image.
  * @param drawnAt - When the drawing was finished; the API stores it as the
  * photo's taken-at time.
+ * @param artistId - The person who drew it, if one was chosen.
  * @throws If the request fails, the response is not OK, or it contains errors.
  */
 export async function uploadDrawing(
   jpeg: Blob,
   size: { width: number; height: number },
   drawnAt: Date,
+  artistId?: string,
 ): Promise<void> {
   const form = new FormData()
   form.append(
@@ -58,7 +60,11 @@ export async function uploadDrawing(
     JSON.stringify({
       query: MUTATION,
       variables: {
-        input: { ...size, drawnAt: Math.floor(drawnAt.getTime() / 1000) },
+        input: {
+          ...size,
+          drawnAt: Math.floor(drawnAt.getTime() / 1000),
+          artistId: artistId ?? null,
+        },
         file: null,
       },
     }),

@@ -19,6 +19,9 @@ type Service struct {
 
 	// Home, when set, supplies the location stamped on saved drawings.
 	Home HomeFunc
+
+	// Artist, when set, resolves the people a drawing can be credited to.
+	Artist ArtistFunc
 }
 
 // New creates a photo service backed by repository and library.
@@ -108,7 +111,16 @@ type Drawing struct {
 	Width   int
 	Height  int
 	DrawnAt time.Time
+	// ArtistID optionally credits a person. Unknown or ineligible people are rejected.
+	ArtistID *uuid.UUID
 }
+
+// ArtistFunc looks up the name of a person who can be credited with a
+// drawing. ok is false when the person does not exist or cannot be chosen.
+type ArtistFunc func(ctx context.Context, id uuid.UUID) (name string, ok bool, err error)
+
+// ErrUnknownArtist is returned when a drawing's artist cannot be credited.
+var ErrUnknownArtist = errors.New("unknown artist")
 
 // HomeFunc reports where Homie lives, as the coordinate and place name of the
 // lowest-order weather location. ok is false when none is configured.
@@ -125,6 +137,21 @@ func (s *Service) SaveDrawing(ctx context.Context, drawing Drawing, src io.Reade
 
 	if drawing.DrawnAt.IsZero() {
 		return Photo{}, errMissingTakenAt
+	}
+
+	var artist *Artist
+	if drawing.ArtistID != nil {
+		if s.Artist == nil {
+			return Photo{}, ErrUnknownArtist
+		}
+		name, ok, err := s.Artist(ctx, *drawing.ArtistID)
+		if err != nil {
+			return Photo{}, err
+		}
+		if !ok {
+			return Photo{}, ErrUnknownArtist
+		}
+		artist = &Artist{ID: *drawing.ArtistID, Name: name}
 	}
 
 	id, err := uuid.NewV7()
@@ -148,9 +175,13 @@ func (s *Service) SaveDrawing(ctx context.Context, drawing Drawing, src io.Reade
 	if err != nil {
 		return Photo{}, err
 	}
-	tagged, err := embedExif(jpeg, exifMetadata{
+	exif := exifMetadata{
 		DrawnAt: drawing.DrawnAt, Description: drawingDescription(drawing.DrawnAt, place), Coordinate: coordinate,
-	})
+	}
+	if artist != nil {
+		exif.Artist = artist.Name
+	}
+	tagged, err := embedExif(jpeg, exif)
 	if err != nil {
 		return Photo{}, err
 	}
@@ -163,7 +194,7 @@ func (s *Service) SaveDrawing(ctx context.Context, drawing Drawing, src io.Reade
 	photo := Photo{
 		ID: id, AssetID: "drawing:" + id.String(), Version: strconv.FormatInt(drawing.DrawnAt.Unix(), 10), File: name,
 		Width: drawing.Width, Height: drawing.Height, TakenAt: drawing.DrawnAt, Kind: KindDrawing,
-		Coordinate: coordinate, Place: place,
+		Coordinate: coordinate, Place: place, Artist: artist,
 	}
 
 	if err := s.repository.Upsert(ctx, photo); err != nil {

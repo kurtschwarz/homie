@@ -3,6 +3,7 @@ package photos_test
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"errors"
 	"image"
 	"image/jpeg"
@@ -245,4 +246,81 @@ func tinyJPEG(t *testing.T) []byte {
 		t.Fatal(err)
 	}
 	return buf.Bytes()
+}
+
+func TestServiceSaveDrawingArtist(t *testing.T) {
+	db := openDB(t)
+	library, err := photos.NewLibrary(filepath.Join(t.TempDir(), "photos"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	service := photos.New(photos.NewSQLiteRepository(db), library)
+	ada, family := uuid.New(), uuid.New()
+	for i, row := range []struct {
+		id     uuid.UUID
+		name   string
+		family int
+	}{{ada, "Ada", 0}, {family, "Family", 1}} {
+		if _, err := db.Exec(`INSERT INTO people (id, name, emoji, swatch, sort_order, is_family) VALUES (?, ?, '', 'slate', ?, ?)`, row.id[:], row.name, i, row.family); err != nil {
+			t.Fatal(err)
+		}
+	}
+	service.Artist = func(ctx context.Context, id uuid.UUID) (string, bool, error) {
+		var name string
+		err := db.GetContext(ctx, &name, `SELECT name FROM people WHERE id = ? AND is_family = 0`, id[:])
+		if err == sql.ErrNoRows {
+			return "", false, nil
+		}
+		return name, err == nil, err
+	}
+	ctx := context.Background()
+	drawing := photos.Drawing{Width: 8, Height: 8, DrawnAt: time.Unix(1_761_000_000, 0)}
+
+	drawing.ArtistID = &ada
+	photo, err := service.SaveDrawing(ctx, drawing, bytes.NewReader(tinyJPEG(t)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if photo.Artist == nil || photo.Artist.Name != "Ada" {
+		t.Fatalf("artist = %+v", photo.Artist)
+	}
+	saved, err := fs.ReadFile(library.FS(), photo.File)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(saved, []byte("Ada\x00")) {
+		t.Fatal("EXIF artist missing from saved file")
+	}
+	listed, err := service.List(ctx, 10)
+	if err != nil || len(listed) != 1 || listed[0].Artist == nil || listed[0].Artist.ID != ada {
+		t.Fatalf("read back = %+v err=%v", listed, err)
+	}
+
+	drawing.ArtistID = &family
+	if _, err := service.SaveDrawing(ctx, drawing, bytes.NewReader(tinyJPEG(t))); !errors.Is(err, photos.ErrUnknownArtist) {
+		t.Fatalf("family err = %v", err)
+	}
+
+	drawing.ArtistID = nil
+	anon, err := service.SaveDrawing(ctx, drawing, bytes.NewReader(tinyJPEG(t)))
+	if err != nil || anon.Artist != nil {
+		t.Fatalf("anonymous = %+v err=%v", anon, err)
+	}
+	saved, _ = fs.ReadFile(library.FS(), anon.File)
+	if bytes.Contains(saved, []byte("Ada")) {
+		t.Fatal("unexpected artist in EXIF")
+	}
+
+	if _, err := db.Exec(`DELETE FROM people WHERE id = ?`, ada[:]); err != nil {
+		t.Fatal(err)
+	}
+	listed, err = service.List(ctx, 10)
+	if err != nil || len(listed) != 2 {
+		t.Fatalf("drawings must survive deleting the artist: %+v err=%v", listed, err)
+	}
+	for _, p := range listed {
+		if p.Artist != nil {
+			t.Fatalf("artist must be cleared: %+v", p.Artist)
+		}
+	}
 }

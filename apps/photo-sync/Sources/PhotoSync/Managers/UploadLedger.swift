@@ -9,9 +9,9 @@ struct UploadLedger {
     private let generationKey = "photo-sync.ledgerGeneration"
     private var generation: Int
 
-    private var versions: [String: String]
+    private var uploadedVersions: [String: String]
     private var pushedDrawings: [String: String]
-    private var places: [String: String]
+    private var geocodedPlaces: [String: String]
 
     private var versionsDirty = false
     private var pushedDrawingsDirty = false
@@ -20,15 +20,15 @@ struct UploadLedger {
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         generation = defaults.integer(forKey: generationKey)
-        versions = defaults.dictionary(forKey: versionsKey) as? [String: String] ?? [:]
+        uploadedVersions = defaults.dictionary(forKey: versionsKey) as? [String: String] ?? [:]
         pushedDrawings = defaults.dictionary(forKey: pushedDrawingsKey) as? [String: String] ?? [:]
-        places = defaults.dictionary(forKey: placesKey) as? [String: String] ?? [:]
+        geocodedPlaces = defaults.dictionary(forKey: placesKey) as? [String: String] ?? [:]
     }
 
-    func isUploaded(_ photo: PhotoAsset) -> Bool { versions[photo.id] == photo.version }
+    func isUploaded(_ photo: PhotoAsset) -> Bool { uploadedVersions[photo.id] == photo.version }
 
     mutating func markUploaded(_ photo: PhotoAsset) {
-        versions[photo.id] = photo.version
+        uploadedVersions[photo.id] = photo.version
         versionsDirty = true
     }
 
@@ -46,10 +46,10 @@ struct UploadLedger {
         pushedDrawingsDirty = true
     }
 
-    func place(for coordinate: CLLocationCoordinate2D) -> String? { places[key(for: coordinate)] }
+    func place(for coordinate: CLLocationCoordinate2D) -> String? { geocodedPlaces[key(for: coordinate)] }
 
     mutating func savePlace(_ place: String, for coordinate: CLLocationCoordinate2D) {
-        places[key(for: coordinate)] = place
+        geocodedPlaces[key(for: coordinate)] = place
         placesDirty = true
     }
 
@@ -62,7 +62,7 @@ struct UploadLedger {
             return
         }
         if versionsDirty {
-            defaults.set(versions, forKey: versionsKey)
+            defaults.set(uploadedVersions, forKey: versionsKey)
             versionsDirty = false
         }
         if pushedDrawingsDirty {
@@ -70,7 +70,7 @@ struct UploadLedger {
             pushedDrawingsDirty = false
         }
         if placesDirty {
-            defaults.set(places, forKey: placesKey)
+            defaults.set(geocodedPlaces, forKey: placesKey)
             placesDirty = false
         }
     }
@@ -86,9 +86,9 @@ struct UploadLedger {
         defaults.removeObject(forKey: versionsKey)
         defaults.removeObject(forKey: placesKey)
         defaults.removeObject(forKey: pushedDrawingsKey)
-        versions = [:]
+        uploadedVersions = [:]
         pushedDrawings = [:]
-        places = [:]
+        geocodedPlaces = [:]
         versionsDirty = false
         pushedDrawingsDirty = false
         placesDirty = false

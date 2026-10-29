@@ -1,5 +1,4 @@
 import Foundation
-import LocalAuthentication
 import Security
 
 enum HomieSession {
@@ -34,11 +33,8 @@ enum HomieSession {
             var query = itemQuery(account: account)
             query[kSecReturnData as String] = true
             query[kSecMatchLimit as String] = kSecMatchLimitOne
-            if !interactive {
-                let context = LAContext()
-                context.interactionNotAllowed = true
-                query[kSecUseAuthenticationContext as String] = context
-            }
+            // LAContext.interactionNotAllowed is ignored by the legacy file-based keychain, which still prompts.
+            if !interactive { query[kSecUseAuthenticationUI as String] = kSecUseAuthenticationUIFail }
             var result: CFTypeRef?
             switch SecItemCopyMatching(query as CFDictionary, &result) {
             case errSecSuccess, errSecItemNotFound:

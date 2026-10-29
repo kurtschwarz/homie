@@ -30,6 +30,7 @@ struct ContentView: View {
             if !signedIn { pane = .status }
         }
         .task {
+            session.permissions.refresh()
             await session.start()
         }
         .onChange(of: showsPermissions) { _, shows in

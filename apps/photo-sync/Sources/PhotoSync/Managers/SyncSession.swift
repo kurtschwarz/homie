@@ -66,7 +66,7 @@ final class SyncSession: ObservableObject {
     }
 
     func start() async {
-        guard !permissions.showsScreen else { return }
+        guard permissions.hasChecked, !permissions.showsScreen else { return }
         await auth.restoreSession()
         loadAlbumsIfNeeded()
     }
@@ -77,6 +77,7 @@ final class SyncSession: ObservableObject {
     }
 
     func syncIfDue() {
+        guard permissions.hasChecked else { return }
         permissions.refresh()
         loadAlbumsIfNeeded()
         guard Self.shouldPoll(

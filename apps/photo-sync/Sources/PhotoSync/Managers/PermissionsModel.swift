@@ -14,12 +14,14 @@ final class PermissionsModel: ObservableObject {
     init(library: PhotoLibrary, endpoint: URL) {
         self.library = library
         self.endpoint = endpoint
-        refresh()
     }
+
+    private(set) var hasChecked = false
 
     var gate: PermissionsGate { PermissionsGate(photos: library.authorization, keychain: keychain) }
 
     func refresh() {
+        hasChecked = true
         library.refreshAuthorization()
         if keychain != .denied || !showsScreen {
             keychain = HomieSession.probeAccess(for: endpoint)

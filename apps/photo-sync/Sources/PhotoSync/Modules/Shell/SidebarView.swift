@@ -94,14 +94,6 @@ private struct SidebarRow: View {
                     .font(.system(size: 14))
                     .foregroundStyle(Color.homieText)
                 Spacer(minLength: 0)
-                if pane.isNew {
-                    Text("New")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(Color.homieBadgeText)
-                        .padding(.horizontal, 8)
-                        .frame(height: 20)
-                        .overlay(Capsule().strokeBorder(Color.homieBadgeBorder, lineWidth: 1.5))
-                }
             }
             .padding(.horizontal, 10)
             .frame(height: 36)

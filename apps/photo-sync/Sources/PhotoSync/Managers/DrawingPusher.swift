@@ -35,14 +35,23 @@ final class DrawingPusher {
         try await service.pushedDrawingAssetIDs()
     }
 
-    func push(toAlbum albumID: String?, run: SyncRunLog) async throws {
+    func push(toAlbum albumID: String?, enabled: Bool = true, run: SyncRunLog) async throws {
         progress = nil
         message = nil
         var ledger = UploadLedger(defaults: defaults)
 
-        guard let albumID, album.canAddDrawings(toAlbum: albumID) else {
+        guard enabled else {
+            run.info("Skipping drawings: saving paintings is off")
+            return
+        }
+        guard let albumID else {
             message = "Choose an artwork album to save Homie drawings to Photos."
             run.info("Skipping drawings: no artwork album")
+            return
+        }
+        guard album.canAddDrawings(toAlbum: albumID) else {
+            message = "The artwork album is missing or can't be added to. Choose another in Artwork."
+            run.info("Skipping drawings: artwork album unusable")
             return
         }
         let drawings: [HomieDrawing]

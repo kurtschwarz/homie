@@ -15,6 +15,10 @@ struct SignedInScreenTests {
         #expect(SignedInScreen.resolve(pane: .albums, hasSelection: hasSelection) == .picker)
     }
 
+    @Test func artworkShowsItsPane() {
+        #expect(SignedInScreen.resolve(pane: .artwork, hasSelection: false) == .artwork)
+    }
+
     @Test func otherPanesShowPlaceholder() {
         #expect(SignedInScreen.resolve(pane: .general, hasSelection: true) == .placeholder)
     }

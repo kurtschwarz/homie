@@ -105,6 +105,8 @@ struct ContentView: View {
                 username: username,
                 onSignOut: { auth.signOut() }
             )
+        case .artwork:
+            ArtworkPaneView(library: library, selection: selection)
         case .emptyStatus:
             SyncEmptyView(onChooseAlbums: { pane = .albums })
         default:

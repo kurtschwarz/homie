@@ -77,7 +77,11 @@ final class SyncSession {
 
     func startSync() {
         let ids = library.albums.map(\.id).filter { selection.contains($0) }
-        runner.sync(albumIDs: ids, artworkAlbumID: selection.artworkAlbumID) { [selection] in selection.markSynced() }
+        runner.sync(
+            albumIDs: ids,
+            artworkAlbumID: selection.artworkAlbumID,
+            artworkEnabled: selection.artworkEnabled
+        ) { [selection] in selection.markSynced() }
     }
 
     func syncIfDue() {

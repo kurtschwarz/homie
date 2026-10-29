@@ -65,10 +65,21 @@ final class SyncSession: ObservableObject {
         return "Not synced yet"
     }
 
+    /// The checks never prompt, so this runs without a window and the menu bar keeps working when the
+    /// window is never opened.
     func start() async {
-        guard permissions.hasChecked, !permissions.showsScreen else { return }
+        permissions.refresh()
+        guard !permissions.showsScreen else { return }
         await auth.restoreSession()
         loadAlbumsIfNeeded()
+    }
+
+    var needsWindowAtLaunch: Bool {
+        Self.needsWindow(showsPermissions: permissions.showsScreen, needsSignIn: needsSignIn, hasSelection: selection.hasSelection)
+    }
+
+    nonisolated static func needsWindow(showsPermissions: Bool, needsSignIn: Bool, hasSelection: Bool) -> Bool {
+        showsPermissions || needsSignIn || !hasSelection
     }
 
     func startSync() {
@@ -77,7 +88,6 @@ final class SyncSession: ObservableObject {
     }
 
     func syncIfDue() {
-        guard permissions.hasChecked else { return }
         permissions.refresh()
         loadAlbumsIfNeeded()
         guard Self.shouldPoll(

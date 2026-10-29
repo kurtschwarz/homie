@@ -26,6 +26,23 @@ struct MenuBarIcon: View {
     }
 }
 
+/// The window is suppressed at launch, so this is the only view that exists then: it runs the startup
+/// checks and opens the window when there is something the user has to finish.
+struct MenuBarLabel: View {
+    @ObservedObject var session: SyncSession
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        MenuBarIcon(session: session)
+            .task {
+                await session.start()
+                guard session.needsWindowAtLaunch else { return }
+                openWindow(id: "main")
+                NSApp.activate(ignoringOtherApps: true)
+            }
+    }
+}
+
 struct MenuBarContent: View {
     @ObservedObject var session: SyncSession
     @ObservedObject var launchAtLogin: LaunchAtLogin

@@ -19,14 +19,11 @@ final class PermissionsModel: ObservableObject {
         self.endpoint = endpoint
     }
 
-    private(set) var hasChecked = false
-
     var gate: PermissionsGate {
         PermissionsGate(photos: library.authorization, localNetwork: localNetwork, keychain: keychain)
     }
 
     func refresh() {
-        hasChecked = true
         library.refreshAuthorization()
         // Browsing is what prompts, so launch trusts the last Allow rather than asking again.
         if localNetwork != .denied { localNetwork = LocalNetworkProbe.recordedAccess() }

@@ -14,7 +14,7 @@ struct PhotoSyncApp: App {
                 onReset: confirmReset
             )
         } label: {
-            MenuBarIcon(session: model.session)
+            MenuBarLabel(session: model.session)
         }
         .menuBarExtraStyle(.menu)
 

@@ -9,10 +9,6 @@ struct AlbumPickerView: View {
     let username: String
     let onSignOut: () -> Void
 
-    // Fixed so the window, which sizes to its content, can't grow with the library. Chosen so the
-    // last visible row is cut in half under the footer.
-    private static let listHeight: CGFloat = 330
-
     @State private var search = ""
     @State private var filter: AlbumList.Filter = .all
     @State private var isScrolled = false
@@ -31,28 +27,25 @@ struct AlbumPickerView: View {
 
     var body: some View {
         let list = list
-        VStack(spacing: 0) {
-            header(list)
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    if list.isEmpty {
-                        emptyState
-                    }
-                    ForEach(list.groups, id: \.title) { group in
-                        AlbumGroup(title: group.title, albums: group.albums, library: library, selection: selection)
-                    }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                if list.isEmpty {
+                    emptyState
                 }
-                .padding(.horizontal, 32)
-                .padding(.vertical, 16)
-                .animation(.default, value: list.groups.flatMap(\.albums).map(\.id))
+                ForEach(list.groups, id: \.title) { group in
+                    AlbumGroup(title: group.title, albums: group.albums, library: library, selection: selection)
+                }
             }
-            .onScrollGeometryChange(for: Bool.self) { $0.contentOffset.y > 1 } action: { _, scrolled in
-                isScrolled = scrolled
-            }
-            .frame(height: Self.listHeight)
-
-            footer
+            .padding(.horizontal, 32)
+            .padding(.vertical, 16)
+            .animation(.default, value: list.groups.flatMap(\.albums).map(\.id))
         }
+        .onScrollGeometryChange(for: Bool.self) { $0.contentOffset.y + $0.contentInsets.top > 1 } action: { _, scrolled in
+            isScrolled = scrolled
+        }
+        .softScrollEdges()
+        .safeAreaInset(edge: .top, spacing: 0) { header(list) }
+        .safeAreaInset(edge: .bottom, spacing: 0) { footer }
         .background {
             Button("") { searchFocused = true }
                 .keyboardShortcut("f", modifiers: .command)
@@ -75,9 +68,9 @@ struct AlbumPickerView: View {
             }
         }
         .padding(.horizontal, 32)
-        .padding(.top, 28)
-        .padding(.bottom, 12)
-        .background(.thinMaterial)
+        .padding(.top, 64)
+        .padding(.bottom, 14)
+        .fadingMaterial(solidEdge: .top)
         .overlay(alignment: .bottom) {
             Color.homieDivider.frame(height: 1).opacity(isScrolled ? 1 : 0).animation(.easeOut(duration: 0.15), value: isScrolled)
         }
@@ -186,8 +179,40 @@ struct AlbumPickerView: View {
         }
         .padding(.horizontal, 32)
         .padding(.vertical, 14)
-        .background(.thinMaterial)
+        .fadingMaterial(solidEdge: .bottom)
         .overlay(alignment: .top) { Color.homieDivider.frame(height: 1) }
+    }
+}
+
+private extension View {
+    // Solid behind the controls, fading over a strip just outside the bar so rows dissolve into it
+    // rather than meeting a hard edge.
+    func fadingMaterial(solidEdge: VerticalEdge) -> some View {
+        let isTop = solidEdge == .top
+        let fade: CGFloat = 28
+        return background(alignment: isTop ? .bottom : .top) {
+            Rectangle()
+                .fill(.ultraThinMaterial)
+                .frame(height: fade)
+                .mask(
+                    LinearGradient(
+                        colors: [.black, .clear],
+                        startPoint: isTop ? .top : .bottom,
+                        endPoint: isTop ? .bottom : .top
+                    )
+                )
+                .offset(y: isTop ? fade : -fade)
+        }
+        .background(.ultraThinMaterial)
+    }
+
+    @ViewBuilder
+    func softScrollEdges() -> some View {
+        #if compiler(>=6.2)
+        if #available(macOS 26, *) { scrollEdgeEffectStyle(.soft, for: .vertical) } else { self }
+        #else
+        self
+        #endif
     }
 }
 

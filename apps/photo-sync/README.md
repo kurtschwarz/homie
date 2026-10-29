@@ -60,7 +60,7 @@ Choose **Homie Photos → Reset Homie Photos…** to return the app to onboardin
 
 Homie Photos runs from the menu bar with no Dock icon. While it runs it syncs every 5 minutes without a window, so drawings reach the artwork album on their own. Sync is skipped until the permissions check has run, you are signed in, Photos access is granted, and albums are chosen; the menu then reads "Sign in needed" or "Open Homie Photos to finish setup". Two syncs never overlap: the timer and **Sync Now** both skip while one is running. Turning off "keep syncing" stops the timer.
 
-The menu bar shows the last sync time or current progress, and **Open Homie Photos…** opens the window for album selection and sign-in. The window is a fixed 680 × 760, always-dark glass window with a sidebar; it needs macOS 15 or later, and uses Liquid Glass on macOS 26. **Start at Login** registers the app as a login item. Login items need a signed build in Applications; macOS may refuse for an unsigned local build.
+The menu bar shows the last sync time or current progress, and **Open Homie Photos…** opens the window for album selection and sign-in. The window is a fixed 680 × 760, always-dark glass window with a sidebar; it needs macOS 15 or later, and uses Liquid Glass on macOS 26. **About Homie Photos** opens the About pane in the same window. **Start at Login** registers the app as a login item. Login items need a signed build in Applications; macOS may refuse for an unsigned local build.
 
 ## Drawings
 

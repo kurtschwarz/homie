@@ -5,6 +5,7 @@ import SwiftUI
 struct ContentView: View {
     private let hostStore: HomieHostStore
     private let session: SyncSession
+    private let navigation: AppNavigation
     @State private var pane: AppPane = .status
 
     private var auth: AuthModel { session.auth }
@@ -12,14 +13,19 @@ struct ContentView: View {
     private var runner: SyncRunner { session.runner }
     private var selection: AlbumSelection { session.selection }
 
-    init(hostStore: HomieHostStore, session: SyncSession) {
+    init(hostStore: HomieHostStore, session: SyncSession, navigation: AppNavigation) {
         self.hostStore = hostStore
         self.session = session
+        self.navigation = navigation
     }
 
     var body: some View {
         HStack(spacing: 0) {
-            SidebarView(selection: highlightedPane, isSignedIn: session.isSignedIn, isLoading: phase.hidesSidebar) { pane = $0 }
+            SidebarView(
+                selection: highlightedPane,
+                isSignedIn: session.isSignedIn || aboutOverridesGate,
+                isLoading: phase.hidesSidebar && !aboutOverridesGate
+            ) { pane = $0 }
             paneContent
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -27,7 +33,12 @@ struct ContentView: View {
         .glassWindowChrome()
         .preferredColorScheme(.dark)
         .onChange(of: session.isSignedIn) { _, signedIn in
-            if !signedIn { pane = .status }
+            if !signedIn && pane != .about { pane = .status }
+        }
+        .onChange(of: navigation.requestedPane, initial: true) { _, requested in
+            guard let requested else { return }
+            pane = requested
+            navigation.requestedPane = nil
         }
         .task {
             session.permissions.refresh()
@@ -45,6 +56,8 @@ struct ContentView: View {
 
     private var highlightedPane: AppPane { pane }
 
+    private var aboutOverridesGate: Bool { pane == .about && phase.hidesSidebar }
+
     private var isChecking: Bool {
         if case .checking = auth.state { return true }
         return false
@@ -60,6 +73,15 @@ struct ContentView: View {
 
     @ViewBuilder
     private var paneContent: some View {
+        if pane == .about {
+            AboutPaneView(info: .current)
+        } else {
+            phasedContent
+        }
+    }
+
+    @ViewBuilder
+    private var phasedContent: some View {
         switch phase {
         case .permissions:
             PermissionsView(permissions: session.permissions, library: library)

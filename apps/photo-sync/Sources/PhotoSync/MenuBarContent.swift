@@ -43,10 +43,25 @@ struct MenuBarLabel: View {
     }
 }
 
+struct AboutCommands: Commands {
+    let navigation: AppNavigation
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some Commands {
+        CommandGroup(replacing: .appInfo) {
+            Button("About Homie Photos") {
+                navigation.requestedPane = .about
+                openWindow(id: "main")
+                NSApp.activate(ignoringOtherApps: true)
+            }
+        }
+    }
+}
+
 struct MenuBarContent: View {
     let session: SyncSession
     let launchAtLogin: LaunchAtLogin
-    let onAbout: () -> Void
+    let navigation: AppNavigation
     let onReset: () -> Void
     @Environment(\.openWindow) private var openWindow
 
@@ -65,7 +80,11 @@ struct MenuBarContent: View {
             Text(error)
         }
         Divider()
-        Button("About Homie Photos", action: onAbout)
+        Button("About Homie Photos") {
+            navigation.requestedPane = .about
+            openWindow(id: "main")
+            NSApp.activate(ignoringOtherApps: true)
+        }
         Button("Reset Homie Photos…", action: onReset)
         Divider()
         Button("Quit Homie Photos") { NSApp.terminate(nil) }

@@ -3,7 +3,7 @@ import SwiftUI
 struct SyncStatusView: View {
     let library: PhotoLibrary
     let selection: AlbumSelection
-    let uploader: PhotoUploader
+    let runner: SyncRunner
     let onSyncNow: () -> Void
     let onChangeAlbums: () -> Void
 
@@ -11,15 +11,15 @@ struct SyncStatusView: View {
     private var artworkAlbum: PhotoAlbum? {
         library.albums.first { $0.id == selection.artworkAlbumID && $0.isArtworkCandidate }
     }
-    private var failedCount: Int { uploader.albumProgress.values.reduce(0) { $0 + $1.failed } }
-    private var photoTotal: Int { uploader.isUploading || uploader.total > 0 ? uploader.total : albums.reduce(0) { $0 + $1.count } }
-    private var photoDone: Int { uploader.total > 0 ? uploader.completed : (selection.lastSyncedAt == nil ? 0 : photoTotal) }
+    private var failedCount: Int { runner.photos.albumProgress.values.reduce(0) { $0 + $1.failed } }
+    private var photoTotal: Int { runner.isRunning || runner.photos.total > 0 ? runner.photos.total : albums.reduce(0) { $0 + $1.count } }
+    private var photoDone: Int { runner.photos.total > 0 ? runner.photos.completed : (selection.lastSyncedAt == nil ? 0 : photoTotal) }
     private var fraction: Double { photoTotal == 0 ? 0 : Double(photoDone) / Double(photoTotal) }
 
     private enum Phase { case ready, syncing, failed, upToDate }
 
     private var phase: Phase {
-        if uploader.isUploading { return .syncing }
+        if runner.isRunning { return .syncing }
         if failedCount > 0 { return .failed }
         if selection.lastSyncedAt != nil { return .upToDate }
         return .ready
@@ -48,12 +48,12 @@ struct SyncStatusView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     ForEach(albums) { album in
-                        SyncAlbumRow(album: album, library: library, progress: uploader.albumProgress[album.id])
+                        SyncAlbumRow(album: album, library: library, progress: runner.photos.albumProgress[album.id])
                     }
                     if let artworkAlbum {
-                        ArtworkAlbumRow(album: artworkAlbum, library: library, progress: uploader.drawingProgress, isUploading: uploader.isUploading)
+                        ArtworkAlbumRow(album: artworkAlbum, library: library, progress: runner.drawings.progress, isUploading: runner.isRunning)
                     }
-                    if let message = uploader.drawingMessage {
+                    if let message = runner.drawings.message {
                         Text(message)
                             .font(.system(size: 12))
                             .foregroundStyle(.orange)
@@ -115,10 +115,10 @@ struct SyncStatusView: View {
                 Spacer()
                 Button("Change albums", action: onChangeAlbums)
                     .buttonStyle(HomieButtonStyle())
-                    .disabled(uploader.isUploading)
+                    .disabled(runner.isRunning)
                 Button("Sync now", action: onSyncNow)
                     .buttonStyle(HomieButtonStyle(prominent: true))
-                    .disabled(uploader.isUploading || albums.isEmpty)
+                    .disabled(runner.isRunning || albums.isEmpty)
             }
         }
         .padding(.horizontal, 32)

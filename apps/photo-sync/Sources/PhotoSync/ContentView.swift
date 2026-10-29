@@ -9,7 +9,7 @@ struct ContentView: View {
 
     private var auth: AuthModel { session.auth }
     private var library: PhotoLibrary { session.library }
-    private var uploader: PhotoUploader { session.uploader }
+    private var runner: SyncRunner { session.runner }
     private var selection: AlbumSelection { session.selection }
 
     init(hostStore: HomieHostStore, session: SyncSession) {
@@ -115,7 +115,7 @@ struct ContentView: View {
             SyncStatusView(
                 library: library,
                 selection: selection,
-                uploader: uploader,
+                runner: runner,
                 onSyncNow: startSync,
                 onChangeAlbums: { pane = .albums }
             )

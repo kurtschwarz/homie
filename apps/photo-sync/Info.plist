@@ -31,6 +31,7 @@
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_homie._tcp</string>
+		<string>_homie-photos-probe._tcp</string>
 	</array>
 	<!-- The API is plain HTTP on the local network. localhost is exempt from
 	     App Transport Security but the Pi's hostname is not. -->

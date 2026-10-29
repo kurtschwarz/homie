@@ -80,6 +80,9 @@ private final class GlassWindowConfiguringView: NSView {
         window.backgroundColor = .clear
         window.appearance = NSAppearance(named: .darkAqua)
         window.standardWindowButton(.zoomButton)?.isEnabled = false
+        // Without this the window stays on the Space it opened on, so answering a system prompt from
+        // another Space looks like the window vanished until macOS animates the Space switch.
+        window.collectionBehavior.insert(.moveToActiveSpace)
         offsetTrafficLightsOnce(in: window)
     }
 

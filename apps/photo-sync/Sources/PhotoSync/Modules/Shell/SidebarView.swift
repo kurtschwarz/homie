@@ -69,7 +69,9 @@ private struct SkeletonRow: View {
     var body: some View {
         HStack(spacing: 10) {
             PaneIconTile(pane: pane)
-            SkeletonBar(width: CGFloat(60 + (pane.title.count * 7) % 50), height: 10)
+                .grayscale(1)
+                .opacity(0.12)
+            SkeletonBar(width: 90, height: 10)
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 10)

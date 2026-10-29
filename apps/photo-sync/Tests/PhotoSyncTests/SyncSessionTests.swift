@@ -38,4 +38,22 @@ final class SyncSessionTests: XCTestCase {
     func testSkipsWhenKeepSyncingIsOff() {
         XCTAssertFalse(poll(keepSyncing: false))
     }
+
+    private func needsWindow(
+        permissions: Bool = false,
+        signIn: Bool = false,
+        selection: Bool = true
+    ) -> Bool {
+        SyncSession.needsWindow(showsPermissions: permissions, needsSignIn: signIn, hasSelection: selection)
+    }
+
+    func testStaysInTheMenuBarOnceSetUp() {
+        XCTAssertFalse(needsWindow())
+    }
+
+    func testOpensTheWindowWhenSetupIsUnfinished() {
+        XCTAssertTrue(needsWindow(permissions: true))
+        XCTAssertTrue(needsWindow(signIn: true))
+        XCTAssertTrue(needsWindow(selection: false))
+    }
 }

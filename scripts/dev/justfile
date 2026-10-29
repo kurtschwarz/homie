@@ -108,6 +108,14 @@ photo-sync:
     # Launch the bundle so macOS attributes the Photos privacy prompt to the app.
     open "{{photo_sync_app}}"
 
+# Forget the macOS permissions granted to the Photo Sync app, so the permissions screen shows again.
+reset-macos-permissions:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    defaults delete "{{photo_sync_bundle_id}}" photo-sync.localNetworkGrantedForCode 2>/dev/null || true
+    defaults delete "{{photo_sync_bundle_id}}" photo-sync.keychainGrantedForCode 2>/dev/null || true
+    tccutil reset All "{{photo_sync_bundle_id}}"
+
 # Tear down the local dev stack: containers, networks, and named volumes.
 # Host state under .scratch (synced photos, the Firefox profile) is left alone.
 reset:

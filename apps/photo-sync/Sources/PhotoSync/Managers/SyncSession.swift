@@ -10,6 +10,7 @@ final class SyncSession: ObservableObject {
     let library: PhotoLibrary
     let uploader: PhotoUploader
     let selection: AlbumSelection
+    let permissions: PermissionsModel
 
     private var forwarding: [AnyCancellable] = []
 
@@ -20,11 +21,14 @@ final class SyncSession: ObservableObject {
         self.auth = auth
         self.library = library
         selection = AlbumSelection()
+        let permissions = PermissionsModel(library: library, endpoint: endpoint)
+        self.permissions = permissions
         uploader = PhotoUploader(library: library, api: api, onAuthenticationRequired: { auth.sessionExpired() })
 
         let changes = [
             auth.objectWillChange, library.objectWillChange,
             uploader.objectWillChange, selection.objectWillChange,
+            permissions.objectWillChange,
         ]
         forwarding = changes.map { publisher in
             publisher.sink { [weak self] _ in self?.objectWillChange.send() }
@@ -61,9 +65,21 @@ final class SyncSession: ObservableObject {
         return "Not synced yet"
     }
 
+    /// The checks never prompt, so this runs without a window and the menu bar keeps working when the
+    /// window is never opened.
     func start() async {
+        permissions.refresh()
+        guard !permissions.showsScreen else { return }
         await auth.restoreSession()
         loadAlbumsIfNeeded()
+    }
+
+    var needsWindowAtLaunch: Bool {
+        Self.needsWindow(showsPermissions: permissions.showsScreen, needsSignIn: needsSignIn, hasSelection: selection.hasSelection)
+    }
+
+    nonisolated static func needsWindow(showsPermissions: Bool, needsSignIn: Bool, hasSelection: Bool) -> Bool {
+        showsPermissions || needsSignIn || !hasSelection
     }
 
     func startSync() {
@@ -72,6 +88,7 @@ final class SyncSession: ObservableObject {
     }
 
     func syncIfDue() {
+        permissions.refresh()
         loadAlbumsIfNeeded()
         guard Self.shouldPoll(
             signedIn: isSignedIn,

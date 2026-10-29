@@ -15,6 +15,46 @@ enum HomieSession {
         return legacyToken
     }
 
+    private static let grant = CodeSignedGrant(key: "photo-sync.keychainGrantedForCode")
+
+    /// Reading an item's data is the only way to learn whether the keychain would prompt, and asking is
+    /// what triggers the prompt. So launch only looks for the item's attributes, which never prompt, and
+    /// trusts what the last Allow told us, for the same code signature only.
+    static func probeAccess(for endpoint: URL, defaults: UserDefaults = .standard) -> AccessState {
+        guard savedAccounts(for: endpoint).contains(where: itemExists) else { return .allowed }
+        return grant.isCurrent(defaults: defaults) ? .allowed : .needsPrompt
+    }
+
+    static func requestAccess(for endpoint: URL, defaults: UserDefaults = .standard) -> AccessState {
+        for account in savedAccounts(for: endpoint) {
+            var query = itemQuery(account: account)
+            query[kSecReturnData as String] = true
+            query[kSecMatchLimit as String] = kSecMatchLimitOne
+            var result: CFTypeRef?
+            switch SecItemCopyMatching(query as CFDictionary, &result) {
+            case errSecSuccess, errSecItemNotFound:
+                continue
+            default:
+                grant.revoke(defaults: defaults)
+                return .denied
+            }
+        }
+        grant.record(defaults: defaults)
+        return .allowed
+    }
+
+    private static func savedAccounts(for endpoint: URL) -> [String] {
+        [sessionAccount(for: endpoint), legacyAccount]
+    }
+
+    private static func itemExists(account: String) -> Bool {
+        var query = itemQuery(account: account)
+        query[kSecReturnAttributes as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+        var result: CFTypeRef?
+        return SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess
+    }
+
     private static func read(account: String) -> String? {
         var query = itemQuery(account: account)
         query[kSecReturnData as String] = true

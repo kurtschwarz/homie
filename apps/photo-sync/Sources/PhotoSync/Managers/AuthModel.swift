@@ -19,7 +19,7 @@ final class AuthModel: ObservableObject {
     init(api: HomieAPI = HomieAPI()) {
         self.api = api
         endpoint = api.endpoint
-        state = HomieSession.token(for: api.endpoint) == nil ? .signedOut(nil) : .checking
+        state = .checking
     }
 
     func restoreSession() async {

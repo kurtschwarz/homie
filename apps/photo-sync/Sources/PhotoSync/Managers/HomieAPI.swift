@@ -279,6 +279,7 @@ struct HomieAPI {
         do {
             (data, response) = try await session.data(for: request)
         } catch {
+            Log.api.error("Request failed: \(error.localizedDescription, privacy: .private)")
             throw HomieAPIError.network(message: error.localizedDescription, endpoint: endpoint)
         }
         guard let response = response as? HTTPURLResponse else { throw HomieAPIError.invalidResponse }

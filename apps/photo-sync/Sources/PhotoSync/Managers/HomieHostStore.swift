@@ -49,6 +49,7 @@ final class HomieHostStore: ObservableObject {
             }
             throw HomieHostError.setupRequired
         }
+        Log.discovery.info("Switching host: \(host.graphQLURL.host() ?? "unknown", privacy: .private) (\(String(describing: host.source), privacy: .public))")
         defaults.set(host.graphQLURL.absoluteString, forKey: "HomieAPIURL")
         defaults.set(host.name, forKey: "HomieAPIName")
         defaults.set(host.source == .discovered, forKey: "HomieAPIDiscovered")
@@ -59,6 +60,7 @@ final class HomieHostStore: ObservableObject {
     }
 
     func resetToDefault() {
+        Log.discovery.info("Resetting host to default")
         checkID = UUID()
         isChecking = false
         health = nil

@@ -11,7 +11,10 @@ enum HomieSession {
         do {
             try save(legacyToken, for: endpoint)
             SecItemDelete(itemQuery(account: legacyAccount) as CFDictionary)
-        } catch {}
+            Log.keychain.info("Migrated legacy session token")
+        } catch {
+            Log.keychain.error("Legacy token migration failed; will retry next launch: \(error.localizedDescription, privacy: .public)")
+        }
         return legacyToken
     }
 
@@ -34,11 +37,13 @@ enum HomieSession {
             switch SecItemCopyMatching(query as CFDictionary, &result) {
             case errSecSuccess, errSecItemNotFound:
                 continue
-            default:
+            case let status:
+                Log.permissions.error("Keychain access denied (status \(status, privacy: .public))")
                 grant.revoke(defaults: defaults)
                 return .denied
             }
         }
+        Log.permissions.info("Keychain access allowed")
         grant.record(defaults: defaults)
         return .allowed
     }

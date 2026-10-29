@@ -1,14 +1,15 @@
 import AppKit
-import Combine
 import Foundation
+import Observation
 
-final class PermissionsModel: ObservableObject {
-    @Published private(set) var keychain: AccessState = .allowed
-    @Published private(set) var localNetwork: AccessState = .allowed
-    @Published private(set) var showsScreen = false
-    @Published private(set) var isRequestingKeychain = false
-    @Published private(set) var isRequestingLocalNetwork = false
-    @Published private(set) var isRequestingPhotos = false
+@Observable
+final class PermissionsModel {
+    private(set) var keychain: AccessState = .allowed
+    private(set) var localNetwork: AccessState = .allowed
+    private(set) var showsScreen = false
+    private(set) var isRequestingKeychain = false
+    private(set) var isRequestingLocalNetwork = false
+    private(set) var isRequestingPhotos = false
 
     private let library: PhotoLibrary
     private let endpoint: URL

@@ -1,8 +1,9 @@
-import Combine
 import Foundation
+import Observation
 import Photos
 
-final class SyncSession: ObservableObject {
+@Observable
+final class SyncSession {
     static let pollInterval: Duration = .seconds(300)
 
     let auth: AuthModel
@@ -10,8 +11,6 @@ final class SyncSession: ObservableObject {
     let uploader: PhotoUploader
     let selection: AlbumSelection
     let permissions: PermissionsModel
-
-    private var forwarding: [AnyCancellable] = []
 
     init(endpoint: URL) {
         let api = HomieAPI(endpoint: endpoint, sessionToken: { HomieSession.token(for: endpoint) })
@@ -23,15 +22,6 @@ final class SyncSession: ObservableObject {
         let permissions = PermissionsModel(library: library, endpoint: endpoint)
         self.permissions = permissions
         uploader = PhotoUploader(library: library, api: api, onAuthenticationRequired: { auth.sessionExpired() })
-
-        let changes = [
-            auth.objectWillChange, library.objectWillChange,
-            uploader.objectWillChange, selection.objectWillChange,
-            permissions.objectWillChange,
-        ]
-        forwarding = changes.map { publisher in
-            publisher.sink { [weak self] _ in self?.objectWillChange.send() }
-        }
     }
 
     var isSignedIn: Bool {

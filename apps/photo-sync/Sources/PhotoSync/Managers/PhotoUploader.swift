@@ -1,6 +1,6 @@
 @preconcurrency import CoreLocation
-import Combine
 import Foundation
+import Observation
 
 struct AlbumProgress: Equatable {
     var completed = 0
@@ -9,13 +9,14 @@ struct AlbumProgress: Equatable {
     var isDone: Bool { total > 0 && completed >= total }
 }
 
-final class PhotoUploader: ObservableObject {
-    @Published private(set) var completed = 0
-    @Published private(set) var total = 0
-    @Published private(set) var isUploading = false
-    @Published private(set) var albumProgress: [String: AlbumProgress] = [:]
-    @Published private(set) var drawingProgress: AlbumProgress?
-    @Published private(set) var drawingMessage: String?
+@Observable
+final class PhotoUploader {
+    private(set) var completed = 0
+    private(set) var total = 0
+    private(set) var isUploading = false
+    private(set) var albumProgress: [String: AlbumProgress] = [:]
+    private(set) var drawingProgress: AlbumProgress?
+    private(set) var drawingMessage: String?
 
     private static let ledgerFlushInterval = 50
 

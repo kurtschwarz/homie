@@ -1,8 +1,8 @@
 import SwiftUI
 
 struct SignInView: View {
-    @ObservedObject var auth: AuthModel
-    @ObservedObject var hostStore: HomieHostStore
+    let auth: AuthModel
+    let hostStore: HomieHostStore
     @State private var username = ""
     @State private var password = ""
     @FocusState private var focusedField: Field?

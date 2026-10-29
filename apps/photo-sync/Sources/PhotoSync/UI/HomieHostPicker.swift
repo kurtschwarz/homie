@@ -1,8 +1,8 @@
 import SwiftUI
 
 struct HomieHostControl: View {
-    @ObservedObject var store: HomieHostStore
-    @ObservedObject private var discovery: HomieDiscovery
+    let store: HomieHostStore
+    private let discovery: HomieDiscovery
     @State private var showsPicker = false
 
     init(store: HomieHostStore) {
@@ -58,8 +58,8 @@ struct HomieHostControl: View {
 }
 
 struct HomieHostPicker: View {
-    @ObservedObject var store: HomieHostStore
-    @ObservedObject private var discovery: HomieDiscovery
+    let store: HomieHostStore
+    private let discovery: HomieDiscovery
     @Binding var isPresented: Bool
     @State private var manualAddress = ""
     @State private var errorMessage: String?

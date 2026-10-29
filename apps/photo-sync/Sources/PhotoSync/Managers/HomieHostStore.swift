@@ -1,12 +1,13 @@
-import Combine
 import Foundation
+import Observation
 
-final class HomieHostStore: ObservableObject {
-    @Published private(set) var selected: HomieHost
-    @Published private(set) var health: HomieHealth?
-    @Published private(set) var isChecking = false
-    @Published private(set) var requiresSetup = false
-    @Published private(set) var contentIdentity = UUID()
+@Observable
+final class HomieHostStore {
+    private(set) var selected: HomieHost
+    private(set) var health: HomieHealth?
+    private(set) var isChecking = false
+    private(set) var requiresSetup = false
+    private(set) var contentIdentity = UUID()
 
     let discovery = HomieDiscovery()
     private let defaults: UserDefaults

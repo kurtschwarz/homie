@@ -1,16 +1,17 @@
-import Combine
 import Foundation
+import Observation
 
-final class AlbumSelection: ObservableObject {
+@Observable
+final class AlbumSelection {
     private static let albumsKey = "photo-sync.selectedAlbums"
     private static let keepSyncingKey = "photo-sync.keepSyncing"
     private static let lastSyncedKey = "photo-sync.lastSyncedAt"
     private static let artworkAlbumKey = "photo-sync.artworkAlbum"
 
-    @Published private(set) var artworkAlbumID: String?
-    @Published private(set) var albumIDs: Set<String>
-    @Published private(set) var keepSyncing: Bool
-    @Published private(set) var lastSyncedAt: Date?
+    private(set) var artworkAlbumID: String?
+    private(set) var albumIDs: Set<String>
+    private(set) var keepSyncing: Bool
+    private(set) var lastSyncedAt: Date?
 
     private let defaults: UserDefaults
 

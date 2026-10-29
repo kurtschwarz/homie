@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 struct MenuBarIcon: View {
-    @ObservedObject var session: SyncSession
+    let session: SyncSession
 
     private var symbol: String? {
         if session.uploader.isUploading { return "arrow.triangle.2.circlepath" }
@@ -29,7 +29,7 @@ struct MenuBarIcon: View {
 /// The window is suppressed at launch, so this is the only view that exists then: it runs the startup
 /// checks and opens the window when there is something the user has to finish.
 struct MenuBarLabel: View {
-    @ObservedObject var session: SyncSession
+    let session: SyncSession
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
@@ -44,8 +44,8 @@ struct MenuBarLabel: View {
 }
 
 struct MenuBarContent: View {
-    @ObservedObject var session: SyncSession
-    @ObservedObject var launchAtLogin: LaunchAtLogin
+    let session: SyncSession
+    let launchAtLogin: LaunchAtLogin
     let onAbout: () -> Void
     let onReset: () -> Void
     @Environment(\.openWindow) private var openWindow

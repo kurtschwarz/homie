@@ -1,9 +1,9 @@
 import SwiftUI
 
 struct SyncStatusView: View {
-    @ObservedObject var library: PhotoLibrary
-    @ObservedObject var selection: AlbumSelection
-    @ObservedObject var uploader: PhotoUploader
+    let library: PhotoLibrary
+    let selection: AlbumSelection
+    let uploader: PhotoUploader
     let onSyncNow: () -> Void
     let onChangeAlbums: () -> Void
 
@@ -145,7 +145,7 @@ struct SyncStatusView: View {
 
 private struct SyncAlbumRow: View {
     let album: PhotoAlbum
-    @ObservedObject var library: PhotoLibrary
+    let library: PhotoLibrary
     let progress: AlbumProgress?
 
     private var status: String {
@@ -177,7 +177,7 @@ private struct SyncAlbumRow: View {
 
 private struct ArtworkAlbumRow: View {
     let album: PhotoAlbum
-    @ObservedObject var library: PhotoLibrary
+    let library: PhotoLibrary
     let progress: AlbumProgress?
     let isUploading: Bool
 

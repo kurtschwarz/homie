@@ -71,7 +71,7 @@ private struct SkeletonRow: View {
             PaneIconTile(pane: pane)
                 .grayscale(1)
                 .opacity(0.4)
-            SkeletonBar(width: CGFloat(60 + (pane.title.count * 7) % 50), height: 10)
+            SkeletonBar(width: 90, height: 10)
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 10)

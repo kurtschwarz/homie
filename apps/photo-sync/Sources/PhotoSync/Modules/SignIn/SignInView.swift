@@ -58,21 +58,10 @@ struct SignInView: View {
                     if auth.isSigningIn { ProgressView().controlSize(.small) }
                     Text(auth.isSigningIn ? "Signing in…" : "Sign in")
                 }
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Color.homieButtonText)
-                .frame(width: 340, height: 40)
-                .background(
-                    LinearGradient(
-                        colors: [Color.homieGreenLight, Color.homieGreen],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    ),
-                    in: RoundedRectangle(cornerRadius: 12)
-                )
             }
-            .buttonStyle(.plain)
+            .buttonStyle(HomieButtonStyle(prominent: true, fullWidth: true))
             .disabled(auth.isSigningIn)
-            .opacity(auth.isSigningIn ? 0.7 : 1)
+            .frame(width: 340)
             .padding(.top, 14)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

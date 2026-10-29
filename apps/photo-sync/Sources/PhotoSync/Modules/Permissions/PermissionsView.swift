@@ -1,9 +1,11 @@
+import AppKit
 import Photos
 import SwiftUI
 
 struct PermissionsView: View {
     @ObservedObject var permissions: PermissionsModel
     @ObservedObject var library: PhotoLibrary
+    @Environment(\.openWindow) private var openWindow
 
     private static let contentWidth: CGFloat = 340
 
@@ -25,12 +27,24 @@ struct PermissionsView: View {
                     detail: photosDetail(gate),
                     isDone: gate.photosAllowed,
                     actionTitle: gate.photos == .denied || gate.photos == .restricted ? "Open System Settings" : "Allow",
-                    isBusy: false
+                    isBusy: permissions.isRequestingPhotos
                 ) {
                     if gate.photos == .denied || gate.photos == .restricted {
                         permissions.openPhotosSettings()
                     } else {
-                        Task { await permissions.allowPhotos() }
+                        Task {
+                            async let request: Void = permissions.allowPhotos()
+                            // PhotoKit answers about two seconds late, so keep asking rather than wait.
+                            let nudge = Task {
+                                while !Task.isCancelled {
+                                    try? await Task.sleep(for: .milliseconds(50))
+                                    comeBack()
+                                }
+                            }
+                            await request
+                            nudge.cancel()
+                            comeBack()
+                        }
                     }
                 }
                 Rectangle().fill(Color.homieDivider).frame(height: 1)
@@ -41,7 +55,10 @@ struct PermissionsView: View {
                     actionTitle: gate.keychain == .denied ? "Try again" : "Allow",
                     isBusy: permissions.isRequestingKeychain
                 ) {
-                    Task { await permissions.allowKeychain() }
+                    Task {
+                        await permissions.allowKeychain()
+                        comeBack()
+                    }
                 }
             }
             .frame(width: Self.contentWidth)
@@ -63,10 +80,19 @@ struct PermissionsView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    /// A system prompt drops the window behind whatever else is on screen, and both openWindow and
+    /// activate are no-ops while another app owns the front. orderFrontRegardless is not.
+    private func comeBack() {
+        openWindow(id: "main")
+        NSApp.activate(ignoringOtherApps: true)
+        NSApp.windows.first { $0.identifier?.rawValue == "main" }?.orderFrontRegardless()
+    }
+
     private func photosDetail(_ gate: PermissionsGate) -> String {
+        if permissions.isRequestingPhotos { return "Waiting for Photos…" }
         switch gate.photos {
-        case .denied, .restricted: "Not allowed"
-        default: "Reads your albums to sync them"
+        case .denied, .restricted: return "Not allowed"
+        default: return "Reads your albums to sync them"
         }
     }
 }

@@ -15,37 +15,50 @@ enum HomieSession {
         return legacyToken
     }
 
-    static func probeAccess(for endpoint: URL) -> KeychainAccess {
-        access(for: endpoint, interactive: false)
+    private static let grantedKey = "keychainAccessGranted"
+
+    /// Reading an item's data is the only way to learn whether the keychain would prompt, and asking is
+    /// what triggers the prompt. So launch only looks for the item's attributes, which never prompt, and
+    /// trusts what the last Allow told us.
+    static func probeAccess(for endpoint: URL, defaults: UserDefaults = .standard) -> KeychainAccess {
+        guard savedAccounts(for: endpoint).contains(where: itemExists) else { return .allowed }
+        return defaults.bool(forKey: grantedKey) ? .allowed : .needsPrompt
     }
 
-    static func requestAccess(for endpoint: URL) -> KeychainAccess {
-        access(for: endpoint, interactive: true)
-    }
-
-    static func resetSaved(for endpoint: URL) {
-        clear(for: endpoint)
-        SecItemDelete(itemQuery(account: legacyAccount) as CFDictionary)
-    }
-
-    private static func access(for endpoint: URL, interactive: Bool) -> KeychainAccess {
-        for account in [sessionAccount(for: endpoint), legacyAccount] {
+    static func requestAccess(for endpoint: URL, defaults: UserDefaults = .standard) -> KeychainAccess {
+        for account in savedAccounts(for: endpoint) {
             var query = itemQuery(account: account)
             query[kSecReturnData as String] = true
             query[kSecMatchLimit as String] = kSecMatchLimitOne
-            // LAContext.interactionNotAllowed is ignored by the legacy file-based keychain, which still prompts.
-            if !interactive { query[kSecUseAuthenticationUI as String] = kSecUseAuthenticationUIFail }
             var result: CFTypeRef?
             switch SecItemCopyMatching(query as CFDictionary, &result) {
             case errSecSuccess, errSecItemNotFound:
                 continue
-            case errSecInteractionNotAllowed where !interactive:
-                return .needsPrompt
             default:
+                defaults.set(false, forKey: grantedKey)
                 return .denied
             }
         }
+        defaults.set(true, forKey: grantedKey)
         return .allowed
+    }
+
+    static func resetSaved(for endpoint: URL, defaults: UserDefaults = .standard) {
+        clear(for: endpoint)
+        SecItemDelete(itemQuery(account: legacyAccount) as CFDictionary)
+        defaults.set(false, forKey: grantedKey)
+    }
+
+    private static func savedAccounts(for endpoint: URL) -> [String] {
+        [sessionAccount(for: endpoint), legacyAccount]
+    }
+
+    private static func itemExists(account: String) -> Bool {
+        var query = itemQuery(account: account)
+        query[kSecReturnAttributes as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+        var result: CFTypeRef?
+        return SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess
     }
 
     private static func read(account: String) -> String? {

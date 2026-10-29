@@ -22,7 +22,9 @@ final class PhotoLibrary: ObservableObject {
     }
 
     func authorize() async {
-        authorization = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
+        // Off the main actor: PhotoKit keeps it busy for a second or two, which stalls any UI work
+        // waiting to run while the prompt is up.
+        authorization = await Task.detached { await PHPhotoLibrary.requestAuthorization(for: .readWrite) }.value
         if authorization == .authorized || authorization == .limited {
             loadAlbums()
         }

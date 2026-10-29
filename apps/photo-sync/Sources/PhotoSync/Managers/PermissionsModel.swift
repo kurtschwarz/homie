@@ -7,6 +7,7 @@ final class PermissionsModel: ObservableObject {
     @Published private(set) var keychain: KeychainAccess = .allowed
     @Published private(set) var showsScreen = false
     @Published private(set) var isRequestingKeychain = false
+    @Published private(set) var isRequestingPhotos = false
 
     private let library: PhotoLibrary
     private let endpoint: URL
@@ -23,13 +24,17 @@ final class PermissionsModel: ObservableObject {
     func refresh() {
         hasChecked = true
         library.refreshAuthorization()
-        if keychain != .denied || !showsScreen {
-            keychain = HomieSession.probeAccess(for: endpoint)
-        }
+        // A denial is only known from the last Allow; probing again would just report "needs prompt".
+        if keychain != .denied { keychain = HomieSession.probeAccess(for: endpoint) }
         showsScreen = PermissionsGate.showsScreen(currentlyShowing: showsScreen, gate: gate)
     }
 
+    /// PhotoKit takes about two seconds to report an answer the system already has, so the row says it is
+    /// waiting rather than sitting there unticked.
     func allowPhotos() async {
+        guard !isRequestingPhotos else { return }
+        isRequestingPhotos = true
+        defer { isRequestingPhotos = false }
         await library.authorize()
     }
 

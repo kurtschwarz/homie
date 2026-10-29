@@ -1,6 +1,6 @@
 import Photos
 
-enum KeychainAccess: Equatable {
+enum AccessState: Equatable {
     case allowed
     case needsPrompt
     case denied
@@ -8,13 +8,15 @@ enum KeychainAccess: Equatable {
 
 struct PermissionsGate: Equatable {
     var photos: PHAuthorizationStatus
-    var keychain: KeychainAccess
+    var localNetwork: AccessState
+    var keychain: AccessState
 
     var photosAllowed: Bool { photos == .authorized || photos == .limited }
-    var isSatisfied: Bool { photosAllowed && keychain == .allowed }
+    var isSatisfied: Bool { photosAllowed && localNetwork == .allowed && keychain == .allowed }
 
     var continueTitle: String {
         if !photosAllowed { return "Allow Photos to continue" }
+        if localNetwork != .allowed { return "Allow Local Network to continue" }
         if keychain != .allowed { return "Allow Keychain to continue" }
         return "Continue"
     }

@@ -4,9 +4,11 @@ import Foundation
 
 @MainActor
 final class PermissionsModel: ObservableObject {
-    @Published private(set) var keychain: KeychainAccess = .allowed
+    @Published private(set) var keychain: AccessState = .allowed
+    @Published private(set) var localNetwork: AccessState = .allowed
     @Published private(set) var showsScreen = false
     @Published private(set) var isRequestingKeychain = false
+    @Published private(set) var isRequestingLocalNetwork = false
     @Published private(set) var isRequestingPhotos = false
 
     private let library: PhotoLibrary
@@ -19,13 +21,18 @@ final class PermissionsModel: ObservableObject {
 
     private(set) var hasChecked = false
 
-    var gate: PermissionsGate { PermissionsGate(photos: library.authorization, keychain: keychain) }
+    var gate: PermissionsGate {
+        PermissionsGate(photos: library.authorization, localNetwork: localNetwork, keychain: keychain)
+    }
 
     func refresh() {
         hasChecked = true
         library.refreshAuthorization()
+        // Browsing is what prompts, so launch trusts the last Allow rather than asking again.
+        if localNetwork != .denied { localNetwork = LocalNetworkProbe.recordedAccess() }
         // A denial is only known from the last Allow; probing again would just report "needs prompt".
         if keychain != .denied { keychain = HomieSession.probeAccess(for: endpoint) }
+        if localNetwork != .denied { localNetwork = LocalNetworkProbe.recordedAccess() }
         showsScreen = PermissionsGate.showsScreen(currentlyShowing: showsScreen, gate: gate)
     }
 
@@ -36,6 +43,13 @@ final class PermissionsModel: ObservableObject {
         isRequestingPhotos = true
         defer { isRequestingPhotos = false }
         await library.authorize()
+    }
+
+    func allowLocalNetwork() async {
+        guard !isRequestingLocalNetwork else { return }
+        isRequestingLocalNetwork = true
+        defer { isRequestingLocalNetwork = false }
+        if let answer = await LocalNetworkProbe.request(timeout: .seconds(60)) { localNetwork = answer }
     }
 
     func allowKeychain() async {
@@ -53,6 +67,11 @@ final class PermissionsModel: ObservableObject {
 
     func openPhotosSettings() {
         guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Photos") else { return }
+        NSWorkspace.shared.open(url)
+    }
+
+    func openLocalNetworkSettings() {
+        guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_LocalNetwork") else { return }
         NSWorkspace.shared.open(url)
     }
 

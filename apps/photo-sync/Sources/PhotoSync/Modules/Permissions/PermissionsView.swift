@@ -15,7 +15,7 @@ struct PermissionsView: View {
             HomieMark()
                 .frame(width: 88, height: 88)
 
-            Text("Two quick permissions")
+            Text("Three quick permissions")
                 .font(.system(size: 24, weight: .bold))
                 .foregroundStyle(.white)
                 .padding(.top, 14)
@@ -43,6 +43,23 @@ struct PermissionsView: View {
                             }
                             await request
                             nudge.cancel()
+                            comeBack()
+                        }
+                    }
+                }
+                Rectangle().fill(Color.homieDivider).frame(height: 1)
+                PermissionRow(
+                    title: "Local Network",
+                    detail: gate.localNetwork == .denied ? "Not allowed" : "Lets Homie Photos find Homie on your Wi-Fi",
+                    isDone: gate.localNetwork == .allowed,
+                    actionTitle: gate.localNetwork == .denied ? "Open System Settings" : "Allow",
+                    isBusy: permissions.isRequestingLocalNetwork
+                ) {
+                    if gate.localNetwork == .denied {
+                        permissions.openLocalNetworkSettings()
+                    } else {
+                        Task {
+                            await permissions.allowLocalNetwork()
                             comeBack()
                         }
                     }

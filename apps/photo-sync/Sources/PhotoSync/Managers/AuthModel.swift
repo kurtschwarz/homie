@@ -1,7 +1,6 @@
 import Combine
 import Foundation
 
-@MainActor
 final class AuthModel: ObservableObject {
     enum State {
         case checking

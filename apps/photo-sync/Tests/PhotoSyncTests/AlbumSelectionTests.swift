@@ -2,7 +2,6 @@ import Foundation
 import Testing
 @testable import PhotoSync
 
-@MainActor
 struct AlbumSelectionTests {
     private let defaults = TestDefaults.make()
 

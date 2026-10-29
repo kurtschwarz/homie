@@ -1,6 +1,6 @@
 import Foundation
 
-struct PhotoUploadInput: Encodable {
+nonisolated struct PhotoUploadInput: Encodable {
     let assetID: String
     let version: String
     let takenAt: Int
@@ -12,12 +12,12 @@ struct PhotoUploadInput: Encodable {
     let focus: FocalRegionInput?
 }
 
-struct UploadedPhoto: Decodable {
+nonisolated struct UploadedPhoto: Decodable {
     let id: String
     let url: String
 }
 
-struct HomieDrawing: Decodable, Equatable {
+nonisolated struct HomieDrawing: Decodable, Equatable {
     struct Coordinate: Decodable, Equatable {
         let latitude: Double
         let longitude: Double
@@ -29,56 +29,56 @@ struct HomieDrawing: Decodable, Equatable {
     let coordinate: Coordinate?
 }
 
-struct DrawingsPayload: Decodable {
+nonisolated struct DrawingsPayload: Decodable {
     let unpushedDrawings: [HomieDrawing]?
 }
 
-struct PushedIDsPayload: Decodable {
+nonisolated struct PushedIDsPayload: Decodable {
     let pushedDrawingAssetIDs: [String]?
 }
 
-struct MarkPushedPayload: Decodable {
+nonisolated struct MarkPushedPayload: Decodable {
     let markDrawingPushed: Bool?
 }
 
 /// Closed set: the server's role enum only has ADMIN, so an unrecognised role fails decoding
 /// rather than being treated as a non-admin. Add a case here when the server adds a role.
-enum HomieRole: String, Decodable, Equatable {
+nonisolated enum HomieRole: String, Decodable, Equatable {
     case admin = "ADMIN"
 }
 
-struct HomieUser: Decodable, Equatable {
+nonisolated struct HomieUser: Decodable, Equatable {
     let id: String
     let username: String
     let role: HomieRole
 }
 
-struct GraphQLResponse<Payload: Decodable>: Decodable {
+nonisolated struct GraphQLResponse<Payload: Decodable>: Decodable {
     let data: Payload?
     let errors: [GraphQLErrorItem]?
 }
 
-struct GraphQLErrorItem: Decodable { let message: String }
+nonisolated struct GraphQLErrorItem: Decodable { let message: String }
 
-struct UploadPayload: Decodable {
+nonisolated struct UploadPayload: Decodable {
     let uploadPhoto: UploadedPhoto?
 }
 
-struct LoginPayload: Decodable { let login: HomieUser? }
+nonisolated struct LoginPayload: Decodable { let login: HomieUser? }
 
-struct SessionPayload: Decodable {
+nonisolated struct SessionPayload: Decodable {
     struct Session: Decodable { let user: HomieUser? }
     let session: Session?
 }
 
-struct HomieHealth: Decodable, Equatable {
+nonisolated struct HomieHealth: Decodable, Equatable {
     let status: String
     let version: String
 }
 
-struct HealthPayload: Decodable { let health: HomieHealth? }
+nonisolated struct HealthPayload: Decodable { let health: HomieHealth? }
 
-struct HomieAPI {
+nonisolated struct HomieAPI {
     // A bundle launched by `open` does not inherit the shell environment, so
     // UserDefaults is the command-line override that works for the app bundle:
     //   defaults write ar.schw.homie.photo-sync HomieAPIURL http://localhost:3030
@@ -308,9 +308,9 @@ struct HomieAPI {
     }
 }
 
-private struct EmptyPayload: Decodable {}
+nonisolated private struct EmptyPayload: Decodable {}
 
-enum HomieAPIError: LocalizedError {
+nonisolated enum HomieAPIError: LocalizedError {
     case invalidResponse
     case missingSessionCookie
     case unauthorized

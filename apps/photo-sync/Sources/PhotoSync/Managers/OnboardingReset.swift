@@ -1,6 +1,5 @@
 import Foundation
 
-@MainActor
 struct OnboardingReset {
     private let defaults: UserDefaults
     private let tokenForEndpoint: (URL) -> String?

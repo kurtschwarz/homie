@@ -2,7 +2,6 @@ import Combine
 import Foundation
 import ServiceManagement
 
-@MainActor
 final class LaunchAtLogin: ObservableObject {
     @Published private(set) var isEnabled = SMAppService.mainApp.status == .enabled
     @Published private(set) var errorMessage: String?
@@ -18,7 +17,6 @@ final class LaunchAtLogin: ObservableObject {
     }
 }
 
-@MainActor
 final class AppModel: ObservableObject {
     let hostStore = HomieHostStore()
     let launchAtLogin = LaunchAtLogin()

@@ -4,7 +4,7 @@ import Network
 /// macOS has no API that reports Local Network access, and a browser reaches `ready` whether or not the
 /// user has answered. So the app advertises a service of its own and browses for it: seeing it means
 /// access is on, and a policy error means it is off.
-enum LocalNetworkProbe {
+nonisolated enum LocalNetworkProbe {
     static let policyDenied: Int32 = -65570
     static let serviceType = "_homie-photos-probe._tcp"
     private static let grant = CodeSignedGrant(key: "photo-sync.localNetworkGrantedForCode")
@@ -70,7 +70,7 @@ enum LocalNetworkProbe {
     }
 }
 
-private final class Settled: @unchecked Sendable {
+private nonisolated final class Settled: @unchecked Sendable {
     private let lock = NSLock()
     private var done = false
 

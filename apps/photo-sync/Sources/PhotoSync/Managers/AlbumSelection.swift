@@ -1,7 +1,6 @@
 import Combine
 import Foundation
 
-@MainActor
 final class AlbumSelection: ObservableObject {
     private static let albumsKey = "photo-sync.selectedAlbums"
     private static let keepSyncingKey = "photo-sync.keepSyncing"

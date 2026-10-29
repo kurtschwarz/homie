@@ -1,12 +1,12 @@
 import Photos
 
-enum AccessState: Equatable {
+nonisolated enum AccessState: Equatable {
     case allowed
     case needsPrompt
     case denied
 }
 
-struct PermissionsGate: Equatable {
+nonisolated struct PermissionsGate: Equatable {
     var photos: PHAuthorizationStatus
     var localNetwork: AccessState
     var keychain: AccessState
@@ -26,7 +26,7 @@ struct PermissionsGate: Equatable {
         return "Continue"
     }
 
-    nonisolated static func showsScreen(currentlyShowing: Bool, gate: PermissionsGate) -> Bool {
+    static func showsScreen(currentlyShowing: Bool, gate: PermissionsGate) -> Bool {
         currentlyShowing || !gate.isSatisfied
     }
 }

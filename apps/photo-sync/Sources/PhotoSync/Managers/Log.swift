@@ -1,7 +1,7 @@
 import Foundation
 import os
 
-enum Log {
+nonisolated enum Log {
     static let subsystem = "ar.schw.homie.photo-sync"
 
     static let sync = Logger(subsystem: subsystem, category: "sync")
@@ -14,7 +14,7 @@ enum Log {
 /// Every line carries the run ID, so one sync can be filtered out of a log archive with
 /// `log show --predicate 'subsystem == "ar.schw.homie.photo-sync" AND eventMessage CONTAINS "run 1a2b3c4d"'`.
 /// `message` is logged in the clear, so keep personal data (hosts, asset IDs, error text) in `detail`.
-struct SyncRunLog: Sendable {
+nonisolated struct SyncRunLog: Sendable {
     let id: String
 
     init(id: String = Self.makeID()) {

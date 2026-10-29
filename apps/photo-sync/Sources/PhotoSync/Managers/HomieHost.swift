@@ -1,6 +1,6 @@
 import Foundation
 
-struct HomieHost: Identifiable, Hashable {
+nonisolated struct HomieHost: Identifiable, Hashable {
     enum Source: Hashable {
         case discovered
         case manual

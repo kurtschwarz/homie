@@ -1,7 +1,6 @@
 import Combine
 import Foundation
 
-@MainActor
 final class HomieDiscovery: NSObject, ObservableObject {
     @Published private(set) var hosts: [HomieHost] = []
     @Published private(set) var isSearching = false
@@ -40,7 +39,7 @@ final class HomieDiscovery: NSObject, ObservableObject {
 
 extension HomieDiscovery: NetServiceBrowserDelegate, NetServiceDelegate {
     nonisolated func netServiceBrowser(_ browser: NetServiceBrowser, didFind service: NetService, moreComing: Bool) {
-        Task { @MainActor in
+        MainActor.assumeIsolated {
             services.append(service)
             service.delegate = self
             service.resolve(withTimeout: 5)
@@ -48,7 +47,7 @@ extension HomieDiscovery: NetServiceBrowserDelegate, NetServiceDelegate {
     }
 
     nonisolated func netServiceDidResolveAddress(_ sender: NetService) {
-        Task { @MainActor in
+        MainActor.assumeIsolated {
             guard let hostname = sender.hostName else { return }
             var components = URLComponents()
             components.scheme = "http"
@@ -69,14 +68,14 @@ extension HomieDiscovery: NetServiceBrowserDelegate, NetServiceDelegate {
     }
 
     nonisolated func netServiceBrowserDidStopSearch(_ browser: NetServiceBrowser) {
-        Task { @MainActor in
+        MainActor.assumeIsolated {
             isSearching = false
             started = false
         }
     }
 
     nonisolated func netServiceBrowser(_ browser: NetServiceBrowser, didRemove service: NetService, moreComing: Bool) {
-        Task { @MainActor in
+        MainActor.assumeIsolated {
             services.removeAll { $0 === service }
             if let host = resolvedHosts.removeValue(forKey: serviceKey(service)) {
                 hosts.removeAll { $0.id == host.id }
@@ -85,14 +84,14 @@ extension HomieDiscovery: NetServiceBrowserDelegate, NetServiceDelegate {
     }
 
     nonisolated func netServiceBrowser(_ browser: NetServiceBrowser, didNotSearch errorDict: [String: NSNumber]) {
-        Task { @MainActor in
+        MainActor.assumeIsolated {
             isSearching = false
             started = false
         }
     }
 
     nonisolated func netService(_ sender: NetService, didNotResolve errorDict: [String: NSNumber]) {
-        Task { @MainActor in services.removeAll { $0 === sender } }
+        MainActor.assumeIsolated { services.removeAll { $0 === sender } }
     }
 
     private func serviceKey(_ service: NetService) -> String {

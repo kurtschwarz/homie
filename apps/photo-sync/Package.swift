@@ -1,5 +1,15 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 6.2
 import PackageDescription
+
+let swiftSettings: [SwiftSetting] = [
+    .swiftLanguageMode(.v5),
+    .defaultIsolation(MainActor.self),
+    .enableUpcomingFeature("DisableOutwardActorInference"),
+    .enableUpcomingFeature("GlobalActorIsolatedTypesUsability"),
+    .enableUpcomingFeature("InferIsolatedConformances"),
+    .enableUpcomingFeature("InferSendableFromCaptures"),
+    .enableUpcomingFeature("NonisolatedNonsendingByDefault")
+]
 
 let package = Package(
     name: "PhotoSync",
@@ -8,13 +18,13 @@ let package = Package(
         .executableTarget(
             name: "PhotoSync",
             path: "Sources/PhotoSync",
-            swiftSettings: [.swiftLanguageMode(.v5)]
+            swiftSettings: swiftSettings
         ),
         .testTarget(
             name: "PhotoSyncTests",
             dependencies: ["PhotoSync"],
             path: "Tests/PhotoSyncTests",
-            swiftSettings: [.swiftLanguageMode(.v5)]
+            swiftSettings: swiftSettings
         )
     ]
 )

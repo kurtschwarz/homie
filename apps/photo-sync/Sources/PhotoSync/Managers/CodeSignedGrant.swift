@@ -3,7 +3,7 @@ import Security
 
 /// A record of the user's last Allow, tied to the app's code signature: re-signing the app invalidates
 /// the system's grant, so a record from an older build proves nothing.
-struct CodeSignedGrant {
+nonisolated struct CodeSignedGrant {
     let key: String
 
     func isCurrent(defaults: UserDefaults = .standard) -> Bool {
@@ -18,7 +18,7 @@ struct CodeSignedGrant {
         defaults.removeObject(forKey: key)
     }
 
-    nonisolated static func isCurrent(recorded: String?, identity: String) -> Bool {
+    static func isCurrent(recorded: String?, identity: String) -> Bool {
         !identity.isEmpty && recorded == identity
     }
 

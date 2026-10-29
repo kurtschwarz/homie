@@ -2,7 +2,6 @@ import Combine
 import Foundation
 import Photos
 
-@MainActor
 final class SyncSession: ObservableObject {
     static let pollInterval: Duration = .seconds(300)
 

@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct HomieMark: View {
+    var eyesClosed = false
+
     var body: some View {
         mark.accessibilityHidden(true)
     }
@@ -50,8 +52,9 @@ struct HomieMark: View {
             )
 
             let face = Color(red: 0.02, green: 0.31, blue: 0.22)
-            context.fill(oval(center: CGPoint(x: 113, y: 73), radii: CGSize(width: 8, height: 14), rotation: -10), with: .color(face))
-            context.fill(oval(center: CGPoint(x: 147, y: 55), radii: CGSize(width: 8, height: 13), rotation: -20), with: .color(face))
+            let eyeScale: CGFloat = eyesClosed ? 0.12 : 1
+            context.fill(oval(center: CGPoint(x: 113, y: 73), radii: CGSize(width: 8, height: 14 * eyeScale), rotation: -10), with: .color(face))
+            context.fill(oval(center: CGPoint(x: 147, y: 55), radii: CGSize(width: 8, height: 13 * eyeScale), rotation: -20), with: .color(face))
 
             var smile = Path()
             smile.move(to: CGPoint(x: 94, y: 106))

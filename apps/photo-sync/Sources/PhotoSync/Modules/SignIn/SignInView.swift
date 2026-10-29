@@ -5,74 +5,86 @@ struct SignInView: View {
     @ObservedObject var hostStore: HomieHostStore
     @State private var username = ""
     @State private var password = ""
+    @State private var isBlinking = false
     @FocusState private var focusedField: Field?
 
     private enum Field { case username, password }
 
     var body: some View {
         VStack(spacing: 0) {
-            Spacer()
-            HomieMark()
-                .frame(width: 154, height: 154)
+            HomieMark(eyesClosed: isBlinking)
+                .frame(width: 88, height: 88)
 
-            VStack(spacing: 14) {
-                Text("Sign in to Homie")
-                    .font(.system(size: 36, weight: .bold))
-                    .tracking(-0.8)
-                Text("Use a manager account to send iCloud Photos\nto your Homie.")
-                    .font(.system(size: 20, weight: .regular))
-                    .lineSpacing(5)
-                    .foregroundStyle(.secondary)
+            Text("Sign in to Homie")
+                .font(.system(size: 24, weight: .bold))
+                .foregroundStyle(.white)
+                .padding(.top, 14)
+
+            HomieHostControl(store: hostStore)
+                .padding(.top, 6)
+                .padding(.bottom, 22)
+
+            VStack(spacing: 0) {
+                TextField("Username", text: $username)
+                    .textFieldStyle(.plain)
+                    .focused($focusedField, equals: .username)
+                    .onSubmit { focusedField = .password }
+                    .padding(.horizontal, 14)
+                    .frame(height: 44)
+                Rectangle().fill(Color.homieDivider).frame(height: 1)
+                SecureField("Password", text: $password)
+                    .textFieldStyle(.plain)
+                    .focused($focusedField, equals: .password)
+                    .onSubmit(signIn)
+                    .padding(.horizontal, 14)
+                    .frame(height: 44)
+            }
+            .frame(width: 340)
+            .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.homieDivider, lineWidth: 1))
+
+            if case .signedOut(let message) = auth.state, let message {
+                Text(message)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color(red: 1, green: 0.55, blue: 0.55))
                     .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(width: 340)
+                    .padding(.top, 12)
             }
-            .padding(.top, 12)
-            .padding(.bottom, 28)
 
-            VStack(alignment: .leading, spacing: 16) {
-                HomieHostControl(store: hostStore)
-
-                VStack(alignment: .leading, spacing: 7) {
-                    Text("Username").font(.headline)
-                    TextField("Your Homie username", text: $username)
-                        .textFieldStyle(.roundedBorder)
-                        .focused($focusedField, equals: .username)
-                        .onSubmit { focusedField = .password }
+            Button(action: signIn) {
+                HStack(spacing: 6) {
+                    if auth.isSigningIn { ProgressView().controlSize(.small) }
+                    Text(auth.isSigningIn ? "Signing in…" : "Sign in")
                 }
-                VStack(alignment: .leading, spacing: 7) {
-                    Text("Password").font(.headline)
-                    SecureField("Your Homie password", text: $password)
-                        .textFieldStyle(.roundedBorder)
-                        .focused($focusedField, equals: .password)
-                        .onSubmit(signIn)
-                }
-                Button(action: signIn) {
-                    HStack {
-                        if auth.isSigningIn { ProgressView().controlSize(.small) }
-                        Text(auth.isSigningIn ? "Signing in…" : "Sign in")
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .disabled(auth.isSigningIn || username.isEmpty || password.isEmpty)
-
-                if case .signedOut(let message) = auth.state, let message {
-                    Label(message, systemImage: "exclamationmark.triangle.fill")
-                        .font(.callout)
-                        .foregroundStyle(.red)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Color.homieButtonText)
+                .frame(width: 340, height: 40)
+                .background(
+                    LinearGradient(
+                        colors: [Color(red: 0.47, green: 0.84, blue: 0.68), Color.homieGreen],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ),
+                    in: RoundedRectangle(cornerRadius: 12)
+                )
             }
-            .frame(maxWidth: 540)
-
-            Spacer()
-            Text("Only admin accounts can sync photos. Your Apple ID stays on this Mac.")
-                .font(.callout)
-                .foregroundStyle(.tertiary)
-                .padding(.bottom, 28)
+            .buttonStyle(.plain)
+            .disabled(auth.isSigningIn)
+            .opacity(auth.isSigningIn ? 0.7 : 1)
+            .padding(.top, 14)
         }
-        .padding(.horizontal, 56)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear { focusedField = .username }
+        .task {
+            while !Task.isCancelled {
+                do { try await Task.sleep(for: .seconds(3.5)) } catch { return }
+                isBlinking = true
+                do { try await Task.sleep(for: .milliseconds(150)) } catch { return }
+                isBlinking = false
+            }
+        }
     }
 
     private func signIn() {

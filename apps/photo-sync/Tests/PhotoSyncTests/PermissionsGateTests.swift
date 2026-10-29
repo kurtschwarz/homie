@@ -46,6 +46,13 @@ final class PermissionsGateTests: XCTestCase {
         XCTAssertEqual(gate(.authorized).continueTitle, "Continue")
     }
 
+    func testSidebarIsSkeletonUntilPastTheStartupScreens() {
+        XCTAssertTrue(StartupPhase.permissions.hidesSidebar)
+        XCTAssertTrue(StartupPhase.gettingReady.hidesSidebar)
+        XCTAssertFalse(StartupPhase.signedOut.hidesSidebar)
+        XCTAssertFalse(StartupPhase.signedIn.hidesSidebar)
+    }
+
     func testStartupOrder() {
         XCTAssertEqual(StartupPhase.resolve(showsPermissions: true, isCheckingSession: true, isSignedIn: false), .permissions)
         XCTAssertEqual(StartupPhase.resolve(showsPermissions: false, isCheckingSession: true, isSignedIn: false), .gettingReady)

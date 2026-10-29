@@ -32,6 +32,9 @@ enum StartupPhase: Equatable {
     case signedOut
     case signedIn
 
+    /// The sidebar has nothing to point at until the app is past its startup screens.
+    var hidesSidebar: Bool { self == .permissions || self == .gettingReady }
+
     nonisolated static func resolve(showsPermissions: Bool, isCheckingSession: Bool, isSignedIn: Bool) -> StartupPhase {
         if showsPermissions { return .permissions }
         if isCheckingSession { return .gettingReady }

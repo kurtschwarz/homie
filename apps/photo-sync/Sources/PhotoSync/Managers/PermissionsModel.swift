@@ -32,7 +32,6 @@ final class PermissionsModel: ObservableObject {
         if localNetwork != .denied { localNetwork = LocalNetworkProbe.recordedAccess() }
         // A denial is only known from the last Allow; probing again would just report "needs prompt".
         if keychain != .denied { keychain = HomieSession.probeAccess(for: endpoint) }
-        if localNetwork != .denied { localNetwork = LocalNetworkProbe.recordedAccess() }
         showsScreen = PermissionsGate.showsScreen(currentlyShowing: showsScreen, gate: gate)
     }
 

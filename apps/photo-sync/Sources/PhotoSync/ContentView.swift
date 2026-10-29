@@ -19,7 +19,7 @@ struct ContentView: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            SidebarView(selection: highlightedPane, isSignedIn: session.isSignedIn, isLoading: isChecking || showsPermissions) { pane = $0 }
+            SidebarView(selection: highlightedPane, isSignedIn: session.isSignedIn, isLoading: phase.hidesSidebar) { pane = $0 }
             paneContent
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -55,19 +55,20 @@ struct ContentView: View {
         return false
     }
 
-    @ViewBuilder
-    private var paneContent: some View {
-        if showsPermissions {
-            PermissionsView(permissions: session.permissions, library: library)
-        } else {
-            authContent
-        }
+    private var phase: StartupPhase {
+        StartupPhase.resolve(
+            showsPermissions: showsPermissions,
+            isCheckingSession: isChecking,
+            isSignedIn: session.isSignedIn
+        )
     }
 
     @ViewBuilder
-    private var authContent: some View {
-        switch auth.state {
-        case .checking:
+    private var paneContent: some View {
+        switch phase {
+        case .permissions:
+            PermissionsView(permissions: session.permissions, library: library)
+        case .gettingReady:
             GettingReadyView(hostName: hostStore.selected.name)
         case .signedOut:
             if pane.isAvailableSignedOut {

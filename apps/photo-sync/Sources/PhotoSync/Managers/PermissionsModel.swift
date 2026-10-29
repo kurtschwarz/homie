@@ -39,13 +39,16 @@ final class PermissionsModel: ObservableObject {
         isRequestingPhotos = true
         defer { isRequestingPhotos = false }
         await library.authorize()
+        Log.permissions.info("Photos answer: \(String(describing: self.library.authorization), privacy: .public)")
     }
 
     func allowLocalNetwork() async {
         guard !isRequestingLocalNetwork else { return }
         isRequestingLocalNetwork = true
         defer { isRequestingLocalNetwork = false }
-        if let answer = await LocalNetworkProbe.request(timeout: .seconds(60)) { localNetwork = answer }
+        let answer = await LocalNetworkProbe.request(timeout: .seconds(60))
+        Log.permissions.info("Local network answer: \(String(describing: answer), privacy: .public)")
+        if let answer { localNetwork = answer }
     }
 
     func allowKeychain() async {

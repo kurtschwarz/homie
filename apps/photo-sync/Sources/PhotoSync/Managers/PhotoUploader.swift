@@ -33,37 +33,47 @@ final class PhotoUploader: ObservableObject {
     func sync(albumIDs: [String], artworkAlbumID: String? = nil, onFinished: @escaping () -> Void = {}) {
         guard !isUploading else { return }
         isUploading = true
+        let run = SyncRunLog()
         Task {
-            await syncAll(albumIDs, artworkAlbumID: artworkAlbumID)
+            run.info("Sync started", detail: "albums=\(albumIDs.count)")
+            await syncAll(albumIDs, artworkAlbumID: artworkAlbumID, run: run)
+            run.info(
+                "Sync finished",
+                detail: "completed=\(completed) total=\(total) failed=\(albumProgress.values.reduce(0) { $0 + $1.failed })"
+            )
             isUploading = false
             onFinished()
         }
     }
 
-    private func syncAll(_ albumIDs: [String], artworkAlbumID: String?) async {
+    private func syncAll(_ albumIDs: [String], artworkAlbumID: String?, run: SyncRunLog) async {
         drawingProgress = nil
         drawingMessage = nil
-        let shouldContinue = await pushDrawings(toAlbum: artworkAlbumID)
+        let shouldContinue = await pushDrawings(toAlbum: artworkAlbumID, run: run)
         guard shouldContinue else { return }
         let drawingAssetIDs: Set<String>
         do {
             drawingAssetIDs = try await api.pushedDrawingAssetIDs()
         } catch {
+            run.error("Could not load pushed drawings; aborting", detail: error.localizedDescription)
             if case HomieAPIError.unauthorized = error { onAuthenticationRequired() }
             return
         }
-        await syncAlbums(albumIDs, excluding: drawingAssetIDs)
+        await syncAlbums(albumIDs, excluding: drawingAssetIDs, run: run)
     }
 
-    private func pushDrawings(toAlbum albumID: String?) async -> Bool {
+    private func pushDrawings(toAlbum albumID: String?, run: SyncRunLog) async -> Bool {
         guard let albumID, library.canAddDrawings(toAlbum: albumID) else {
             drawingMessage = "Choose an artwork album to save Homie drawings to Photos."
+            run.info("Skipping drawings: no artwork album")
             return true
         }
         let drawings: [HomieDrawing]
         do {
             drawings = try await api.unpushedDrawings()
+            run.info("Drawings to push", detail: "count=\(drawings.count)")
         } catch {
+            run.error("Could not list drawings", detail: error.localizedDescription)
             drawingMessage = error.localizedDescription
             if case HomieAPIError.unauthorized = error {
                 onAuthenticationRequired()
@@ -95,6 +105,7 @@ final class PhotoUploader: ObservableObject {
             } catch {
                 progress.completed += 1
                 progress.failed += 1
+                run.error("Drawing failed", detail: "id=\(drawing.id) error=\(error.localizedDescription)")
                 drawingMessage = "Drawing didn't sync: \(error.localizedDescription)"
                 if case HomieAPIError.unauthorized = error {
                     drawingProgress = progress
@@ -114,16 +125,17 @@ final class PhotoUploader: ObservableObject {
         assets.filter { !drawingAssetIDs.contains($0.id) }
     }
 
-    private func syncAlbums(_ albumIDs: [String], excluding drawingAssetIDs: Set<String>) async {
+    private func syncAlbums(_ albumIDs: [String], excluding drawingAssetIDs: Set<String>, run: SyncRunLog) async {
         let batches = albumIDs.map { id in
             (id, Self.uploadable(library.assets(inAlbum: id), excluding: drawingAssetIDs))
         }
         albumProgress = Dictionary(uniqueKeysWithValues: batches.map { ($0.0, AlbumProgress(total: $0.1.count)) })
         total = batches.reduce(0) { $0 + $1.1.count }
         completed = 0
+        run.info("Photos to check", detail: "albums=\(batches.count) photos=\(total)")
 
         for (albumID, photos) in batches {
-            let shouldContinue = await uploadPhotos(photos, albumID: albumID)
+            let shouldContinue = await uploadPhotos(photos, albumID: albumID, run: run)
             if !shouldContinue { break }
         }
     }
@@ -134,13 +146,14 @@ final class PhotoUploader: ObservableObject {
         if failed { albumProgress[albumID]?.failed += 1 }
     }
 
-    private func uploadPhotos(_ photos: [PhotoAsset], albumID: String) async -> Bool {
+    private func uploadPhotos(_ photos: [PhotoAsset], albumID: String, run: SyncRunLog) async -> Bool {
         for photo in photos {
             if ledger.isUploaded(photo) {
                 finish(albumID: albumID)
                 continue
             }
             guard let takenAt = photo.takenAt else {
+                run.error("Photo skipped: no capture date", detail: "asset=\(photo.id)")
                 finish(albumID: albumID, failed: true)
                 continue
             }
@@ -164,9 +177,14 @@ final class PhotoUploader: ObservableObject {
                 ledger.markUploaded(photo)
                 finish(albumID: albumID)
             } catch {
-                if error is CancellationError { return false }
+                if error is CancellationError {
+                    run.info("Sync cancelled")
+                    return false
+                }
+                run.error("Upload failed", detail: "asset=\(photo.id) error=\(error.localizedDescription)")
                 finish(albumID: albumID, failed: true)
                 if case HomieAPIError.unauthorized = error {
+                    run.error("Session expired; stopping")
                     onAuthenticationRequired()
                     return false
                 }
@@ -192,6 +210,7 @@ final class PhotoUploader: ObservableObject {
             }
         } catch {
             try Task.checkCancellation()
+            Log.sync.error("Place lookup failed: \(error.localizedDescription, privacy: .private)")
             return nil
         }
         guard let placemark = placemarks?.first else { return nil }

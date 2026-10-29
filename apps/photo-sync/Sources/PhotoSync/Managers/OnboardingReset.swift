@@ -12,7 +12,11 @@ struct OnboardingReset {
         tokenForEndpoint: @escaping (URL) -> String? = HomieSession.token(for:),
         clearSessions: @escaping () -> Void = HomieSession.clearAll,
         logout: @escaping (URL, String) async -> Void = { endpoint, token in
-            _ = try? await HomieAPI(endpoint: endpoint).logout(token: token)
+            do {
+                try await HomieAPI(endpoint: endpoint).logout(token: token)
+            } catch {
+                Log.api.error("Logout during reset failed: \(error.localizedDescription, privacy: .private)")
+            }
         }
     ) {
         self.defaults = defaults

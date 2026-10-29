@@ -70,8 +70,17 @@ final class KeychainGrantTests: XCTestCase {
 }
 
 final class LocalNetworkProbeTests: XCTestCase {
-    func testReadyBrowserMeansAllowed() {
-        XCTAssertEqual(LocalNetworkProbe.access(for: .ready), .allowed)
+    func testReadyBrowserSaysNothingBecauseItIsReadyWhetherOrNotAccessIsAllowed() {
+        XCTAssertNil(LocalNetworkProbe.access(for: .ready))
+    }
+
+    func testFindingOurOwnAdvertisedServiceMeansAllowed() {
+        XCTAssertEqual(LocalNetworkProbe.access(foundNames: ["other", "probe-1"], own: "probe-1"), .allowed)
+    }
+
+    func testNotFindingOurOwnServiceSaysNothing() {
+        XCTAssertNil(LocalNetworkProbe.access(foundNames: ["other"], own: "probe-1"))
+        XCTAssertNil(LocalNetworkProbe.access(foundNames: [], own: "probe-1"))
     }
 
     func testPolicyDenialMeansDenied() {

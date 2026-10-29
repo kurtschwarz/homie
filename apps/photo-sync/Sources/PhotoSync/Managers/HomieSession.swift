@@ -30,7 +30,7 @@ enum HomieSession {
         !identity.isEmpty && recorded == identity
     }
 
-    private static var codeIdentity: String {
+    static var codeIdentity: String {
         var code: SecCode?
         var staticCode: SecStaticCode?
         var info: CFDictionary?

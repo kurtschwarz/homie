@@ -19,6 +19,10 @@ final class PermissionsModel {
         self.endpoint = endpoint
     }
 
+    var isRequesting: Bool {
+        isRequestingPhotos || isRequestingLocalNetwork || isRequestingKeychain
+    }
+
     var gate: PermissionsGate {
         PermissionsGate(photos: library.authorization, localNetwork: localNetwork, keychain: keychain)
     }

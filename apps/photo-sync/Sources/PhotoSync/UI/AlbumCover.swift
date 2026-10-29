@@ -7,12 +7,22 @@ struct AlbumCover: View {
     var size: CGFloat = 70
     @State private var image: NSImage?
 
+    private var placeholder: LinearGradient {
+        let seed = album.id.unicodeScalars.reduce(0) { ($0 &* 31 &+ Int($1.value)) % 360 }
+        let hue = Double(seed) / 360
+        return LinearGradient(
+            colors: [Color(hue: hue, saturation: 0.45, brightness: 0.85), Color(hue: (hue + 0.08).truncatingRemainder(dividingBy: 1), saturation: 0.6, brightness: 0.55)],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
     var body: some View {
         Group {
             if let image {
                 Image(nsImage: image).resizable().scaledToFill()
             } else {
-                Rectangle().fill(.quaternary)
+                Rectangle().fill(placeholder)
             }
         }
         .frame(width: size, height: size)

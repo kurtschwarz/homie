@@ -22,7 +22,7 @@ struct AlbumSelectionTests {
 
     @Test func artworkAlbumPersistsAndIsIndependentOfSources() {
         let first = AlbumSelection(defaults: defaults)
-        first.select(["a"])
+        first.toggle("a")
         first.setArtworkAlbum("a")
 
         let second = AlbumSelection(defaults: defaults)
@@ -47,7 +47,7 @@ struct AlbumSelectionTests {
 
     @Test func clearRemovesEverything() {
         let selection = AlbumSelection(defaults: defaults)
-        selection.select(["a"])
+        selection.toggle("a")
         selection.markSynced()
 
         AlbumSelection.clear(defaults: defaults)

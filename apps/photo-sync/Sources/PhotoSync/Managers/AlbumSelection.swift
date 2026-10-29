@@ -37,11 +37,6 @@ final class AlbumSelection {
         defaults.set(albumIDs.sorted(), forKey: Self.albumsKey)
     }
 
-    func select(_ ids: [String]) {
-        albumIDs = Set(ids)
-        defaults.set(albumIDs.sorted(), forKey: Self.albumsKey)
-    }
-
     func setKeepSyncing(_ value: Bool) {
         keepSyncing = value
         defaults.set(value, forKey: Self.keepSyncingKey)

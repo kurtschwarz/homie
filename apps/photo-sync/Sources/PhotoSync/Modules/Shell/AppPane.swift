@@ -12,6 +12,21 @@ struct AppPaneSection: Identifiable {
     var id: String { heading ?? "" }
 }
 
+enum SignedInScreen: Equatable {
+    case emptyStatus
+    case status
+    case picker
+    case placeholder
+
+    nonisolated static func resolve(pane: AppPane, hasSelection: Bool) -> SignedInScreen {
+        switch pane {
+        case .status: hasSelection ? .status : .emptyStatus
+        case .albums: .picker
+        default: .placeholder
+        }
+    }
+}
+
 enum AppPane: String, CaseIterable, Identifiable {
     case status, albums, artwork, sync, connection, account, general, about
 

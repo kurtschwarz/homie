@@ -1,26 +1,29 @@
 import Foundation
+import Network
 import Observation
 
 @Observable
-final class HomieDiscovery: NSObject {
+final class HomieDiscovery {
     private(set) var hosts: [HomieHost] = []
     private(set) var isSearching = false
 
-    private let browser = NetServiceBrowser()
-    private var services: [NetService] = []
-    private var resolvedHosts: [String: HomieHost] = [:]
-    private var started = false
-
-    override init() {
-        super.init()
-        browser.delegate = self
-    }
+    @ObservationIgnored private var browser: NWBrowser?
+    @ObservationIgnored private var resolutions: [String: Task<Void, Never>] = [:]
+    @ObservationIgnored private var resolvedHosts: [String: HomieHost] = [:]
 
     func start() {
-        guard !started else { return }
-        started = true
+        guard browser == nil else { return }
         isSearching = true
-        browser.searchForServices(ofType: "_homie._tcp.", inDomain: "local.")
+
+        let browser = NWBrowser(for: .bonjour(type: "_homie._tcp", domain: "local."), using: NWParameters())
+        browser.stateUpdateHandler = { [weak self] state in
+            MainActor.assumeIsolated { self?.apply(state) }
+        }
+        browser.browseResultsChangedHandler = { [weak self] _, changes in
+            MainActor.assumeIsolated { self?.apply(changes) }
+        }
+        self.browser = browser
+        browser.start(queue: .main)
 
         Task {
             try? await Task.sleep(for: .seconds(2))
@@ -36,56 +39,118 @@ final class HomieDiscovery: NSObject {
             }
         }
     }
-}
 
-extension HomieDiscovery: @MainActor NetServiceBrowserDelegate, @MainActor NetServiceDelegate {
-    func netServiceBrowser(_ browser: NetServiceBrowser, didFind service: NetService, moreComing: Bool) {
-        services.append(service)
-        service.delegate = self
-        service.resolve(withTimeout: 5)
-    }
-
-    func netServiceDidResolveAddress(_ sender: NetService) {
-        guard let hostname = sender.hostName else { return }
-        var components = URLComponents()
-        components.scheme = "http"
-        components.host = hostname
-        components.port = sender.port
-        components.path = "/graphql"
-        guard let endpoint = components.url else { return }
-        let host = HomieHost(name: sender.name, graphQLURL: endpoint, source: .discovered)
-        resolvedHosts[serviceKey(sender)] = host
-        if let index = hosts.firstIndex(where: { $0.id == host.id }) {
-            hosts[index] = host
-        } else {
-            hosts.append(host)
+    private func apply(_ state: NWBrowser.State) {
+        switch state {
+        case .failed, .cancelled:
+            browser = nil
+            isSearching = false
+        default:
+            break
         }
-        hosts.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
-        isSearching = false
     }
 
-    func netServiceBrowserDidStopSearch(_ browser: NetServiceBrowser) {
-        isSearching = false
-        started = false
+    private func apply(_ changes: Set<NWBrowser.Result.Change>) {
+        for change in changes {
+            switch change {
+            case .added(let result), .changed(old: _, new: let result, flags: _):
+                if case .service(let name, let type, let domain, _) = result.endpoint {
+                    resolve(result.endpoint, key: Self.serviceKey(name: name, type: type, domain: domain), name: name)
+                }
+            case .removed(let result):
+                if case .service(let name, let type, let domain, _) = result.endpoint {
+                    remove(key: Self.serviceKey(name: name, type: type, domain: domain))
+                }
+            case .identical:
+                break
+            @unknown default:
+                break
+            }
+        }
     }
 
-    func netServiceBrowser(_ browser: NetServiceBrowser, didRemove service: NetService, moreComing: Bool) {
-        services.removeAll { $0 === service }
-        if let host = resolvedHosts.removeValue(forKey: serviceKey(service)) {
+    private func resolve(_ endpoint: NWEndpoint, key: String, name: String) {
+        resolutions[key]?.cancel()
+        resolutions[key] = Task {
+            let target = await Self.resolveTarget(of: endpoint)
+            guard !Task.isCancelled, let target,
+                  let url = Self.graphQLURL(serviceName: name, target: target) else { return }
+            resolutions[key] = nil
+            let host = HomieHost(name: name, graphQLURL: url, source: .discovered)
+            if let previous = resolvedHosts[key] { hosts.removeAll { $0.id == previous.id } }
+            resolvedHosts[key] = host
+            if let index = hosts.firstIndex(where: { $0.id == host.id }) {
+                hosts[index] = host
+            } else {
+                hosts.append(host)
+            }
+            hosts.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+            isSearching = false
+        }
+    }
+
+    private func remove(key: String) {
+        resolutions.removeValue(forKey: key)?.cancel()
+        if let host = resolvedHosts.removeValue(forKey: key) {
             hosts.removeAll { $0.id == host.id }
         }
     }
 
-    func netServiceBrowser(_ browser: NetServiceBrowser, didNotSearch errorDict: [String: NSNumber]) {
-        isSearching = false
-        started = false
+    private static func serviceKey(name: String, type: String, domain: String) -> String {
+        "\(name)|\(type)|\(domain)"
     }
 
-    func netService(_ sender: NetService, didNotResolve errorDict: [String: NSNumber]) {
-        services.removeAll { $0 === sender }
+    /// Avahi advertises the service as "Homie · <hostname>", and the host answers mDNS as `<hostname>.local`.
+    nonisolated static func hostname(fromServiceName name: String) -> String? {
+        let prefix = "Homie · "
+        guard name.hasPrefix(prefix) else { return nil }
+        let hostname = name.dropFirst(prefix.count).trimmingCharacters(in: .whitespaces)
+        return hostname.isEmpty ? nil : "\(hostname).local"
     }
 
-    private func serviceKey(_ service: NetService) -> String {
-        "\(service.name)|\(service.type)|\(service.domain)"
+    private nonisolated static func graphQLURL(serviceName: String, target: NWEndpoint) -> URL? {
+        guard case .hostPort(let host, let port) = target else { return nil }
+        var components = URLComponents()
+        components.scheme = "http"
+        components.host = hostname(fromServiceName: serviceName) ?? literal(for: host)
+        components.port = Int(port.rawValue)
+        components.path = "/graphql"
+        return components.url
+    }
+
+    private nonisolated static func literal(for host: NWEndpoint.Host) -> String {
+        let text = "\(host)".split(separator: "%").first.map(String.init) ?? "\(host)"
+        return text.contains(":") ? "[\(text)]" : text
+    }
+
+    private nonisolated static func resolveTarget(of endpoint: NWEndpoint) async -> NWEndpoint? {
+        let connection = NWConnection(to: endpoint, using: .tcp)
+        let timeout = Task {
+            try? await Task.sleep(for: .seconds(5))
+            connection.cancel()
+        }
+        defer { timeout.cancel() }
+
+        return await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                let settled = Settled()
+                connection.stateUpdateHandler = { state in
+                    switch state {
+                    case .ready:
+                        if settled.claim() {
+                            continuation.resume(returning: connection.currentPath?.remoteEndpoint)
+                            connection.cancel()
+                        }
+                    case .failed, .cancelled:
+                        if settled.claim() { continuation.resume(returning: nil) }
+                    default:
+                        break
+                    }
+                }
+                connection.start(queue: .global(qos: .userInitiated))
+            }
+        } onCancel: {
+            connection.cancel()
+        }
     }
 }

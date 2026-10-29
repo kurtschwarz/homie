@@ -16,6 +16,7 @@ final class PhotoLibrary {
     private(set) var albums: [PhotoAlbum] = []
 
     private let imageManager = PHCachingImageManager()
+    private var changeObserver: LibraryChangeObserver?
 
     func refreshAuthorization() {
         authorization = PHPhotoLibrary.authorizationStatus(for: .readWrite)
@@ -33,6 +34,11 @@ final class PhotoLibrary {
     }
 
     func loadAlbums() {
+        if changeObserver == nil {
+            let observer = LibraryChangeObserver { [weak self] in self?.loadAlbums() }
+            PHPhotoLibrary.shared().register(observer)
+            changeObserver = observer
+        }
         let collections = PHAssetCollection.fetchAssetCollections(with: .album, subtype: .any, options: nil)
         var found: [PhotoAlbum] = []
         collections.enumerateObjects { collection, _, _ in
@@ -49,6 +55,7 @@ final class PhotoLibrary {
                 count: count,
                 isShared: collection.assetCollectionSubtype == .albumCloudShared,
                 canAddContent: collection.canPerform(.addContent),
+                recency: cover?.creationDate ?? collection.endDate ?? collection.startDate,
                 cover: cover
             ))
         }
@@ -152,6 +159,22 @@ final class PhotoLibrary {
         }
         guard let cgImage = bitmap.cgImage else { throw PhotoLibraryError.jpegEncodingFailed }
         return PhotoJPEG(data: jpeg, width: bitmap.pixelsWide, height: bitmap.pixelsHigh, cgImage: cgImage)
+    }
+}
+
+private final class LibraryChangeObserver: NSObject, PHPhotoLibraryChangeObserver {
+    private let onChange: @MainActor () -> Void
+
+    init(onChange: @escaping @MainActor () -> Void) {
+        self.onChange = onChange
+    }
+
+    deinit {
+        PHPhotoLibrary.shared().unregisterChangeObserver(self)
+    }
+
+    nonisolated func photoLibraryDidChange(_ changeInstance: PHChange) {
+        Task { @MainActor in onChange() }
     }
 }
 

@@ -9,29 +9,149 @@ struct AlbumPickerView: View {
     let username: String
     let onSignOut: () -> Void
 
+    // Fixed so the window, which sizes to its content, can't grow with the library. Chosen so the
+    // last visible row is cut in half under the footer.
+    private static let listHeight: CGFloat = 330
+
+    @State private var search = ""
+    @State private var filter: AlbumList.Filter = .all
+    @State private var isScrolled = false
+    @FocusState private var searchFocused: Bool
+
     private var selectedAlbums: [PhotoAlbum] { library.albums.filter { selection.contains($0.id) } }
     private var photoCount: Int { selectedAlbums.reduce(0) { $0 + $1.count } }
-    private var iCloudAlbums: [PhotoAlbum] { library.albums.filter { !$0.isShared } }
-    private var sharedAlbums: [PhotoAlbum] { library.albums.filter(\.isShared) }
+
+    private var list: AlbumList {
+        AlbumList(albums: library.albums, selectedIDs: selection.albumIDs, search: search, filter: filter, sort: selection.sort)
+    }
 
     private var sizeText: String {
         ByteCountFormatter.string(fromByteCount: Int64(Double(photoCount) * Self.estimatedBytesPerPhoto), countStyle: .file)
     }
 
     var body: some View {
+        let list = list
         VStack(spacing: 0) {
+            header(list)
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    PaneHeader(pane: .albums, subtitle: "Photos from these albums show in the slideshow on \(hostName).")
-                    AlbumGroup(title: "iCloud Photos", albums: iCloudAlbums, library: library, selection: selection)
-                    AlbumGroup(title: "Shared albums", albums: sharedAlbums, library: library, selection: selection)
+                    if list.isEmpty {
+                        emptyState
+                    }
+                    ForEach(list.groups, id: \.title) { group in
+                        AlbumGroup(title: group.title, albums: group.albums, library: library, selection: selection)
+                    }
                 }
                 .padding(.horizontal, 32)
-                .padding(.vertical, 28)
+                .padding(.vertical, 16)
+                .animation(.default, value: list.groups.flatMap(\.albums).map(\.id))
             }
+            .onScrollGeometryChange(for: Bool.self) { $0.contentOffset.y > 1 } action: { _, scrolled in
+                isScrolled = scrolled
+            }
+            .frame(height: Self.listHeight)
 
             footer
         }
+        .background {
+            Button("") { searchFocused = true }
+                .keyboardShortcut("f", modifiers: .command)
+                .opacity(0)
+        }
+    }
+
+    private func header(_ list: AlbumList) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            PaneHeader(pane: .albums, subtitle: "Photos from these albums show in the slideshow on \(hostName).")
+            HStack(spacing: 10) {
+                searchField(libraryTotal: list.libraryTotal)
+                sortMenu
+            }
+            HStack(spacing: 8) {
+                chip("All", count: list.counts.all, value: .all)
+                chip("On Homie", count: list.counts.onHomie, value: .onHomie)
+                chip("Not on Homie", count: list.counts.notOnHomie, value: .notOnHomie)
+                Spacer()
+            }
+        }
+        .padding(.horizontal, 32)
+        .padding(.top, 28)
+        .padding(.bottom, 12)
+        .background(.thinMaterial)
+        .overlay(alignment: .bottom) {
+            Color.homieDivider.frame(height: 1).opacity(isScrolled ? 1 : 0).animation(.easeOut(duration: 0.15), value: isScrolled)
+        }
+        .zIndex(1)
+    }
+
+    private func searchField(libraryTotal: Int) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+            TextField("Search \(libraryTotal.formatted()) albums", text: $search)
+                .textFieldStyle(.plain)
+                .focused($searchFocused)
+                .onKeyPress(.escape) {
+                    if !search.isEmpty {
+                        search = ""
+                    } else {
+                        searchFocused = false
+                    }
+                    return .handled
+                }
+            if !search.isEmpty {
+                Button { search = "" } label: { Image(systemName: "xmark.circle.fill") }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                    .accessibilityLabel("Clear search")
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private var sortMenu: some View {
+        Picker("Sort", selection: Binding(get: { selection.sort }, set: { selection.setSort($0) })) {
+            ForEach(AlbumList.Sort.allCases, id: \.self) { Text($0.title).tag($0) }
+        }
+        .pickerStyle(.menu)
+        .fixedSize()
+    }
+
+    private func chip(_ title: String, count: Int, value: AlbumList.Filter) -> some View {
+        let active = filter == value
+        return Button {
+            filter = value
+        } label: {
+            Text("\(title) \(count.formatted())")
+                .font(.system(size: 12, weight: .semibold))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .foregroundStyle(active ? Color.white : Color.homieSectionHeading)
+                .background(active ? Color.homieGreen : Color.white.opacity(0.07), in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(active ? .isSelected : [])
+    }
+
+    private var emptyState: some View {
+        let libraryIsEmpty = library.albums.isEmpty
+        return VStack(spacing: 8) {
+            Text(libraryIsEmpty ? "No albums in your Photos library." : "No albums match.")
+                .foregroundStyle(Color.homieSectionHeading)
+            if !libraryIsEmpty {
+                Button("Clear search") {
+                    search = ""
+                    filter = .all
+                }
+                .buttonStyle(.plain)
+                .fontWeight(.semibold)
+                .foregroundStyle(Color.homieGreenDark)
+            }
+        }
+        .font(.system(size: 13))
+        .frame(maxWidth: .infinity)
+        .padding(.top, 40)
     }
 
     private var footer: some View {

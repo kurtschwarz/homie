@@ -7,9 +7,11 @@ final class AlbumSelection {
     private static let keepSyncingKey = "photo-sync.keepSyncing"
     private static let lastSyncedKey = "photo-sync.lastSyncedAt"
     private static let artworkAlbumKey = "photo-sync.artworkAlbum"
+    private static let sortKey = "photo-sync.albumSort"
 
     private(set) var artworkAlbumID: String?
     private(set) var albumIDs: Set<String>
+    private(set) var sort: AlbumList.Sort
     private(set) var keepSyncing: Bool
     private(set) var lastSyncedAt: Date?
 
@@ -18,6 +20,7 @@ final class AlbumSelection {
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         albumIDs = Set(defaults.stringArray(forKey: Self.albumsKey) ?? [])
+        sort = defaults.string(forKey: Self.sortKey).flatMap(AlbumList.Sort.init(rawValue:)) ?? .recent
         keepSyncing = defaults.object(forKey: Self.keepSyncingKey) as? Bool ?? true
         lastSyncedAt = defaults.object(forKey: Self.lastSyncedKey) as? Date
         artworkAlbumID = defaults.string(forKey: Self.artworkAlbumKey)
@@ -37,6 +40,11 @@ final class AlbumSelection {
         defaults.set(albumIDs.sorted(), forKey: Self.albumsKey)
     }
 
+    func setSort(_ value: AlbumList.Sort) {
+        sort = value
+        defaults.set(value.rawValue, forKey: Self.sortKey)
+    }
+
     func setKeepSyncing(_ value: Bool) {
         keepSyncing = value
         defaults.set(value, forKey: Self.keepSyncingKey)
@@ -52,5 +60,6 @@ final class AlbumSelection {
         defaults.removeObject(forKey: keepSyncingKey)
         defaults.removeObject(forKey: lastSyncedKey)
         defaults.removeObject(forKey: artworkAlbumKey)
+        defaults.removeObject(forKey: sortKey)
     }
 }

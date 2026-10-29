@@ -8,5 +8,6 @@ struct PhotoAlbum: Identifiable, Hashable {
     let canAddContent: Bool
 
     var isArtworkCandidate: Bool { !isShared && canAddContent }
+    let recency: Date?
     let cover: PHAsset?
 }

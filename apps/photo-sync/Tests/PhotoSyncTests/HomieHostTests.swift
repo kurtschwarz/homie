@@ -99,6 +99,24 @@ struct HomieHostTests {
         #expect(defaults.string(forKey: "HomieAPIURL") == nil)
     }
 
+    @Test func lastSelectionWinsAndClearsChecking() async throws {
+        let store = HomieHostStore(defaults: defaults) { url in
+            if url.host() == "slow.local" { try await Task.sleep(for: .seconds(30)) }
+            return HomieHealth(status: "OK", version: "1.2.3")
+        }
+        let slow = HomieHost.manual("slow.local:3000")!
+        let fast = HomieHost.manual("fast.local:3000")!
+
+        let first = Task { try await store.select(slow) }
+        while !store.isChecking { await Task.yield() }
+        try await store.select(fast)
+
+        await #expect(throws: CancellationError.self) { try await first.value }
+        #expect(store.selected == fast)
+        #expect(!store.isChecking)
+        #expect(defaults.string(forKey: "HomieAPIURL") == fast.graphQLURL.absoluteString)
+    }
+
     @Test func resetToDefaultClearsPersistedHost() async throws {
         let store = HomieHostStore(defaults: defaults) { _ in HomieHealth(status: "OK", version: "1.2.3") }
         try await store.select(HomieHost.manual("other.local:3000")!)

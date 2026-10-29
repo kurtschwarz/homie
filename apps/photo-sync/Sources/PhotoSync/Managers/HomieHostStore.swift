@@ -12,7 +12,7 @@ final class HomieHostStore {
     let discovery = HomieDiscovery()
     private let defaults: UserDefaults
     private let healthCheck: (URL) async throws -> HomieHealth
-    private var checkID = UUID()
+    private var checkTask: Task<HomieHealth, Error>?
 
     init(
         defaults: UserDefaults = .standard,
@@ -23,25 +23,42 @@ final class HomieHostStore {
         selected = HomieHost.configured(defaults: defaults)
     }
 
-    func validateSelected() async {
-        let host = selected
-        let requestID = UUID()
-        checkID = requestID
+    private func check(_ url: URL) async throws -> HomieHealth {
+        checkTask?.cancel()
+        let healthCheck = healthCheck
+        let task = Task { try await healthCheck(url) }
+        checkTask = task
         isChecking = true
-        defer { if checkID == requestID { isChecking = false } }
-        let result = try? await healthCheck(host.graphQLURL)
-        guard checkID == requestID, selected.id == host.id else { return }
+        defer {
+            if !task.isCancelled {
+                checkTask = nil
+                isChecking = false
+            }
+        }
+        let result = await withTaskCancellationHandler {
+            await task.result
+        } onCancel: {
+            task.cancel()
+        }
+        if task.isCancelled { throw CancellationError() }
+        return try result.get()
+    }
+
+    func validateSelected() async {
+        let result: HomieHealth?
+        do {
+            result = try await check(selected.graphQLURL)
+        } catch is CancellationError {
+            return
+        } catch {
+            result = nil
+        }
         health = result?.status == "OK" ? result : nil
         requiresSetup = result?.status == "SETUP_REQUIRED"
     }
 
     func select(_ host: HomieHost) async throws {
-        let requestID = UUID()
-        checkID = requestID
-        isChecking = true
-        defer { if checkID == requestID { isChecking = false } }
-        let health = try await healthCheck(host.graphQLURL)
-        guard checkID == requestID else { throw CancellationError() }
+        let health = try await check(host.graphQLURL)
         guard health.status == "OK" else {
             if health.status == "SETUP_REQUIRED", host.id == selected.id {
                 self.health = nil
@@ -61,7 +78,8 @@ final class HomieHostStore {
 
     func resetToDefault() {
         Log.discovery.info("Resetting host to default")
-        checkID = UUID()
+        checkTask?.cancel()
+        checkTask = nil
         isChecking = false
         health = nil
         requiresSetup = false

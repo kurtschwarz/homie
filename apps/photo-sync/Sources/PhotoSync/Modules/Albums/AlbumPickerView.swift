@@ -11,7 +11,6 @@ struct AlbumPickerView: View {
 
     @State private var search = ""
     @State private var filter: AlbumList.Filter = .all
-    @State private var isScrolled = false
     @FocusState private var searchFocused: Bool
 
     private var selectedAlbums: [PhotoAlbum] { library.albums.filter { selection.contains($0.id) } }
@@ -40,9 +39,6 @@ struct AlbumPickerView: View {
             .padding(.vertical, 16)
             .animation(.default, value: list.groups.flatMap(\.albums).map(\.id))
         }
-        .onScrollGeometryChange(for: Bool.self) { $0.contentOffset.y + $0.contentInsets.top > 1 } action: { _, scrolled in
-            isScrolled = scrolled
-        }
         .softScrollEdges()
         .safeAreaInset(edge: .top, spacing: 0) { header(list) }
         .safeAreaInset(edge: .bottom, spacing: 0) { footer }
@@ -68,12 +64,9 @@ struct AlbumPickerView: View {
             }
         }
         .padding(.horizontal, 32)
-        .padding(.top, 64)
+        .padding(.top, 34)
         .padding(.bottom, 14)
         .fadingMaterial(solidEdge: .top)
-        .overlay(alignment: .bottom) {
-            Color.homieDivider.frame(height: 1).opacity(isScrolled ? 1 : 0).animation(.easeOut(duration: 0.15), value: isScrolled)
-        }
         .zIndex(1)
     }
 

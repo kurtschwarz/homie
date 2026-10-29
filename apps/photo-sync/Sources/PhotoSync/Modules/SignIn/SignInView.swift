@@ -5,14 +5,13 @@ struct SignInView: View {
     @ObservedObject var hostStore: HomieHostStore
     @State private var username = ""
     @State private var password = ""
-    @State private var isBlinking = false
     @FocusState private var focusedField: Field?
 
     private enum Field { case username, password }
 
     var body: some View {
         VStack(spacing: 0) {
-            HomieMark(eyesClosed: isBlinking)
+            HomieMark(blinks: true)
                 .frame(width: 88, height: 88)
 
             Text("Sign in to Homie")
@@ -66,14 +65,6 @@ struct SignInView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear { focusedField = .username }
-        .task {
-            while !Task.isCancelled {
-                do { try await Task.sleep(for: .seconds(3.5)) } catch { return }
-                isBlinking = true
-                do { try await Task.sleep(for: .milliseconds(150)) } catch { return }
-                isBlinking = false
-            }
-        }
     }
 
     private func signIn() {

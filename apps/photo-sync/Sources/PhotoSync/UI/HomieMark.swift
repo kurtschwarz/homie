@@ -1,10 +1,21 @@
 import SwiftUI
 
 struct HomieMark: View {
-    var eyesClosed = false
+    var blinks = false
+    @State private var eyesClosed = false
 
     var body: some View {
-        mark.accessibilityHidden(true)
+        mark
+            .accessibilityHidden(true)
+            .task(id: blinks) {
+                guard blinks else { return }
+                while !Task.isCancelled {
+                    do { try await Task.sleep(for: .seconds(3.5)) } catch { return }
+                    eyesClosed = true
+                    do { try await Task.sleep(for: .milliseconds(150)) } catch { return }
+                    eyesClosed = false
+                }
+            }
     }
 
     private var mark: some View {

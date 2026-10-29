@@ -48,23 +48,21 @@ struct ContentView: View {
 
     @ViewBuilder
     private var paneContent: some View {
-        if isChecking {
+        switch auth.state {
+        case .checking:
             GettingReadyView(hostName: hostStore.selected.name)
-        } else if pane.isAvailableSignedOut {
-            PanePlaceholder(pane: pane)
-        } else {
-            switch auth.state {
-            case .checking:
-                EmptyView()
-            case .signedOut:
+        case .signedOut:
+            if pane.isAvailableSignedOut {
+                PanePlaceholder(pane: pane)
+            } else {
                 SignInView(auth: auth, hostStore: hostStore)
-            case .signedIn:
-                switch pane {
-                case .status, .albums:
-                    photoLibraryContent
-                default:
-                    PanePlaceholder(pane: pane)
-                }
+            }
+        case .signedIn:
+            switch pane {
+            case .status, .albums:
+                photoLibraryContent
+            default:
+                PanePlaceholder(pane: pane)
             }
         }
     }

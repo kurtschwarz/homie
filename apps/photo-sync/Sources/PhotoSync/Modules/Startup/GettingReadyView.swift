@@ -9,8 +9,12 @@ struct GettingReadyView: View {
         VStack(spacing: 0) {
             HomieMark()
                 .frame(width: 88, height: 88)
+                .overlay {
+                    SpinnerRing()
+                        .frame(width: 88, height: 88)
+                        .offset(y: -8)
+                }
                 .padding(14)
-                .overlay { SpinnerRing() }
 
             Text("Getting ready")
                 .font(.system(size: 24, weight: .bold))

@@ -26,8 +26,37 @@ jobs:
       - name: Show Swift version
         run: swift --version
 
+      # SwiftPM writes Swift Testing results to the given path with a "-swift-testing" suffix, resolved
+      # against the working directory. The step tolerates failure so the report still runs; the gate below re-asserts it.
       - name: Run tests
-        run: swift test --package-path apps/photo-sync
+        id: tests
+        continue-on-error: true
+        run: swift test --package-path apps/photo-sync --xunit-output photo-sync-test-results.xml
+
+      # A GitHub App token is required so the check and comment are attributed to the app, not github-actions.
+      - name: Create GitHub App token
+        id: app-token
+        if: ${{ !cancelled() }}
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ secrets.RELEASE_PLEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
+
+      - name: Report test results
+        if: ${{ !cancelled() }}
+        uses: mikepenz/action-junit-report@6ef3fdcfcd5f0b5d14df3e659ef19b8c6820f93d # v6.6.1
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          report_paths: photo-sync-test-results-swift-testing.xml
+          check_name: Photo Sync test results
+          require_tests: true
+          fail_on_failure: false
+          comment: true
+          updateComment: true
+
+      - name: Fail if tests failed
+        if: ${{ steps.tests.outcome == 'failure' }}
+        run: exit 1
 
       - name: Build app
         run: ./apps/photo-sync/build.sh

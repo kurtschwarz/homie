@@ -29,5 +29,8 @@ dist/
 *.moved-aside
 *.hmap
 
+# Swift Testing xunit reports
+*-swift-testing.xml
+
 # OS
 .DS_Store

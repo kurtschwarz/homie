@@ -71,7 +71,7 @@ nonisolated enum LocalNetworkProbe {
     }
 }
 
-private nonisolated final class Settled: Sendable {
+nonisolated final class Settled: Sendable {
     private let done = Mutex(false)
 
     func claim() -> Bool {

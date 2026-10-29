@@ -16,7 +16,7 @@ struct PushedDrawingSkipTests {
     }
 
     @Test func skipListDoesNotDependOnTheLocalLedgerSoResetDoesNotDuplicateArtwork() {
-        let ledger = UploadLedger(defaults: defaults)
+        var ledger = UploadLedger(defaults: defaults)
         ledger.savePushedDrawing("d1", assetID: "drawing-1")
 
         ledger.clear()

@@ -14,6 +14,11 @@ struct PermissionsGate: Equatable {
     var photosAllowed: Bool { photos == .authorized || photos == .limited }
     var isSatisfied: Bool { photosAllowed && localNetwork == .allowed && keychain == .allowed }
 
+    static let count = 3
+    var allowedCount: Int {
+        [photosAllowed, localNetwork == .allowed, keychain == .allowed].filter { $0 }.count
+    }
+
     var continueTitle: String {
         if !photosAllowed { return "Allow Photos to continue" }
         if localNetwork != .allowed { return "Allow Local Network to continue" }

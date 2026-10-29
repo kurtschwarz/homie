@@ -15,11 +15,37 @@ struct PermissionsView: View {
             HomieMark()
                 .frame(width: 88, height: 88)
 
-            Text("Three quick permissions")
+            Text("Before we start")
                 .font(.system(size: 24, weight: .bold))
                 .foregroundStyle(.white)
                 .padding(.top, 14)
-                .padding(.bottom, 22)
+                .padding(.bottom, 8)
+
+            Text(
+                "To find Homie and send it your photos, the app needs your OK for a few things. "
+                    + "You can change any of them later in System Settings."
+            )
+            .font(.system(size: 13))
+            .foregroundStyle(Color.homieSectionHeading)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(width: Self.contentWidth)
+            .padding(.bottom, 22)
+
+            HStack(spacing: 8) {
+                Text("\(gate.allowedCount) of \(PermissionsGate.count) allowed")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Color.homieSectionHeading)
+                Spacer(minLength: 0)
+                ForEach(0..<PermissionsGate.count, id: \.self) { step in
+                    Capsule()
+                        .fill(step < gate.allowedCount ? Color.homieGreen : Color.homieRowSelected)
+                        .frame(width: 24, height: 4)
+                }
+            }
+            .frame(width: Self.contentWidth)
+            .padding(.bottom, 10)
+            .accessibilityElement(children: .combine)
 
             VStack(spacing: 0) {
                 PermissionRow(

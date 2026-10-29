@@ -1,8 +1,7 @@
 import Foundation
 import CoreLocation
 
-@MainActor
-final class UploadLedger {
+struct UploadLedger {
     private let defaults: UserDefaults
     private let versionsKey = "photo-sync.uploadedVersions"
     private let placesKey = "photo-sync.geocodedPlaces"
@@ -10,68 +9,84 @@ final class UploadLedger {
     private let generationKey = "photo-sync.ledgerGeneration"
     private var generation: Int
 
+    private var versions: [String: String]
+    private var pushedDrawings: [String: String]
+    private var places: [String: String]
+
+    private var versionsDirty = false
+    private var pushedDrawingsDirty = false
+    private var placesDirty = false
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         generation = defaults.integer(forKey: generationKey)
-    }
-
-    private var versions: [String: String] {
-        get { defaults.dictionary(forKey: versionsKey) as? [String: String] ?? [:] }
-        set { defaults.set(newValue, forKey: versionsKey) }
-    }
-
-    private var pushedDrawings: [String: String] {
-        get { defaults.dictionary(forKey: pushedDrawingsKey) as? [String: String] ?? [:] }
-        set { defaults.set(newValue, forKey: pushedDrawingsKey) }
-    }
-
-    private var places: [String: String] {
-        get { defaults.dictionary(forKey: placesKey) as? [String: String] ?? [:] }
-        set { defaults.set(newValue, forKey: placesKey) }
+        versions = defaults.dictionary(forKey: versionsKey) as? [String: String] ?? [:]
+        pushedDrawings = defaults.dictionary(forKey: pushedDrawingsKey) as? [String: String] ?? [:]
+        places = defaults.dictionary(forKey: placesKey) as? [String: String] ?? [:]
     }
 
     func isUploaded(_ photo: PhotoAsset) -> Bool { versions[photo.id] == photo.version }
 
-    func markUploaded(_ photo: PhotoAsset) {
-        guard isCurrent else { return }
-        var value = versions
-        value[photo.id] = photo.version
-        versions = value
+    mutating func markUploaded(_ photo: PhotoAsset) {
+        versions[photo.id] = photo.version
+        versionsDirty = true
     }
 
     // Remembers drawings already added to Photos so a failed markDrawingPushed
     // is retried without creating a second asset.
     func pushedAssetID(forDrawing id: String) -> String? { pushedDrawings[id] }
 
-    func savePushedDrawing(_ id: String, assetID: String) {
-        guard isCurrent else { return }
-        var value = pushedDrawings
-        value[id] = assetID
-        pushedDrawings = value
+    mutating func savePushedDrawing(_ id: String, assetID: String) {
+        pushedDrawings[id] = assetID
+        pushedDrawingsDirty = true
     }
 
-    func forgetPushedDrawing(_ id: String) {
-        guard isCurrent else { return }
-        var value = pushedDrawings
-        value.removeValue(forKey: id)
-        pushedDrawings = value
+    mutating func forgetPushedDrawing(_ id: String) {
+        pushedDrawings.removeValue(forKey: id)
+        pushedDrawingsDirty = true
     }
 
     func place(for coordinate: CLLocationCoordinate2D) -> String? { places[key(for: coordinate)] }
 
-    func savePlace(_ place: String, for coordinate: CLLocationCoordinate2D) {
-        guard isCurrent else { return }
-        var value = places
-        value[key(for: coordinate)] = place
-        places = value
+    mutating func savePlace(_ place: String, for coordinate: CLLocationCoordinate2D) {
+        places[key(for: coordinate)] = place
+        placesDirty = true
     }
 
-    func clear() {
+    // Writes only collections changed since the last flush, and nothing once another ledger has cleared.
+    mutating func flush() {
+        guard isCurrent else {
+            versionsDirty = false
+            pushedDrawingsDirty = false
+            placesDirty = false
+            return
+        }
+        if versionsDirty {
+            defaults.set(versions, forKey: versionsKey)
+            versionsDirty = false
+        }
+        if pushedDrawingsDirty {
+            defaults.set(pushedDrawings, forKey: pushedDrawingsKey)
+            pushedDrawingsDirty = false
+        }
+        if placesDirty {
+            defaults.set(places, forKey: placesKey)
+            placesDirty = false
+        }
+    }
+
+    mutating func clear() {
         generation += 1
         defaults.set(generation, forKey: generationKey)
         defaults.removeObject(forKey: versionsKey)
         defaults.removeObject(forKey: placesKey)
         defaults.removeObject(forKey: pushedDrawingsKey)
+        versions = [:]
+        pushedDrawings = [:]
+        places = [:]
+        versionsDirty = false
+        pushedDrawingsDirty = false
+        placesDirty = false
     }
 
     private var isCurrent: Bool {

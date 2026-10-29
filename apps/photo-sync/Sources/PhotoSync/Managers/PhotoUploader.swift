@@ -20,7 +20,7 @@ final class PhotoUploader: ObservableObject {
 
     private let library: PhotoLibrary
     private let api: HomieAPI
-    private let ledger = UploadLedger()
+    private var ledger = UploadLedger()
     private let geocoder = CLGeocoder()
     private let onAuthenticationRequired: () -> Void
 
@@ -82,6 +82,7 @@ final class PhotoUploader: ObservableObject {
             return true
         }
         guard !drawings.isEmpty else { return true }
+        defer { ledger.flush() }
 
         var progress = AlbumProgress(total: drawings.count)
         drawingProgress = progress
@@ -147,6 +148,7 @@ final class PhotoUploader: ObservableObject {
     }
 
     private func uploadPhotos(_ photos: [PhotoAsset], albumID: String, run: SyncRunLog) async -> Bool {
+        defer { ledger.flush() }
         for photo in photos {
             if ledger.isUploaded(photo) {
                 finish(albumID: albumID)
@@ -176,6 +178,7 @@ final class PhotoUploader: ObservableObject {
                 _ = try await api.upload(input, jpeg: jpeg.data, filename: "\(photo.id).jpg")
                 ledger.markUploaded(photo)
                 finish(albumID: albumID)
+                if completed.isMultiple(of: 50) { ledger.flush() }
             } catch {
                 if error is CancellationError {
                     run.info("Sync cancelled")

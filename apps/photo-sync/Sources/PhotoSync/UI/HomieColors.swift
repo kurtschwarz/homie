@@ -8,6 +8,9 @@ extension Color {
     static let homieError = Color(red: 1, green: 0.55, blue: 0.55)
 
     static let homieWindowTint = Color(hex: 0x363A48)
+    // The window tint as it lands once composited over the glass, for bars that sit opaque over
+    // scrolling content and have to read as the same surface.
+    static let homieBarBackground = Color(hex: 0x2B2E3A)
     static let homieText = Color(hex: 0xF2F2F4)
     static let homieSectionHeading = Color(hex: 0xA9A9B0)
     static let homieBadgeText = Color(hex: 0xC9C9CE)

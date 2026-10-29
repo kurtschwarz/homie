@@ -40,8 +40,8 @@ struct AlbumPickerView: View {
             .animation(.default, value: list.groups.flatMap(\.albums).map(\.id))
         }
         .softScrollEdges()
-        .safeAreaInset(edge: .top, spacing: 0) { header(list) }
-        .safeAreaInset(edge: .bottom, spacing: 0) { footer }
+        .paneBar(edge: .top) { header(list) }
+        .paneBar(edge: .bottom) { footer }
         .background {
             Button("") { searchFocused = true }
                 .keyboardShortcut("f", modifiers: .command)
@@ -173,14 +173,54 @@ struct AlbumPickerView: View {
         .padding(.horizontal, 32)
         .padding(.vertical, 14)
         .fadingMaterial(solidEdge: .bottom)
-        .overlay(alignment: .top) { Color.homieDivider.frame(height: 1) }
     }
 }
 
 private extension View {
+    // A bar that the scroll edge effect knows about, so content blurs into it. Before macOS 26 the
+    // bar draws its own fading material instead.
+    @ViewBuilder
+    func paneBar(edge: VerticalEdge, @ViewBuilder content: () -> some View) -> some View {
+        #if compiler(>=6.2)
+        if #available(macOS 26, *) {
+            safeAreaBar(edge: edge, spacing: 0, content: content)
+        } else {
+            safeAreaInset(edge: edge, spacing: 0, content: content)
+        }
+        #else
+        safeAreaInset(edge: edge, spacing: 0, content: content)
+        #endif
+    }
+
+    @ViewBuilder
+    func fadingMaterial(solidEdge: VerticalEdge) -> some View {
+        #if compiler(>=6.2)
+        if #available(macOS 26, *) { barScrim(solidEdge: solidEdge) } else { legacyFadingMaterial(solidEdge: solidEdge) }
+        #else
+        legacyFadingMaterial(solidEdge: solidEdge)
+        #endif
+    }
+
+    // The scroll edge effect blurs the rows but keeps their contrast, so the bar's own text sits on
+    // a scrim that fades out at the seam rather than ending on an edge.
+    func barScrim(solidEdge: VerticalEdge) -> some View {
+        let isTop = solidEdge == .top
+        return background {
+            LinearGradient(
+                stops: [
+                    .init(color: Color.homieBarBackground, location: 0),
+                    .init(color: Color.homieBarBackground, location: 0.78),
+                    .init(color: Color.homieBarBackground.opacity(0), location: 1)
+                ],
+                startPoint: isTop ? .top : .bottom,
+                endPoint: isTop ? .bottom : .top
+            )
+        }
+    }
+
     // Solid behind the controls, fading over a strip just outside the bar so rows dissolve into it
     // rather than meeting a hard edge.
-    func fadingMaterial(solidEdge: VerticalEdge) -> some View {
+    func legacyFadingMaterial(solidEdge: VerticalEdge) -> some View {
         let isTop = solidEdge == .top
         let fade: CGFloat = 28
         return background(alignment: isTop ? .bottom : .top) {

@@ -35,7 +35,11 @@ final class HomieHostStore {
                 isChecking = false
             }
         }
-        let result = await task.result
+        let result = await withTaskCancellationHandler {
+            await task.result
+        } onCancel: {
+            task.cancel()
+        }
         if task.isCancelled { throw CancellationError() }
         return try result.get()
     }

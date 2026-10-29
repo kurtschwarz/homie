@@ -37,61 +37,51 @@ final class HomieDiscovery: NSObject, ObservableObject {
     }
 }
 
-extension HomieDiscovery: NetServiceBrowserDelegate, NetServiceDelegate {
-    nonisolated func netServiceBrowser(_ browser: NetServiceBrowser, didFind service: NetService, moreComing: Bool) {
-        MainActor.assumeIsolated {
-            services.append(service)
-            service.delegate = self
-            service.resolve(withTimeout: 5)
+extension HomieDiscovery: @MainActor NetServiceBrowserDelegate, @MainActor NetServiceDelegate {
+    func netServiceBrowser(_ browser: NetServiceBrowser, didFind service: NetService, moreComing: Bool) {
+        services.append(service)
+        service.delegate = self
+        service.resolve(withTimeout: 5)
+    }
+
+    func netServiceDidResolveAddress(_ sender: NetService) {
+        guard let hostname = sender.hostName else { return }
+        var components = URLComponents()
+        components.scheme = "http"
+        components.host = hostname
+        components.port = sender.port
+        components.path = "/graphql"
+        guard let endpoint = components.url else { return }
+        let host = HomieHost(name: sender.name, graphQLURL: endpoint, source: .discovered)
+        resolvedHosts[serviceKey(sender)] = host
+        if let index = hosts.firstIndex(where: { $0.id == host.id }) {
+            hosts[index] = host
+        } else {
+            hosts.append(host)
+        }
+        hosts.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        isSearching = false
+    }
+
+    func netServiceBrowserDidStopSearch(_ browser: NetServiceBrowser) {
+        isSearching = false
+        started = false
+    }
+
+    func netServiceBrowser(_ browser: NetServiceBrowser, didRemove service: NetService, moreComing: Bool) {
+        services.removeAll { $0 === service }
+        if let host = resolvedHosts.removeValue(forKey: serviceKey(service)) {
+            hosts.removeAll { $0.id == host.id }
         }
     }
 
-    nonisolated func netServiceDidResolveAddress(_ sender: NetService) {
-        MainActor.assumeIsolated {
-            guard let hostname = sender.hostName else { return }
-            var components = URLComponents()
-            components.scheme = "http"
-            components.host = hostname
-            components.port = sender.port
-            components.path = "/graphql"
-            guard let endpoint = components.url else { return }
-            let host = HomieHost(name: sender.name, graphQLURL: endpoint, source: .discovered)
-            resolvedHosts[serviceKey(sender)] = host
-            if let index = hosts.firstIndex(where: { $0.id == host.id }) {
-                hosts[index] = host
-            } else {
-                hosts.append(host)
-            }
-            hosts.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
-            isSearching = false
-        }
+    func netServiceBrowser(_ browser: NetServiceBrowser, didNotSearch errorDict: [String: NSNumber]) {
+        isSearching = false
+        started = false
     }
 
-    nonisolated func netServiceBrowserDidStopSearch(_ browser: NetServiceBrowser) {
-        MainActor.assumeIsolated {
-            isSearching = false
-            started = false
-        }
-    }
-
-    nonisolated func netServiceBrowser(_ browser: NetServiceBrowser, didRemove service: NetService, moreComing: Bool) {
-        MainActor.assumeIsolated {
-            services.removeAll { $0 === service }
-            if let host = resolvedHosts.removeValue(forKey: serviceKey(service)) {
-                hosts.removeAll { $0.id == host.id }
-            }
-        }
-    }
-
-    nonisolated func netServiceBrowser(_ browser: NetServiceBrowser, didNotSearch errorDict: [String: NSNumber]) {
-        MainActor.assumeIsolated {
-            isSearching = false
-            started = false
-        }
-    }
-
-    nonisolated func netService(_ sender: NetService, didNotResolve errorDict: [String: NSNumber]) {
-        MainActor.assumeIsolated { services.removeAll { $0 === sender } }
+    func netService(_ sender: NetService, didNotResolve errorDict: [String: NSNumber]) {
+        services.removeAll { $0 === sender }
     }
 
     private func serviceKey(_ service: NetService) -> String {

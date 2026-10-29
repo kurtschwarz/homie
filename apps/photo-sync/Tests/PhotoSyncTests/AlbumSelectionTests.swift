@@ -33,6 +33,34 @@ struct AlbumSelectionTests {
         #expect(AlbumSelection(defaults: defaults).artworkAlbumID == nil)
     }
 
+    @Test func artworkSwitchDefaultsOffForFreshInstalls() {
+        #expect(AlbumSelection(defaults: defaults).artworkEnabled == false)
+    }
+
+    @Test func artworkSwitchDefaultsOnForAnExistingStoredAlbum() {
+        AlbumSelection(defaults: defaults).setArtworkAlbum("a")
+
+        #expect(AlbumSelection(defaults: defaults).artworkEnabled == true)
+    }
+
+    @Test func turningTheSwitchOffKeepsTheAlbumAndPersists() {
+        let first = AlbumSelection(defaults: defaults)
+        first.setArtworkAlbum("a")
+        first.setArtworkEnabled(false)
+
+        let second = AlbumSelection(defaults: defaults)
+        #expect(second.artworkEnabled == false)
+        #expect(second.artworkAlbumID == "a")
+    }
+
+    @Test func clearRemovesArtworkSwitch() {
+        AlbumSelection(defaults: defaults).setArtworkEnabled(true)
+
+        AlbumSelection.clear(defaults: defaults)
+
+        #expect(AlbumSelection(defaults: defaults).artworkEnabled == false)
+    }
+
     @Test func clearRemovesArtworkAlbum() {
         AlbumSelection(defaults: defaults).setArtworkAlbum("a")
 

@@ -47,6 +47,26 @@ struct DrawingPusherTests {
         #expect(pusher.message == "Choose an artwork album to save Homie drawings to Photos.")
     }
 
+    @Test func skipsSilentlyWhenSavingIsSwitchedOff() async throws {
+        service.drawings = [drawing("a")]
+        let pusher = pusher()
+
+        try await pusher.push(toAlbum: "album", enabled: false, run: SyncRunLog())
+
+        #expect(pusher.message == nil)
+        #expect(service.marked.isEmpty)
+    }
+
+    @Test func warnsWhenTheChosenAlbumIsUnusable() async throws {
+        service.drawings = [drawing("a")]
+        let pusher = pusher(canAdd: false)
+
+        try await pusher.push(toAlbum: "album", run: SyncRunLog())
+
+        #expect(pusher.message?.contains("missing or can't be added to") == true)
+        #expect(service.marked.isEmpty)
+    }
+
     @Test func pushesEachDrawingAndMarksItPushed() async throws {
         service.drawings = [drawing("a"), drawing("b")]
         let pusher = pusher()

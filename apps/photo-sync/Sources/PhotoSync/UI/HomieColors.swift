@@ -13,11 +13,9 @@ extension Color {
     static let homieBarBackground = Color(hex: 0x2B2E3A)
     static let homieText = Color(hex: 0xF2F2F4)
     static let homieSectionHeading = Color(hex: 0xA9A9B0)
-    static let homieBadgeText = Color(hex: 0xC9C9CE)
     static let homieDivider = Color.white.opacity(0.08)
     static let homieRowSelected = Color.white.opacity(0.12)
     static let homieRowHover = Color.white.opacity(0.06)
-    static let homieBadgeBorder = Color.white.opacity(0.25)
 
     init(hex: UInt32) {
         self.init(

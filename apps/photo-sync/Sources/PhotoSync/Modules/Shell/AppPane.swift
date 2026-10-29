@@ -16,12 +16,14 @@ enum SignedInScreen: Equatable {
     case emptyStatus
     case status
     case picker
+    case artwork
     case placeholder
 
     nonisolated static func resolve(pane: AppPane, hasSelection: Bool) -> SignedInScreen {
         switch pane {
         case .status: hasSelection ? .status : .emptyStatus
         case .albums: .picker
+        case .artwork: .artwork
         default: .placeholder
         }
     }
@@ -46,8 +48,6 @@ enum AppPane: String, CaseIterable, Identifiable {
         case .about: .symbol("info", gradient: [Color(hex: 0xA9ADB5), Color(hex: 0x6E737C)])
         }
     }
-
-    var isNew: Bool { self == .artwork }
 
     var isAvailableSignedOut: Bool { self == .about }
 

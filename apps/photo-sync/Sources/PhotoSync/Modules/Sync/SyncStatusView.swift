@@ -9,7 +9,8 @@ struct SyncStatusView: View {
 
     private var albums: [PhotoAlbum] { library.albums.filter { selection.contains($0.id) } }
     private var artworkAlbum: PhotoAlbum? {
-        library.albums.first { $0.id == selection.artworkAlbumID && $0.isArtworkCandidate }
+        let artwork = ArtworkAlbums(albums: library.albums, storedID: selection.artworkAlbumID, enabled: selection.artworkEnabled)
+        return artwork.status == .ready ? artwork.current : nil
     }
     private var failedCount: Int { runner.photos.albumProgress.values.reduce(0) { $0 + $1.failed } }
     private var photoTotal: Int { runner.isRunning || runner.photos.total > 0 ? runner.photos.total : albums.reduce(0) { $0 + $1.count } }

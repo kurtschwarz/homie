@@ -15,21 +15,21 @@ final class SyncRunner {
         self.onAuthenticationRequired = onAuthenticationRequired
     }
 
-    func sync(albumIDs: [String], artworkAlbumID: String? = nil, onFinished: @escaping () -> Void = {}) {
+    func sync(albumIDs: [String], artworkAlbumID: String? = nil, artworkEnabled: Bool = true, onFinished: @escaping () -> Void = {}) {
         guard !isRunning else { return }
         isRunning = true
         Task {
-            await run(albumIDs: albumIDs, artworkAlbumID: artworkAlbumID)
+            await run(albumIDs: albumIDs, artworkAlbumID: artworkAlbumID, artworkEnabled: artworkEnabled)
             isRunning = false
             onFinished()
         }
     }
 
-    func run(albumIDs: [String], artworkAlbumID: String?) async {
+    func run(albumIDs: [String], artworkAlbumID: String?, artworkEnabled: Bool = true) async {
         let log = SyncRunLog()
         log.info("Sync started", detail: "albums=\(albumIDs.count)")
         do {
-            try await drawings.push(toAlbum: artworkAlbumID, run: log)
+            try await drawings.push(toAlbum: artworkAlbumID, enabled: artworkEnabled, run: log)
             let drawingAssetIDs: Set<String>
             do {
                 drawingAssetIDs = try await drawings.pushedAssetIDs()

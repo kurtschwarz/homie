@@ -7,9 +7,11 @@ final class AlbumSelection {
     private static let keepSyncingKey = "photo-sync.keepSyncing"
     private static let lastSyncedKey = "photo-sync.lastSyncedAt"
     private static let artworkAlbumKey = "photo-sync.artworkAlbum"
+    private static let artworkEnabledKey = "photo-sync.artworkEnabled"
     private static let sortKey = "photo-sync.albumSort"
 
     private(set) var artworkAlbumID: String?
+    private(set) var artworkEnabled: Bool
     private(set) var albumIDs: Set<String>
     private(set) var sort: AlbumList.Sort
     private(set) var keepSyncing: Bool
@@ -23,7 +25,14 @@ final class AlbumSelection {
         sort = defaults.string(forKey: Self.sortKey).flatMap(AlbumList.Sort.init(rawValue:)) ?? .recent
         keepSyncing = defaults.object(forKey: Self.keepSyncingKey) as? Bool ?? true
         lastSyncedAt = defaults.object(forKey: Self.lastSyncedKey) as? Date
-        artworkAlbumID = defaults.string(forKey: Self.artworkAlbumKey)
+        let storedArtworkAlbum = defaults.string(forKey: Self.artworkAlbumKey)
+        artworkAlbumID = storedArtworkAlbum
+        artworkEnabled = defaults.object(forKey: Self.artworkEnabledKey) as? Bool ?? (storedArtworkAlbum != nil)
+    }
+
+    func setArtworkEnabled(_ value: Bool) {
+        artworkEnabled = value
+        defaults.set(value, forKey: Self.artworkEnabledKey)
     }
 
     func setArtworkAlbum(_ id: String?) {
@@ -60,6 +69,7 @@ final class AlbumSelection {
         defaults.removeObject(forKey: keepSyncingKey)
         defaults.removeObject(forKey: lastSyncedKey)
         defaults.removeObject(forKey: artworkAlbumKey)
+        defaults.removeObject(forKey: artworkEnabledKey)
         defaults.removeObject(forKey: sortKey)
     }
 }

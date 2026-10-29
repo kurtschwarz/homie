@@ -146,7 +146,7 @@ final class PhotoUploader: ObservableObject {
             }
 
             do {
-                let place = await bestEffortPlace(for: photo.coordinate)
+                let place = try await bestEffortPlace(for: photo.coordinate)
                 let jpeg = try await library.fullSizeJPEG(for: photo)
                 let coordinate = photo.coordinate
                 let input = PhotoUploadInput(
@@ -164,6 +164,7 @@ final class PhotoUploader: ObservableObject {
                 ledger.markUploaded(photo)
                 finish(albumID: albumID)
             } catch {
+                if error is CancellationError { return false }
                 finish(albumID: albumID, failed: true)
                 if case HomieAPIError.unauthorized = error {
                     onAuthenticationRequired()
@@ -174,51 +175,32 @@ final class PhotoUploader: ObservableObject {
         return true
     }
 
-    private func bestEffortPlace(for coordinate: CLLocationCoordinate2D?) async -> String? {
+    private func bestEffortPlace(for coordinate: CLLocationCoordinate2D?) async throws -> String? {
         guard let coordinate else { return nil }
         if let cached = ledger.place(for: coordinate) { return cached }
+        // Keep requests serial and leave time for PhotoKit/iCloud between lookups.
+        try await Task.sleep(for: .seconds(1))
+        let placemarks: [CLPlacemark]?
         do {
-            // Keep requests serial and leave time for PhotoKit/iCloud between lookups.
-            try await Task.sleep(for: .seconds(1))
-            let placemarks = try await geocoderWithTimeout(for: coordinate)
-            guard let placemark = placemarks.first else { return nil }
-            let place = [placemark.locality, placemark.administrativeArea, placemark.country]
-                .compactMap { $0 }
-                .reduce(into: [String]()) { result, item in if result.last != item { result.append(item) } }
-                .joined(separator: ", ")
-            guard !place.isEmpty else { return nil }
-            ledger.savePlace(place, for: coordinate)
-            return place
+            placemarks = try await withTimeout(.seconds(5)) { [geocoder] in
+                let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+                return try await withTaskCancellationHandler {
+                    try await geocoder.reverseGeocodeLocation(location)
+                } onCancel: {
+                    geocoder.cancelGeocode()
+                }
+            }
         } catch {
+            try Task.checkCancellation()
             return nil
         }
+        guard let placemark = placemarks?.first else { return nil }
+        let place = [placemark.locality, placemark.administrativeArea, placemark.country]
+            .compactMap { $0 }
+            .reduce(into: [String]()) { result, item in if result.last != item { result.append(item) } }
+            .joined(separator: ", ")
+        guard !place.isEmpty else { return nil }
+        ledger.savePlace(place, for: coordinate)
+        return place
     }
-
-    private func geocoderWithTimeout(for coordinate: CLLocationCoordinate2D) async throws -> [CLPlacemark] {
-        try await withCheckedThrowingContinuation { continuation in
-            let lock = NSLock()
-            var finished = false
-            func finish(_ result: Result<[CLPlacemark], Error>) {
-                lock.lock()
-                defer { lock.unlock() }
-                guard !finished else { return }
-                finished = true
-                continuation.resume(with: result)
-            }
-
-            geocoder.reverseGeocodeLocation(CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)) { placemarks, error in
-                if let error { finish(.failure(error)) }
-                else { finish(.success(placemarks ?? [])) }
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-                self.geocoder.cancelGeocode()
-                finish(.failure(PhotoUploaderError.geocodingTimedOut))
-            }
-        }
-    }
-}
-
-private enum PhotoUploaderError: LocalizedError {
-    case geocodingTimedOut
-    var errorDescription: String? { "Place lookup timed out." }
 }

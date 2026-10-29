@@ -17,6 +17,10 @@ final class PhotoLibrary: ObservableObject {
 
     private let imageManager = PHCachingImageManager()
 
+    func refreshAuthorization() {
+        authorization = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+    }
+
     func authorize() async {
         authorization = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
         if authorization == .authorized || authorization == .limited {

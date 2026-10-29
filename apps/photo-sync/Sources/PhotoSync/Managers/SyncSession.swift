@@ -10,6 +10,7 @@ final class SyncSession: ObservableObject {
     let library: PhotoLibrary
     let uploader: PhotoUploader
     let selection: AlbumSelection
+    let permissions: PermissionsModel
 
     private var forwarding: [AnyCancellable] = []
 
@@ -20,11 +21,14 @@ final class SyncSession: ObservableObject {
         self.auth = auth
         self.library = library
         selection = AlbumSelection()
+        let permissions = PermissionsModel(library: library, endpoint: endpoint)
+        self.permissions = permissions
         uploader = PhotoUploader(library: library, api: api, onAuthenticationRequired: { auth.sessionExpired() })
 
         let changes = [
             auth.objectWillChange, library.objectWillChange,
             uploader.objectWillChange, selection.objectWillChange,
+            permissions.objectWillChange,
         ]
         forwarding = changes.map { publisher in
             publisher.sink { [weak self] _ in self?.objectWillChange.send() }
@@ -62,6 +66,7 @@ final class SyncSession: ObservableObject {
     }
 
     func start() async {
+        guard !permissions.showsScreen else { return }
         await auth.restoreSession()
         loadAlbumsIfNeeded()
     }
@@ -72,6 +77,7 @@ final class SyncSession: ObservableObject {
     }
 
     func syncIfDue() {
+        permissions.refresh()
         loadAlbumsIfNeeded()
         guard Self.shouldPoll(
             signedIn: isSignedIn,

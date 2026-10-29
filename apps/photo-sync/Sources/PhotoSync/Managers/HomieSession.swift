@@ -1,4 +1,5 @@
 import Foundation
+import LocalAuthentication
 import Security
 
 enum HomieSession {
@@ -13,6 +14,42 @@ enum HomieSession {
             SecItemDelete(itemQuery(account: legacyAccount) as CFDictionary)
         } catch {}
         return legacyToken
+    }
+
+    static func probeAccess(for endpoint: URL) -> KeychainAccess {
+        access(for: endpoint, interactive: false)
+    }
+
+    static func requestAccess(for endpoint: URL) -> KeychainAccess {
+        access(for: endpoint, interactive: true)
+    }
+
+    static func resetSaved(for endpoint: URL) {
+        clear(for: endpoint)
+        SecItemDelete(itemQuery(account: legacyAccount) as CFDictionary)
+    }
+
+    private static func access(for endpoint: URL, interactive: Bool) -> KeychainAccess {
+        for account in [sessionAccount(for: endpoint), legacyAccount] {
+            var query = itemQuery(account: account)
+            query[kSecReturnData as String] = true
+            query[kSecMatchLimit as String] = kSecMatchLimitOne
+            if !interactive {
+                let context = LAContext()
+                context.interactionNotAllowed = true
+                query[kSecUseAuthenticationContext as String] = context
+            }
+            var result: CFTypeRef?
+            switch SecItemCopyMatching(query as CFDictionary, &result) {
+            case errSecSuccess, errSecItemNotFound:
+                continue
+            case errSecInteractionNotAllowed where !interactive:
+                return .needsPrompt
+            default:
+                return .denied
+            }
+        }
+        return .allowed
     }
 
     private static func read(account: String) -> String? {

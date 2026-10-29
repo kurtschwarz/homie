@@ -19,7 +19,7 @@ struct ContentView: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            SidebarView(selection: highlightedPane, isSignedIn: session.isSignedIn, isLoading: isChecking) { pane = $0 }
+            SidebarView(selection: highlightedPane, isSignedIn: session.isSignedIn, isLoading: isChecking || showsPermissions) { pane = $0 }
             paneContent
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -32,7 +32,15 @@ struct ContentView: View {
         .task {
             await session.start()
         }
+        .onChange(of: showsPermissions) { _, shows in
+            if !shows { Task { await session.start() } }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            session.permissions.refresh()
+        }
     }
+
+    private var showsPermissions: Bool { session.permissions.showsScreen }
 
     private var isPickingAlbums: Bool { pane == .albums || !selection.hasSelection }
 
@@ -48,6 +56,15 @@ struct ContentView: View {
 
     @ViewBuilder
     private var paneContent: some View {
+        if showsPermissions {
+            PermissionsView(permissions: session.permissions, library: library)
+        } else {
+            authContent
+        }
+    }
+
+    @ViewBuilder
+    private var authContent: some View {
         switch auth.state {
         case .checking:
             GettingReadyView(hostName: hostStore.selected.name)
@@ -75,19 +92,8 @@ struct ContentView: View {
                 .onAppear {
                     if library.albums.isEmpty { library.loadAlbums() }
                 }
-        case .denied, .restricted:
-            ContentUnavailableView("Photos Access Needed", systemImage: "photo.badge.exclamationmark", description: Text("Allow Photo Sync to access your Photos library in System Settings → Privacy & Security → Photos."))
-        case .notDetermined:
-            ContentUnavailableView {
-                Label("Connect to Photos", systemImage: "photo.on.rectangle.angled")
-            } description: {
-                Text("Photo Sync reads your Homie album and displays photo metadata locally.")
-            } actions: {
-                Button("Allow Photo Access") { Task { await library.authorize() } }
-                    .buttonStyle(.borderedProminent)
-            }
-        @unknown default:
-            ContentUnavailableView("Photos Unavailable", systemImage: "photo")
+        default:
+            Color.clear
         }
     }
 

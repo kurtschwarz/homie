@@ -9,6 +9,8 @@ struct SignInView: View {
 
     private enum Field { case username, password }
 
+    private static let contentWidth: CGFloat = 340
+
     var body: some View {
         VStack(spacing: 0) {
             HomieMark(blinks: true)
@@ -38,7 +40,7 @@ struct SignInView: View {
                     .padding(.horizontal, 14)
                     .frame(height: 44)
             }
-            .frame(width: 340)
+            .frame(width: Self.contentWidth)
             .background(Color.homieDivider, in: RoundedRectangle(cornerRadius: 12))
             .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.homieDivider, lineWidth: 1))
 
@@ -48,7 +50,7 @@ struct SignInView: View {
                     .foregroundStyle(Color.homieError)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
-                    .frame(width: 340)
+                    .frame(width: Self.contentWidth)
                     .padding(.top, 12)
             }
 
@@ -60,7 +62,7 @@ struct SignInView: View {
             }
             .buttonStyle(HomieButtonStyle(prominent: true, fullWidth: true))
             .disabled(auth.isSigningIn)
-            .frame(width: 340)
+            .frame(width: Self.contentWidth)
             .padding(.top, 14)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -24,7 +24,12 @@ final class PhotoLibrary {
     func authorize() async {
         // Off the main actor: PhotoKit keeps it busy for a second or two, which stalls any UI work
         // waiting to run while the prompt is up.
-        authorization = await Task.detached { await PHPhotoLibrary.requestAuthorization(for: .readWrite) }.value
+        authorization = await Self.requestAuthorization()
+    }
+
+    @concurrent
+    private static func requestAuthorization() async -> PHAuthorizationStatus {
+        await PHPhotoLibrary.requestAuthorization(for: .readWrite)
     }
 
     func loadAlbums() {

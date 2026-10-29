@@ -63,16 +63,16 @@ final class PermissionsGateTests: XCTestCase {
 
 final class KeychainGrantTests: XCTestCase {
     func testGrantHoldsForTheSameCodeSignature() {
-        XCTAssertTrue(HomieSession.grantIsCurrent(recorded: "abc", identity: "abc"))
+        XCTAssertTrue(CodeSignedGrant.isCurrent(recorded: "abc", identity: "abc"))
     }
 
     func testGrantFromAnotherBuildIsStale() {
-        XCTAssertFalse(HomieSession.grantIsCurrent(recorded: "abc", identity: "def"))
+        XCTAssertFalse(CodeSignedGrant.isCurrent(recorded: "abc", identity: "def"))
     }
 
     func testNoRecordOrUnreadableSignatureIsNotAGrant() {
-        XCTAssertFalse(HomieSession.grantIsCurrent(recorded: nil, identity: "abc"))
-        XCTAssertFalse(HomieSession.grantIsCurrent(recorded: "", identity: ""))
+        XCTAssertFalse(CodeSignedGrant.isCurrent(recorded: nil, identity: "abc"))
+        XCTAssertFalse(CodeSignedGrant.isCurrent(recorded: "", identity: ""))
     }
 }
 

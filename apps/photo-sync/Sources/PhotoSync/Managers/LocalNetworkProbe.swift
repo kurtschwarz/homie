@@ -7,7 +7,7 @@ import Network
 enum LocalNetworkProbe {
     static let policyDenied: Int32 = -65570
     static let serviceType = "_homie-photos-probe._tcp"
-    private static let grantedKey = "photo-sync.localNetworkGrantedForCode"
+    private static let grant = CodeSignedGrant(key: "photo-sync.localNetworkGrantedForCode")
 
     static func access(for state: NWBrowser.State) -> AccessState? {
         if case .waiting(.dns(policyDenied)) = state { return .denied }
@@ -19,8 +19,7 @@ enum LocalNetworkProbe {
     }
 
     static func recordedAccess(defaults: UserDefaults = .standard) -> AccessState {
-        grantIsCurrent(recorded: defaults.string(forKey: grantedKey), identity: HomieSession.codeIdentity)
-            ? .allowed : .needsPrompt
+        grant.isCurrent(defaults: defaults) ? .allowed : .needsPrompt
     }
 
     /// Waits for the system to settle on an answer. With the prompt open that waits for the user, so
@@ -28,15 +27,11 @@ enum LocalNetworkProbe {
     static func request(timeout: Duration, defaults: UserDefaults = .standard) async -> AccessState? {
         let result = await probe(timeout: timeout)
         switch result {
-        case .allowed: defaults.set(HomieSession.codeIdentity, forKey: grantedKey)
-        case .denied: defaults.removeObject(forKey: grantedKey)
+        case .allowed: grant.record(defaults: defaults)
+        case .denied: grant.revoke(defaults: defaults)
         default: break
         }
         return result
-    }
-
-    nonisolated static func grantIsCurrent(recorded: String?, identity: String) -> Bool {
-        HomieSession.grantIsCurrent(recorded: recorded, identity: identity)
     }
 
     private static func probe(timeout: Duration) async -> AccessState? {

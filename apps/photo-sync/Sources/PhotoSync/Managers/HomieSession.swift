@@ -15,30 +15,14 @@ enum HomieSession {
         return legacyToken
     }
 
-    private static let grantedKey = "photo-sync.keychainGrantedForCode"
+    private static let grant = CodeSignedGrant(key: "photo-sync.keychainGrantedForCode")
 
     /// Reading an item's data is the only way to learn whether the keychain would prompt, and asking is
     /// what triggers the prompt. So launch only looks for the item's attributes, which never prompt, and
-    /// trusts what the last Allow told us, for the same code signature only: re-signing the app
-    /// invalidates the keychain's grant, so a record from an older build proves nothing.
+    /// trusts what the last Allow told us, for the same code signature only.
     static func probeAccess(for endpoint: URL, defaults: UserDefaults = .standard) -> AccessState {
         guard savedAccounts(for: endpoint).contains(where: itemExists) else { return .allowed }
-        return grantIsCurrent(recorded: defaults.string(forKey: grantedKey), identity: codeIdentity) ? .allowed : .needsPrompt
-    }
-
-    nonisolated static func grantIsCurrent(recorded: String?, identity: String) -> Bool {
-        !identity.isEmpty && recorded == identity
-    }
-
-    static var codeIdentity: String {
-        var code: SecCode?
-        var staticCode: SecStaticCode?
-        var info: CFDictionary?
-        guard SecCodeCopySelf([], &code) == errSecSuccess, let code,
-              SecCodeCopyStaticCode(code, [], &staticCode) == errSecSuccess, let staticCode,
-              SecCodeCopySigningInformation(staticCode, SecCSFlags(rawValue: kSecCSSigningInformation), &info) == errSecSuccess,
-              let unique = (info as? [String: Any])?[kSecCodeInfoUnique as String] as? Data else { return "" }
-        return unique.map { String(format: "%02x", $0) }.joined()
+        return grant.isCurrent(defaults: defaults) ? .allowed : .needsPrompt
     }
 
     static func requestAccess(for endpoint: URL, defaults: UserDefaults = .standard) -> AccessState {
@@ -51,11 +35,11 @@ enum HomieSession {
             case errSecSuccess, errSecItemNotFound:
                 continue
             default:
-                defaults.removeObject(forKey: grantedKey)
+                grant.revoke(defaults: defaults)
                 return .denied
             }
         }
-        defaults.set(codeIdentity, forKey: grantedKey)
+        grant.record(defaults: defaults)
         return .allowed
     }
 

@@ -5,19 +5,19 @@ struct PaneHeader: View {
     var subtitle: String?
 
     var body: some View {
-        HStack(spacing: 14) {
-            PaneIconTile(pane: pane, size: 40)
-            VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 12) {
+                PaneIconTile(pane: pane, size: 32)
                 Text(pane.title)
-                    .font(.system(size: 22, weight: .bold))
+                    .font(.system(size: 19, weight: .bold))
                     .foregroundStyle(Color.homieText)
-                if let subtitle {
-                    Text(subtitle)
-                        .font(.system(size: 13))
-                        .foregroundStyle(Color.homieSectionHeading)
-                }
+                Spacer(minLength: 0)
             }
-            Spacer(minLength: 0)
+            if let subtitle {
+                Text(subtitle)
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.homieSectionHeading)
+            }
         }
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isHeader)

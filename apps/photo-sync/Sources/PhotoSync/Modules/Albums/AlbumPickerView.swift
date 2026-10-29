@@ -9,29 +9,135 @@ struct AlbumPickerView: View {
     let username: String
     let onSignOut: () -> Void
 
+    @State private var search = ""
+    @State private var filter: AlbumList.Filter = .all
+    @FocusState private var searchFocused: Bool
+
     private var selectedAlbums: [PhotoAlbum] { library.albums.filter { selection.contains($0.id) } }
     private var photoCount: Int { selectedAlbums.reduce(0) { $0 + $1.count } }
-    private var iCloudAlbums: [PhotoAlbum] { library.albums.filter { !$0.isShared } }
-    private var sharedAlbums: [PhotoAlbum] { library.albums.filter(\.isShared) }
+
+    private var list: AlbumList {
+        AlbumList(albums: library.albums, selectedIDs: selection.albumIDs, search: search, filter: filter, sort: selection.sort)
+    }
 
     private var sizeText: String {
         ByteCountFormatter.string(fromByteCount: Int64(Double(photoCount) * Self.estimatedBytesPerPhoto), countStyle: .file)
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    PaneHeader(pane: .albums, subtitle: "Photos from these albums show in the slideshow on \(hostName).")
-                    AlbumGroup(title: "iCloud Photos", albums: iCloudAlbums, library: library, selection: selection)
-                    AlbumGroup(title: "Shared albums", albums: sharedAlbums, library: library, selection: selection)
+        let list = list
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                if list.isEmpty {
+                    emptyState
                 }
-                .padding(.horizontal, 32)
-                .padding(.vertical, 28)
+                ForEach(list.groups, id: \.title) { group in
+                    AlbumGroup(title: group.title, albums: group.albums, library: library, selection: selection)
+                }
             }
-
-            footer
+            .padding(.horizontal, 32)
+            .padding(.vertical, 16)
+            .animation(.default, value: list.groups.flatMap(\.albums).map(\.id))
         }
+        .softScrollEdges()
+        .paneBar(edge: .top) { header(list) }
+        .paneBar(edge: .bottom) { footer }
+        .background {
+            Button("") { searchFocused = true }
+                .keyboardShortcut("f", modifiers: .command)
+                .opacity(0)
+        }
+    }
+
+    private func header(_ list: AlbumList) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            PaneHeader(pane: .albums, subtitle: "Photos from these albums show in the slideshow on \(hostName).")
+            HStack(spacing: 10) {
+                searchField(libraryTotal: list.libraryTotal)
+                sortMenu
+            }
+            HStack(spacing: 8) {
+                chip("All", count: list.counts.all, value: .all)
+                chip("On Homie", count: list.counts.onHomie, value: .onHomie)
+                chip("Not on Homie", count: list.counts.notOnHomie, value: .notOnHomie)
+                Spacer()
+            }
+        }
+        .padding(.horizontal, 32)
+        .padding(.top, 34)
+        .padding(.bottom, 14)
+        .fadingMaterial(solidEdge: .top)
+        .zIndex(1)
+    }
+
+    private func searchField(libraryTotal: Int) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+            TextField("Search \(libraryTotal.formatted()) albums", text: $search)
+                .textFieldStyle(.plain)
+                .focused($searchFocused)
+                .onKeyPress(.escape) {
+                    if !search.isEmpty {
+                        search = ""
+                    } else {
+                        searchFocused = false
+                    }
+                    return .handled
+                }
+            if !search.isEmpty {
+                Button { search = "" } label: { Image(systemName: "xmark.circle.fill") }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                    .accessibilityLabel("Clear search")
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private var sortMenu: some View {
+        Picker("Sort", selection: Binding(get: { selection.sort }, set: { selection.setSort($0) })) {
+            ForEach(AlbumList.Sort.allCases, id: \.self) { Text($0.title).tag($0) }
+        }
+        .pickerStyle(.menu)
+        .fixedSize()
+    }
+
+    private func chip(_ title: String, count: Int, value: AlbumList.Filter) -> some View {
+        let active = filter == value
+        return Button {
+            filter = value
+        } label: {
+            Text("\(title) \(count.formatted())")
+                .font(.system(size: 12, weight: .semibold))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .foregroundStyle(active ? Color.white : Color.homieSectionHeading)
+                .background(active ? Color.homieGreen : Color.white.opacity(0.07), in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(active ? .isSelected : [])
+    }
+
+    private var emptyState: some View {
+        let libraryIsEmpty = library.albums.isEmpty
+        return VStack(spacing: 8) {
+            Text(libraryIsEmpty ? "No albums in your Photos library." : "No albums match.")
+                .foregroundStyle(Color.homieSectionHeading)
+            if !libraryIsEmpty {
+                Button("Clear search") {
+                    search = ""
+                    filter = .all
+                }
+                .buttonStyle(.plain)
+                .fontWeight(.semibold)
+                .foregroundStyle(Color.homieGreenDark)
+            }
+        }
+        .font(.system(size: 13))
+        .frame(maxWidth: .infinity)
+        .padding(.top, 40)
     }
 
     private var footer: some View {
@@ -66,8 +172,80 @@ struct AlbumPickerView: View {
         }
         .padding(.horizontal, 32)
         .padding(.vertical, 14)
-        .background(.thinMaterial)
-        .overlay(alignment: .top) { Color.homieDivider.frame(height: 1) }
+        .fadingMaterial(solidEdge: .bottom)
+    }
+}
+
+private extension View {
+    // A bar that the scroll edge effect knows about, so content blurs into it. Before macOS 26 the
+    // bar draws its own fading material instead.
+    @ViewBuilder
+    func paneBar(edge: VerticalEdge, @ViewBuilder content: () -> some View) -> some View {
+        #if compiler(>=6.2)
+        if #available(macOS 26, *) {
+            safeAreaBar(edge: edge, spacing: 0, content: content)
+        } else {
+            safeAreaInset(edge: edge, spacing: 0, content: content)
+        }
+        #else
+        safeAreaInset(edge: edge, spacing: 0, content: content)
+        #endif
+    }
+
+    @ViewBuilder
+    func fadingMaterial(solidEdge: VerticalEdge) -> some View {
+        #if compiler(>=6.2)
+        if #available(macOS 26, *) { barScrim(solidEdge: solidEdge) } else { legacyFadingMaterial(solidEdge: solidEdge) }
+        #else
+        legacyFadingMaterial(solidEdge: solidEdge)
+        #endif
+    }
+
+    // The scroll edge effect blurs the rows but keeps their contrast, so the bar's own text sits on
+    // a scrim that fades out at the seam rather than ending on an edge.
+    func barScrim(solidEdge: VerticalEdge) -> some View {
+        let isTop = solidEdge == .top
+        return background {
+            LinearGradient(
+                stops: [
+                    .init(color: Color.homieBarBackground, location: 0),
+                    .init(color: Color.homieBarBackground, location: 0.78),
+                    .init(color: Color.homieBarBackground.opacity(0), location: 1)
+                ],
+                startPoint: isTop ? .top : .bottom,
+                endPoint: isTop ? .bottom : .top
+            )
+        }
+    }
+
+    // Solid behind the controls, fading over a strip just outside the bar so rows dissolve into it
+    // rather than meeting a hard edge.
+    func legacyFadingMaterial(solidEdge: VerticalEdge) -> some View {
+        let isTop = solidEdge == .top
+        let fade: CGFloat = 28
+        return background(alignment: isTop ? .bottom : .top) {
+            Rectangle()
+                .fill(.ultraThinMaterial)
+                .frame(height: fade)
+                .mask(
+                    LinearGradient(
+                        colors: [.black, .clear],
+                        startPoint: isTop ? .top : .bottom,
+                        endPoint: isTop ? .bottom : .top
+                    )
+                )
+                .offset(y: isTop ? fade : -fade)
+        }
+        .background(.ultraThinMaterial)
+    }
+
+    @ViewBuilder
+    func softScrollEdges() -> some View {
+        #if compiler(>=6.2)
+        if #available(macOS 26, *) { scrollEdgeEffectStyle(.soft, for: .vertical) } else { self }
+        #else
+        self
+        #endif
     }
 }
 

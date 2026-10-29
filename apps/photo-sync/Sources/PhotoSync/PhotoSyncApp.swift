@@ -10,7 +10,7 @@ struct PhotoSyncApp: App {
             MenuBarContent(
                 session: model.session,
                 launchAtLogin: model.launchAtLogin,
-                onAbout: showAbout,
+                navigation: model.navigation,
                 onReset: confirmReset
             )
         } label: {
@@ -19,16 +19,7 @@ struct PhotoSyncApp: App {
         .menuBarExtraStyle(.menu)
 
         MainWindow(model: model)
-    }
-
-    private func showAbout() {
-        // The standard panel renders "Version <applicationVersion> (<version>)".
-        var options: [NSApplication.AboutPanelOptionKey: Any] = [:]
-        if let commit = Bundle.main.object(forInfoDictionaryKey: "HomieGitCommit") as? String {
-            options[.version] = commit
-        }
-        NSApp.activate(ignoringOtherApps: true)
-        NSApp.orderFrontStandardAboutPanel(options: options)
+            .commands { AboutCommands(navigation: model.navigation) }
     }
 
     private func confirmReset() {
@@ -50,7 +41,7 @@ private struct MainWindow: Scene {
 
     var body: some Scene {
         Window("Homie Photos", id: "main") {
-            ContentView(hostStore: model.hostStore, session: model.session)
+            ContentView(hostStore: model.hostStore, session: model.session, navigation: model.navigation)
                 .id(model.hostStore.contentIdentity)
         }
         .windowStyle(.hiddenTitleBar)

@@ -19,8 +19,14 @@ final class LaunchAtLogin {
 }
 
 @Observable
+final class AppNavigation {
+    var requestedPane: AppPane?
+}
+
+@Observable
 final class AppModel {
     let hostStore = HomieHostStore()
+    let navigation = AppNavigation()
     let launchAtLogin = LaunchAtLogin()
     private(set) var session: SyncSession
 

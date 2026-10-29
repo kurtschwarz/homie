@@ -137,7 +137,7 @@ struct AlbumPickerView: View {
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
-                    Toggle("", isOn: Binding(get: { selection.keepSyncing }, set: selection.setKeepSyncing))
+                    Toggle("", isOn: Binding(get: { selection.keepSyncing }, set: { selection.setKeepSyncing($0) }))
                         .toggleStyle(.switch)
                         .labelsHidden()
                         .tint(.homieGreen)

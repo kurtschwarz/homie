@@ -59,16 +59,7 @@ struct PermissionsView: View {
                         permissions.openPhotosSettings()
                     } else {
                         Task {
-                            async let request: Void = permissions.allowPhotos()
-                            // PhotoKit answers about two seconds late, so keep asking rather than wait.
-                            let nudge = Task {
-                                while !Task.isCancelled {
-                                    try? await Task.sleep(for: .milliseconds(50))
-                                    comeBack()
-                                }
-                            }
-                            await request
-                            nudge.cancel()
+                            await permissions.allowPhotos()
                             comeBack()
                         }
                     }
@@ -128,6 +119,14 @@ struct PermissionsView: View {
                 .padding(.top, 8)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didActivateApplicationNotification)) { note in
+            // Dismissing a prompt hands the front to whatever sat behind the window, not back to us,
+            // so that app activating is the signal to come back.
+            guard permissions.isRequesting else { return }
+            let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
+            Log.permissions.info("Front app while prompting: \(app?.bundleIdentifier ?? "unknown", privacy: .public)")
+            comeBack()
+        }
     }
 
     /// A system prompt drops the window behind whatever else is on screen, and both openWindow and

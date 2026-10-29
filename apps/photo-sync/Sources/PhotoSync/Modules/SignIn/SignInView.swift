@@ -40,13 +40,13 @@ struct SignInView: View {
                     .frame(height: 44)
             }
             .frame(width: 340)
-            .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+            .background(Color.homieDivider, in: RoundedRectangle(cornerRadius: 12))
             .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.homieDivider, lineWidth: 1))
 
             if case .signedOut(let message) = auth.state, let message {
                 Text(message)
                     .font(.system(size: 12))
-                    .foregroundStyle(Color(red: 1, green: 0.55, blue: 0.55))
+                    .foregroundStyle(Color.homieError)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(width: 340)
@@ -63,7 +63,7 @@ struct SignInView: View {
                 .frame(width: 340, height: 40)
                 .background(
                     LinearGradient(
-                        colors: [Color(red: 0.47, green: 0.84, blue: 0.68), Color.homieGreen],
+                        colors: [Color.homieGreenLight, Color.homieGreen],
                         startPoint: .top,
                         endPoint: .bottom
                     ),

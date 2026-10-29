@@ -1,16 +1,12 @@
-import XCTest
+import Foundation
+import Testing
 @testable import PhotoSync
 
 @MainActor
-final class AlbumSelectionTests: XCTestCase {
-    private func makeDefaults() -> UserDefaults {
-        let defaults = UserDefaults(suiteName: "AlbumSelectionTests")!
-        defaults.removePersistentDomain(forName: "AlbumSelectionTests")
-        return defaults
-    }
+struct AlbumSelectionTests {
+    private let defaults = TestDefaults.make()
 
-    func testSelectionPersistsAcrossInstances() {
-        let defaults = makeDefaults()
+    @Test func selectionPersistsAcrossInstances() {
         let first = AlbumSelection(defaults: defaults)
         first.toggle("a")
         first.toggle("b")
@@ -20,40 +16,37 @@ final class AlbumSelectionTests: XCTestCase {
         first.markSynced(at: date)
 
         let second = AlbumSelection(defaults: defaults)
-        XCTAssertEqual(second.albumIDs, ["b"])
-        XCTAssertFalse(second.keepSyncing)
-        XCTAssertEqual(second.lastSyncedAt, date)
+        #expect(second.albumIDs == ["b"])
+        #expect(!second.keepSyncing)
+        #expect(second.lastSyncedAt == date)
     }
 
-    func testArtworkAlbumPersistsAndIsIndependentOfSources() {
-        let defaults = makeDefaults()
+    @Test func artworkAlbumPersistsAndIsIndependentOfSources() {
         let first = AlbumSelection(defaults: defaults)
         first.select(["a"])
         first.setArtworkAlbum("a")
 
         let second = AlbumSelection(defaults: defaults)
-        XCTAssertEqual(second.artworkAlbumID, "a")
-        XCTAssertTrue(second.contains("a"))
+        #expect(second.artworkAlbumID == "a")
+        #expect(second.contains("a"))
 
         second.setArtworkAlbum(nil)
-        XCTAssertNil(AlbumSelection(defaults: defaults).artworkAlbumID)
+        #expect(AlbumSelection(defaults: defaults).artworkAlbumID == nil)
     }
 
-    func testClearRemovesArtworkAlbum() {
-        let defaults = makeDefaults()
+    @Test func clearRemovesArtworkAlbum() {
         AlbumSelection(defaults: defaults).setArtworkAlbum("a")
 
         AlbumSelection.clear(defaults: defaults)
 
-        XCTAssertNil(AlbumSelection(defaults: defaults).artworkAlbumID)
+        #expect(AlbumSelection(defaults: defaults).artworkAlbumID == nil)
     }
 
-    func testKeepSyncingDefaultsToOn() {
-        XCTAssertTrue(AlbumSelection(defaults: makeDefaults()).keepSyncing)
+    @Test func keepSyncingDefaultsToOn() {
+        #expect(AlbumSelection(defaults: defaults).keepSyncing)
     }
 
-    func testClearRemovesEverything() {
-        let defaults = makeDefaults()
+    @Test func clearRemovesEverything() {
         let selection = AlbumSelection(defaults: defaults)
         selection.select(["a"])
         selection.markSynced()
@@ -61,7 +54,7 @@ final class AlbumSelectionTests: XCTestCase {
         AlbumSelection.clear(defaults: defaults)
 
         let reloaded = AlbumSelection(defaults: defaults)
-        XCTAssertFalse(reloaded.hasSelection)
-        XCTAssertNil(reloaded.lastSyncedAt)
+        #expect(!reloaded.hasSelection)
+        #expect(reloaded.lastSyncedAt == nil)
     }
 }

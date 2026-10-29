@@ -1,21 +1,21 @@
-import XCTest
+import Testing
 @testable import PhotoSync
 
-final class SignedInScreenTests: XCTestCase {
-    func testStatusWithoutSelectionShowsEmptyState() {
-        XCTAssertEqual(SignedInScreen.resolve(pane: .status, hasSelection: false), .emptyStatus)
+struct SignedInScreenTests {
+    @Test func statusWithoutSelectionShowsEmptyState() {
+        #expect(SignedInScreen.resolve(pane: .status, hasSelection: false) == .emptyStatus)
     }
 
-    func testStatusWithSelectionShowsSyncStatus() {
-        XCTAssertEqual(SignedInScreen.resolve(pane: .status, hasSelection: true), .status)
+    @Test func statusWithSelectionShowsSyncStatus() {
+        #expect(SignedInScreen.resolve(pane: .status, hasSelection: true) == .status)
     }
 
-    func testAlbumsAlwaysShowsPicker() {
-        XCTAssertEqual(SignedInScreen.resolve(pane: .albums, hasSelection: false), .picker)
-        XCTAssertEqual(SignedInScreen.resolve(pane: .albums, hasSelection: true), .picker)
+    @Test(arguments: [false, true])
+    func albumsAlwaysShowsPicker(hasSelection: Bool) {
+        #expect(SignedInScreen.resolve(pane: .albums, hasSelection: hasSelection) == .picker)
     }
 
-    func testOtherPanesShowPlaceholder() {
-        XCTAssertEqual(SignedInScreen.resolve(pane: .general, hasSelection: true), .placeholder)
+    @Test func otherPanesShowPlaceholder() {
+        #expect(SignedInScreen.resolve(pane: .general, hasSelection: true) == .placeholder)
     }
 }

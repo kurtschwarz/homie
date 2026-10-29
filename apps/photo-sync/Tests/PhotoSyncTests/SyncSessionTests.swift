@@ -1,7 +1,7 @@
-import XCTest
+import Testing
 @testable import PhotoSync
 
-final class SyncSessionTests: XCTestCase {
+struct SyncSessionTests {
     private func poll(
         signedIn: Bool = true,
         access: Bool = true,
@@ -18,25 +18,28 @@ final class SyncSessionTests: XCTestCase {
         )
     }
 
-    func testPollsWhenReady() {
-        XCTAssertTrue(poll())
+    @Test func pollsWhenReady() {
+        #expect(poll())
     }
 
-    func testNeverOverlapsARunningSync() {
-        XCTAssertFalse(poll(uploading: true))
+    @Test func neverOverlapsARunningSync() {
+        #expect(!poll(uploading: true))
     }
 
-    func testSkipsWhenSignedOut() {
-        XCTAssertFalse(poll(signedIn: false))
+    @Test func skipsWhenSignedOut() {
+        #expect(!poll(signedIn: false))
     }
 
-    func testSkipsWithoutPhotosAccessOrSelection() {
-        XCTAssertFalse(poll(access: false))
-        XCTAssertFalse(poll(selection: false))
+    @Test func skipsWithoutPhotosAccess() {
+        #expect(!poll(access: false))
     }
 
-    func testSkipsWhenKeepSyncingIsOff() {
-        XCTAssertFalse(poll(keepSyncing: false))
+    @Test func skipsWithoutSelection() {
+        #expect(!poll(selection: false))
+    }
+
+    @Test func skipsWhenKeepSyncingIsOff() {
+        #expect(!poll(keepSyncing: false))
     }
 
     private func needsWindow(
@@ -47,13 +50,19 @@ final class SyncSessionTests: XCTestCase {
         SyncSession.needsWindow(showsPermissions: permissions, needsSignIn: signIn, hasSelection: selection)
     }
 
-    func testStaysInTheMenuBarOnceSetUp() {
-        XCTAssertFalse(needsWindow())
+    @Test func staysInTheMenuBarOnceSetUp() {
+        #expect(!needsWindow())
     }
 
-    func testOpensTheWindowWhenSetupIsUnfinished() {
-        XCTAssertTrue(needsWindow(permissions: true))
-        XCTAssertTrue(needsWindow(signIn: true))
-        XCTAssertTrue(needsWindow(selection: false))
+    @Test func opensTheWindowWhenPermissionsAreMissing() {
+        #expect(needsWindow(permissions: true))
+    }
+
+    @Test func opensTheWindowWhenSignInIsNeeded() {
+        #expect(needsWindow(signIn: true))
+    }
+
+    @Test func opensTheWindowWithoutSelection() {
+        #expect(needsWindow(selection: false))
     }
 }

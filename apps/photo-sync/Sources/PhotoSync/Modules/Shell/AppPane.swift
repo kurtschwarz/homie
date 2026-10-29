@@ -1,5 +1,17 @@
 import SwiftUI
 
+enum PaneIcon {
+    case homie
+    case symbol(String, gradient: [Color])
+}
+
+struct AppPaneSection: Identifiable {
+    let heading: String?
+    let panes: [AppPane]
+
+    var id: String { heading ?? "" }
+}
+
 enum AppPane: String, CaseIterable, Identifiable {
     case status, albums, artwork, sync, connection, account, general, about
 
@@ -7,28 +19,16 @@ enum AppPane: String, CaseIterable, Identifiable {
 
     var title: String { rawValue.capitalized }
 
-    var symbol: String? {
+    var icon: PaneIcon {
         switch self {
-        case .status: nil
-        case .albums: "photo"
-        case .artwork: "paintbrush.pointed.fill"
-        case .sync: "arrow.triangle.2.circlepath"
-        case .connection: "wifi"
-        case .account: "person.fill"
-        case .general: "gearshape.fill"
-        case .about: "info"
-        }
-    }
-
-    var gradient: [Color] {
-        switch self {
-        case .status: [Color.white.opacity(0.1), Color.white.opacity(0.1)]
-        case .albums: [Color(hex: 0x6FB7FF), Color(hex: 0x2F7BEA)]
-        case .artwork: [Color(hex: 0xFF8FC2), Color(hex: 0xE8458E)]
-        case .sync: [Color(hex: 0x6FE0A9), Color(hex: 0x2FB277)]
-        case .connection: [Color(hex: 0x6FD9E8), Color(hex: 0x1FA5BE)]
-        case .account: [Color(hex: 0xB9A0FF), Color(hex: 0x7A5AF0)]
-        case .general, .about: [Color(hex: 0xA9ADB5), Color(hex: 0x6E737C)]
+        case .status: .homie
+        case .albums: .symbol("photo", gradient: [Color(hex: 0x6FB7FF), Color(hex: 0x2F7BEA)])
+        case .artwork: .symbol("paintbrush.pointed.fill", gradient: [Color(hex: 0xFF8FC2), Color(hex: 0xE8458E)])
+        case .sync: .symbol("arrow.triangle.2.circlepath", gradient: [Color(hex: 0x6FE0A9), Color(hex: 0x2FB277)])
+        case .connection: .symbol("wifi", gradient: [Color(hex: 0x6FD9E8), Color(hex: 0x1FA5BE)])
+        case .account: .symbol("person.fill", gradient: [Color(hex: 0xB9A0FF), Color(hex: 0x7A5AF0)])
+        case .general: .symbol("gearshape.fill", gradient: [Color(hex: 0xA9ADB5), Color(hex: 0x6E737C)])
+        case .about: .symbol("info", gradient: [Color(hex: 0xA9ADB5), Color(hex: 0x6E737C)])
         }
     }
 
@@ -36,10 +36,10 @@ enum AppPane: String, CaseIterable, Identifiable {
 
     var isAvailableSignedOut: Bool { self == .about }
 
-    static let sections: [(heading: String?, panes: [AppPane])] = [
-        (nil, [.status]),
-        ("Photos", [.albums, .artwork, .sync]),
-        ("Homie", [.connection, .account]),
-        ("Homie Photos", [.general, .about])
+    static let sections: [AppPaneSection] = [
+        AppPaneSection(heading: nil, panes: [.status]),
+        AppPaneSection(heading: "Photos", panes: [.albums, .artwork, .sync]),
+        AppPaneSection(heading: "Homie", panes: [.connection, .account]),
+        AppPaneSection(heading: "Homie Photos", panes: [.general, .about])
     ]
 }

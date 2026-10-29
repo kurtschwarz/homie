@@ -19,22 +19,32 @@ struct ContentView: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            SidebarView(selection: pane, isSignedIn: session.isSignedIn) { pane = $0 }
+            SidebarView(selection: highlightedPane, isSignedIn: session.isSignedIn) { pane = $0 }
             paneContent
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .glassWindowChrome()
         .preferredColorScheme(.dark)
+        .onChange(of: session.isSignedIn) { _, signedIn in
+            if !signedIn { pane = .status }
+        }
         .task {
             await session.start()
         }
     }
 
+    private var isPickingAlbums: Bool { pane == .albums || !selection.hasSelection }
+
+    private var highlightedPane: AppPane {
+        let showsPicker = session.isSignedIn && session.hasPhotosAccess && isPickingAlbums
+        return pane == .status && showsPicker ? .albums : pane
+    }
+
     @ViewBuilder
     private var paneContent: some View {
         if pane.isAvailableSignedOut {
-            PanePlaceholder(pane: .about)
+            PanePlaceholder(pane: pane)
         } else {
             switch auth.state {
             case .checking:
@@ -78,7 +88,7 @@ struct ContentView: View {
 
     @ViewBuilder
     private var albumFlow: some View {
-        if pane == .albums || !selection.hasSelection {
+        if isPickingAlbums {
             AlbumPickerView(
                 library: library,
                 selection: selection,

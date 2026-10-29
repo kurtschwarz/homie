@@ -7,8 +7,8 @@ struct SidebarView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Color.clear.frame(height: 52)
-            ForEach(AppPane.sections, id: \.heading) { section in
+            Color.clear.frame(height: GlassWindow.sidebarTopInset)
+            ForEach(AppPane.sections) { section in
                 if let heading = section.heading {
                     Text(heading)
                         .font(.system(size: 13, weight: .semibold))
@@ -33,7 +33,7 @@ struct SidebarView: View {
         .frame(width: 220)
         .frame(maxHeight: .infinity)
         .overlay(alignment: .trailing) {
-            Rectangle().fill(Color.white.opacity(0.08)).frame(width: 1)
+            Rectangle().fill(Color.homieDivider).frame(width: 1)
         }
     }
 }
@@ -59,7 +59,7 @@ private struct SidebarRow: View {
                         .foregroundStyle(Color.homieBadgeText)
                         .padding(.horizontal, 8)
                         .frame(height: 20)
-                        .overlay(Capsule().strokeBorder(Color.white.opacity(0.25), lineWidth: 1.5))
+                        .overlay(Capsule().strokeBorder(Color.homieBadgeBorder, lineWidth: 1.5))
                 }
             }
             .padding(.horizontal, 10)
@@ -67,7 +67,7 @@ private struct SidebarRow: View {
             .contentShape(Rectangle())
             .background(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color.white.opacity(isSelected ? 0.12 : (isHovering && isEnabled ? 0.06 : 0)))
+                    .fill(isSelected ? Color.homieRowSelected : (isHovering && isEnabled ? Color.homieRowHover : .clear))
             )
         }
         .buttonStyle(.plain)

@@ -54,6 +54,7 @@ private struct MainWindow: Scene {
                 .id(model.hostStore.contentIdentity)
         }
         .windowStyle(.hiddenTitleBar)
+        .windowResizability(.contentSize)
         .defaultLaunchBehavior(.suppressed)
     }
 }

@@ -2,6 +2,10 @@ import SwiftUI
 
 struct HomieMark: View {
     var body: some View {
+        mark.accessibilityHidden(true)
+    }
+
+    private var mark: some View {
         Canvas { context, size in
             let scale = min(size.width, size.height) / 220
             context.scaleBy(x: scale, y: scale)
@@ -19,7 +23,7 @@ struct HomieMark: View {
                 ball,
                 with: .linearGradient(
                     Gradient(colors: [
-                        Color(red: 0.22, green: 0.73, blue: 0.53),
+                        Color.homieGreen,
                         Color(red: 0.47, green: 0.84, blue: 0.68),
                         Color(red: 0.77, green: 0.94, blue: 0.84),
                     ]),

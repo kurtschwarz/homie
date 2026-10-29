@@ -14,7 +14,6 @@ struct SignInView: View {
             Spacer()
             HomieMark()
                 .frame(width: 154, height: 154)
-                .accessibilityHidden(true)
 
             VStack(spacing: 14) {
                 Text("Sign in to Homie")

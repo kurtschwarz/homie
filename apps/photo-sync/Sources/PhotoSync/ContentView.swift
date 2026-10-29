@@ -103,10 +103,6 @@ struct ContentView: View {
                 selection: selection,
                 hostName: hostStore.selected.name,
                 username: username,
-                onStart: {
-                    pane = .status
-                    startSync()
-                },
                 onSignOut: { auth.signOut() }
             )
         case .emptyStatus:

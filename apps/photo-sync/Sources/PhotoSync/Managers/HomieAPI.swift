@@ -41,17 +41,10 @@ struct MarkPushedPayload: Decodable {
     let markDrawingPushed: Bool?
 }
 
-struct HomieRole: Decodable, Equatable {
-    static let admin = HomieRole(rawValue: "ADMIN")
-    let rawValue: String
-
-    init(rawValue: String) {
-        self.rawValue = rawValue
-    }
-
-    init(from decoder: Decoder) throws {
-        rawValue = try decoder.singleValueContainer().decode(String.self)
-    }
+/// Closed set: the server's role enum only has ADMIN, so an unrecognised role fails decoding
+/// rather than being treated as a non-admin. Add a case here when the server adds a role.
+enum HomieRole: String, Decodable, Equatable {
+    case admin = "ADMIN"
 }
 
 struct HomieUser: Decodable, Equatable {
@@ -92,6 +85,12 @@ struct HomieAPI {
     static let defaultEndpoint = URL(string: "http://homie/graphql")!
 
     let endpoint: URL
+    private static let sharedSession: URLSession = {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.httpShouldSetCookies = false
+        return URLSession(configuration: configuration)
+    }()
+
     private let session: URLSession
     private let sessionToken: () -> String?
 
@@ -101,13 +100,7 @@ struct HomieAPI {
         sessionToken: (() -> String?)? = nil
     ) {
         self.endpoint = endpoint
-        if let session {
-            self.session = session
-        } else {
-            let configuration = URLSessionConfiguration.ephemeral
-            configuration.httpShouldSetCookies = false
-            self.session = URLSession(configuration: configuration)
-        }
+        self.session = session ?? Self.sharedSession
         self.sessionToken = sessionToken ?? { HomieSession.token(for: endpoint) }
     }
 
@@ -130,9 +123,8 @@ struct HomieAPI {
             variables: ["username": username, "password": password],
             token: nil
         )
-        try validate(data: data, response: response)
-        let result = try decode(GraphQLResponse<LoginPayload>.self, from: data, response: response)
-        guard let user = result.data?.login else { throw HomieAPIError.invalidResponse }
+        let payload = try parse(LoginPayload.self, data: data, response: response)
+        guard let user = payload?.login else { throw HomieAPIError.invalidResponse }
         guard let token = Self.sessionToken(from: response) else { throw HomieAPIError.missingSessionCookie }
         return (user, token)
     }
@@ -143,13 +135,12 @@ struct HomieAPI {
             variables: [:],
             token: token
         )
-        try validate(data: data, response: response)
-        return try decode(GraphQLResponse<SessionPayload>.self, from: data, response: response).data?.session?.user
+        return try parse(SessionPayload.self, data: data, response: response)?.session?.user
     }
 
     func logout(token: String) async throws {
         let (data, response) = try await perform(query: "mutation Logout { logout }", variables: [:], token: token)
-        try validate(data: data, response: response)
+        _ = try parse(EmptyPayload.self, data: data, response: response)
     }
 
     func health() async throws -> HomieHealth {
@@ -158,8 +149,7 @@ struct HomieAPI {
             variables: [:],
             token: nil
         )
-        try validate(data: data, response: response)
-        guard let health = try decode(GraphQLResponse<HealthPayload>.self, from: data, response: response).data?.health else {
+        guard let health = try parse(HealthPayload.self, data: data, response: response)?.health else {
             throw HomieAPIError.invalidResponse
         }
         return health
@@ -189,9 +179,7 @@ struct HomieAPI {
         request.httpBody = body
 
         let (data, response) = try await send(request)
-        try validate(data: data, response: response)
-        let result = try decode(GraphQLResponse<UploadPayload>.self, from: data, response: response)
-        guard let photo = result.data?.uploadPhoto else { throw HomieAPIError.invalidResponse }
+        guard let photo = try parse(UploadPayload.self, data: data, response: response)?.uploadPhoto else { throw HomieAPIError.invalidResponse }
         return photo
     }
 
@@ -202,8 +190,7 @@ struct HomieAPI {
             variables: [:],
             token: token
         )
-        try validate(data: data, response: response)
-        guard let drawings = try decode(GraphQLResponse<DrawingsPayload>.self, from: data, response: response).data?.unpushedDrawings else {
+        guard let drawings = try parse(DrawingsPayload.self, data: data, response: response)?.unpushedDrawings else {
             throw HomieAPIError.invalidResponse
         }
         return drawings
@@ -216,8 +203,7 @@ struct HomieAPI {
             variables: [:],
             token: token
         )
-        try validate(data: data, response: response)
-        guard let ids = try decode(GraphQLResponse<PushedIDsPayload>.self, from: data, response: response).data?.pushedDrawingAssetIDs else {
+        guard let ids = try parse(PushedIDsPayload.self, data: data, response: response)?.pushedDrawingAssetIDs else {
             throw HomieAPIError.invalidResponse
         }
         return Set(ids)
@@ -242,8 +228,7 @@ struct HomieAPI {
             variables: ["id": id, "assetID": assetID],
             token: token
         )
-        try validate(data: data, response: response)
-        guard try decode(GraphQLResponse<MarkPushedPayload>.self, from: data, response: response).data?.markDrawingPushed == true else {
+        guard try parse(MarkPushedPayload.self, data: data, response: response)?.markDrawingPushed == true else {
             throw HomieAPIError.invalidResponse
         }
     }
@@ -301,20 +286,20 @@ struct HomieAPI {
         return (data, response)
     }
 
-    private func validate(data: Data, response: HTTPURLResponse) throws {
-        if let message = try? JSONDecoder().decode(GraphQLResponse<EmptyPayload>.self, from: data).errors?.first?.message {
-            throw Self.error(forGraphQLMessage: message)
-        }
-        guard (200..<300).contains(response.statusCode) else { throw HomieAPIError.http(response.statusCode) }
-    }
-
-    private func decode<T: Decodable>(_ type: T.Type, from data: Data, response: HTTPURLResponse) throws -> T {
+    private func parse<Payload: Decodable>(_ type: Payload.Type, data: Data, response: HTTPURLResponse) throws -> Payload? {
+        let decoded: GraphQLResponse<Payload>
         do {
-            return try JSONDecoder().decode(type, from: data)
+            decoded = try JSONDecoder().decode(GraphQLResponse<Payload>.self, from: data)
         } catch {
+            guard (200..<300).contains(response.statusCode) else { throw HomieAPIError.http(response.statusCode) }
             let body = String(decoding: data.prefix(512), as: UTF8.self)
             throw HomieAPIError.unexpectedResponse(status: response.statusCode, body: body, reason: error.localizedDescription)
         }
+        if let message = decoded.errors?.first?.message {
+            throw Self.error(forGraphQLMessage: message)
+        }
+        guard (200..<300).contains(response.statusCode) else { throw HomieAPIError.http(response.statusCode) }
+        return decoded.data
     }
 
     private func appendField(_ name: String, value: String, boundary: String, to data: inout Data) {

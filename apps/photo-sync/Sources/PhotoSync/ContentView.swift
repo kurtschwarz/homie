@@ -5,7 +5,7 @@ import SwiftUI
 struct ContentView: View {
     @ObservedObject private var hostStore: HomieHostStore
     @ObservedObject private var session: SyncSession
-    @State private var isPickingAlbums = false
+    @State private var pane: AppPane = .status
 
     private var auth: AuthModel { session.auth }
     private var library: PhotoLibrary { session.library }
@@ -18,21 +18,47 @@ struct ContentView: View {
     }
 
     var body: some View {
-        Group {
+        HStack(spacing: 0) {
+            SidebarView(selection: highlightedPane, isSignedIn: session.isSignedIn) { pane = $0 }
+            paneContent
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .glassWindowChrome()
+        .preferredColorScheme(.dark)
+        .onChange(of: session.isSignedIn) { _, signedIn in
+            if !signedIn { pane = .status }
+        }
+        .task {
+            await session.start()
+        }
+    }
+
+    private var isPickingAlbums: Bool { pane == .albums || !selection.hasSelection }
+
+    private var highlightedPane: AppPane {
+        let showsPicker = session.isSignedIn && session.hasPhotosAccess && isPickingAlbums
+        return pane == .status && showsPicker ? .albums : pane
+    }
+
+    @ViewBuilder
+    private var paneContent: some View {
+        if pane.isAvailableSignedOut {
+            PanePlaceholder(pane: pane)
+        } else {
             switch auth.state {
             case .checking:
                 ProgressView("Checking your Homie session…")
             case .signedOut:
                 SignInView(auth: auth, hostStore: hostStore)
             case .signedIn:
-                photoLibraryContent
+                switch pane {
+                case .status, .albums:
+                    photoLibraryContent
+                default:
+                    PanePlaceholder(pane: pane)
+                }
             }
-        }
-        .frame(minWidth: 520, minHeight: 620)
-        .hidingWindowTitle()
-        .toolbar { WindowTitleToolbar() }
-        .task {
-            await session.start()
         }
     }
 
@@ -62,14 +88,14 @@ struct ContentView: View {
 
     @ViewBuilder
     private var albumFlow: some View {
-        if isPickingAlbums || !selection.hasSelection {
+        if isPickingAlbums {
             AlbumPickerView(
                 library: library,
                 selection: selection,
                 hostName: hostStore.selected.name,
                 username: username,
                 onStart: {
-                    isPickingAlbums = false
+                    pane = .status
                     startSync()
                 },
                 onSignOut: { auth.signOut() }
@@ -80,7 +106,7 @@ struct ContentView: View {
                 selection: selection,
                 uploader: uploader,
                 onSyncNow: startSync,
-                onChangeAlbums: { isPickingAlbums = true }
+                onChangeAlbums: { pane = .albums }
             )
         }
     }
@@ -92,37 +118,5 @@ struct ContentView: View {
 
     private func startSync() {
         session.startSync()
-    }
-}
-
-private extension View {
-    @ViewBuilder
-    func hidingWindowTitle() -> some View {
-        if #available(macOS 15, *) {
-            toolbar(removing: .title)
-        } else {
-            self
-        }
-    }
-}
-
-private struct WindowTitleToolbar: ToolbarContent {
-    private var title: some View {
-        Text("Homie Photos")
-            .font(.system(size: 13, weight: .semibold))
-            .foregroundStyle(.secondary)
-    }
-
-    var body: some ToolbarContent {
-        #if compiler(>=6.2)
-        if #available(macOS 26, *) {
-            ToolbarItem(placement: .principal) { title }
-                .sharedBackgroundVisibility(.hidden)
-        } else {
-            ToolbarItem(placement: .principal) { title }
-        }
-        #else
-        ToolbarItem(placement: .principal) { title }
-        #endif
     }
 }

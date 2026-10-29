@@ -52,43 +52,9 @@ private struct MainWindow: Scene {
         Window("Homie Photos", id: "main") {
             ContentView(hostStore: model.hostStore, session: model.session)
                 .id(model.hostStore.contentIdentity)
-                .hidingLaunchWindowBeforeMacOS15()
         }
-        .windowStyle(.titleBar)
-        .defaultSize(width: 560, height: 680)
-        .launchSuppressed()
-    }
-}
-
-private extension Scene {
-    func launchSuppressed() -> some Scene {
-        if #available(macOS 15, *) {
-            return defaultLaunchBehavior(.suppressed)
-        }
-        return self
-    }
-}
-
-private struct LaunchWindowHider: ViewModifier {
-    @Environment(\.dismissWindow) private var dismissWindow
-    @State private var handled = false
-
-    func body(content: Content) -> some View {
-        content.onAppear {
-            guard !handled else { return }
-            handled = true
-            dismissWindow(id: "main")
-        }
-    }
-}
-
-private extension View {
-    @ViewBuilder
-    func hidingLaunchWindowBeforeMacOS15() -> some View {
-        if #available(macOS 15, *) {
-            self
-        } else {
-            modifier(LaunchWindowHider())
-        }
+        .windowStyle(.hiddenTitleBar)
+        .windowResizability(.contentSize)
+        .defaultLaunchBehavior(.suppressed)
     }
 }

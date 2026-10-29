@@ -1,8 +1,21 @@
 import SwiftUI
 
 struct HomieMark: View {
+    var blinks = false
+    @State private var eyesClosed = false
+
     var body: some View {
-        mark.accessibilityHidden(true)
+        mark
+            .accessibilityHidden(true)
+            .task(id: blinks) {
+                guard blinks else { return }
+                while !Task.isCancelled {
+                    do { try await Task.sleep(for: .seconds(3.5)) } catch { return }
+                    eyesClosed = true
+                    do { try await Task.sleep(for: .milliseconds(150)) } catch { return }
+                    eyesClosed = false
+                }
+            }
     }
 
     private var mark: some View {
@@ -50,8 +63,9 @@ struct HomieMark: View {
             )
 
             let face = Color(red: 0.02, green: 0.31, blue: 0.22)
-            context.fill(oval(center: CGPoint(x: 113, y: 73), radii: CGSize(width: 8, height: 14), rotation: -10), with: .color(face))
-            context.fill(oval(center: CGPoint(x: 147, y: 55), radii: CGSize(width: 8, height: 13), rotation: -20), with: .color(face))
+            let eyeScale: CGFloat = eyesClosed ? 0.12 : 1
+            context.fill(oval(center: CGPoint(x: 113, y: 73), radii: CGSize(width: 8, height: 14 * eyeScale), rotation: -10), with: .color(face))
+            context.fill(oval(center: CGPoint(x: 147, y: 55), radii: CGSize(width: 8, height: 13 * eyeScale), rotation: -20), with: .color(face))
 
             var smile = Path()
             smile.move(to: CGPoint(x: 94, y: 106))

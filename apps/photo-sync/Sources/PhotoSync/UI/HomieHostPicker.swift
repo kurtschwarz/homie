@@ -12,35 +12,18 @@ struct HomieHostControl: View {
 
     var body: some View {
         Button { showsPicker = true } label: {
-            HStack(spacing: 14) {
-                Image(systemName: "display")
-                    .font(.title2)
-                    .foregroundStyle(.green)
-                    .frame(width: 48, height: 48)
-                    .background(.background, in: RoundedRectangle(cornerRadius: 12))
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(store.selected.name)
-                        .font(.headline)
-                        .foregroundStyle(.primary)
-                    HStack(spacing: 7) {
-                        Circle()
-                            .fill(store.health == nil ? Color.secondary : Color.green)
-                            .frame(width: 9, height: 9)
-                        Text(statusText)
-                            .foregroundStyle(.secondary)
-                    }
-                    .font(.callout)
-                }
-                Spacer()
-                Text("Change")
-                    .font(.headline)
-                    .foregroundStyle(.green)
+            HStack(spacing: 5) {
+                Text(store.selected.name)
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.homieSectionHeading)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(Color.homieSectionHeading)
             }
-            .padding(12)
-            .background(Color.green.opacity(0.06), in: RoundedRectangle(cornerRadius: 15))
-            .overlay(RoundedRectangle(cornerRadius: 15).stroke(Color.green.opacity(0.25), lineWidth: 1.5))
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .help(statusText)
         .sheet(isPresented: $showsPicker) {
             HomieHostPicker(store: store, isPresented: $showsPicker)
         }

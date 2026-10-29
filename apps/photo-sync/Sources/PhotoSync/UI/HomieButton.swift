@@ -2,6 +2,7 @@ import SwiftUI
 
 struct HomieButtonStyle: ButtonStyle {
     var prominent = false
+    var fullWidth = false
     @Environment(\.isEnabled) private var isEnabled
 
     func makeBody(configuration: Configuration) -> some View {
@@ -9,9 +10,18 @@ struct HomieButtonStyle: ButtonStyle {
             .font(.system(size: 14, weight: .semibold))
             .foregroundStyle(prominent ? Color.homieButtonText : Color.primary)
             .padding(.horizontal, 22)
-            .padding(.vertical, 9)
+            .padding(.vertical, fullWidth ? 11 : 9)
+            .frame(maxWidth: fullWidth ? .infinity : nil)
             .background {
-                if prominent {
+                if fullWidth {
+                    RoundedRectangle(cornerRadius: 12).fill(
+                        LinearGradient(
+                            colors: [Color.homieGreenLight, Color.homieGreen],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                } else if prominent {
                     RoundedRectangle(cornerRadius: 12).fill(Color.homieGreen.opacity(0.75))
                 } else {
                     RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .controlBackgroundColor))

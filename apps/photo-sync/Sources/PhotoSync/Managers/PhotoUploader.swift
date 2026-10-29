@@ -49,6 +49,7 @@ final class PhotoUploader: ObservableObject {
     }
 
     private func syncAll(_ albumIDs: [String], artworkAlbumID: String?, run: SyncRunLog) async {
+        ledger = UploadLedger()
         drawingProgress = nil
         drawingMessage = nil
         let shouldContinue = await pushDrawings(toAlbum: artworkAlbumID, run: run)

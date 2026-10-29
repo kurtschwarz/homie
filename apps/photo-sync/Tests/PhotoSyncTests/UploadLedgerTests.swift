@@ -1,32 +1,29 @@
 import CoreLocation
-import XCTest
+import Foundation
+import Testing
 @testable import PhotoSync
 
-final class UploadLedgerTests: XCTestCase {
-    @MainActor
-    func testClearPreventsExistingLedgersFromWritingStaleState() {
-        let defaults = UserDefaults(suiteName: "UploadLedgerResetTests")!
-        defaults.removePersistentDomain(forName: "UploadLedgerResetTests")
+@MainActor
+struct UploadLedgerTests {
+    private let defaults = TestDefaults.make()
+    private let coordinate = CLLocationCoordinate2D(latitude: 40.7, longitude: -74)
+
+    @Test func clearPreventsExistingLedgersFromWritingStaleState() {
         let staleLedger = UploadLedger(defaults: defaults)
         let resettingLedger = UploadLedger(defaults: defaults)
-        let coordinate = CLLocationCoordinate2D(latitude: 40.7, longitude: -74)
 
         resettingLedger.clear()
         staleLedger.savePlace("New York", for: coordinate)
 
-        XCTAssertNil(UploadLedger(defaults: defaults).place(for: coordinate))
+        #expect(UploadLedger(defaults: defaults).place(for: coordinate) == nil)
     }
 
-    @MainActor
-    func testClearedLedgerCanStoreNewState() {
-        let defaults = UserDefaults(suiteName: "UploadLedgerReuseTests")!
-        defaults.removePersistentDomain(forName: "UploadLedgerReuseTests")
+    @Test func clearedLedgerCanStoreNewState() {
         let ledger = UploadLedger(defaults: defaults)
-        let coordinate = CLLocationCoordinate2D(latitude: 40.7, longitude: -74)
 
         ledger.clear()
         ledger.savePlace("New York", for: coordinate)
 
-        XCTAssertEqual(ledger.place(for: coordinate), "New York")
+        #expect(ledger.place(for: coordinate) == "New York")
     }
 }

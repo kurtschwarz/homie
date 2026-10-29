@@ -1,10 +1,10 @@
 import Network
 import Photos
-import XCTest
+import Testing
 @testable import PhotoSync
 
-final class PermissionsGateTests: XCTestCase {
-    private func gate(
+struct PermissionsGateTests {
+    private static func gate(
         _ photos: PHAuthorizationStatus,
         localNetwork: AccessState = .allowed,
         keychain: AccessState = .allowed
@@ -12,91 +12,117 @@ final class PermissionsGateTests: XCTestCase {
         PermissionsGate(photos: photos, localNetwork: localNetwork, keychain: keychain)
     }
 
-    func testSatisfiedWhenAllAllowed() {
-        XCTAssertTrue(gate(.authorized).isSatisfied)
-        XCTAssertTrue(gate(.limited).isSatisfied)
+    @Test(arguments: [PHAuthorizationStatus.authorized, .limited])
+    func satisfiedWhenAllAllowed(photos: PHAuthorizationStatus) {
+        #expect(Self.gate(photos).isSatisfied)
     }
 
-    func testNotSatisfiedWhenAnyMissing() {
-        XCTAssertFalse(gate(.notDetermined).isSatisfied)
-        XCTAssertFalse(gate(.denied).isSatisfied)
-        XCTAssertFalse(gate(.authorized, localNetwork: .needsPrompt).isSatisfied)
-        XCTAssertFalse(gate(.authorized, localNetwork: .denied).isSatisfied)
-        XCTAssertFalse(gate(.authorized, keychain: .needsPrompt).isSatisfied)
-        XCTAssertFalse(gate(.authorized, keychain: .denied).isSatisfied)
+    @Test(arguments: [
+        (PHAuthorizationStatus.notDetermined, AccessState.allowed, AccessState.allowed),
+        (.denied, .allowed, .allowed),
+        (.authorized, .needsPrompt, .allowed),
+        (.authorized, .denied, .allowed),
+        (.authorized, .allowed, .needsPrompt),
+        (.authorized, .allowed, .denied),
+    ])
+    func notSatisfiedWhenAnyMissing(photos: PHAuthorizationStatus, localNetwork: AccessState, keychain: AccessState) {
+        #expect(!Self.gate(photos, localNetwork: localNetwork, keychain: keychain).isSatisfied)
     }
 
-    func testScreenNeverShownWhenSatisfied() {
-        XCTAssertFalse(PermissionsGate.showsScreen(currentlyShowing: false, gate: gate(.authorized)))
+    @Test func screenNeverShownWhenSatisfied() {
+        #expect(!PermissionsGate.showsScreen(currentlyShowing: false, gate: Self.gate(.authorized)))
     }
 
-    func testScreenAppearsWhenAccessIsRevoked() {
-        XCTAssertTrue(PermissionsGate.showsScreen(currentlyShowing: false, gate: gate(.denied)))
-        XCTAssertTrue(PermissionsGate.showsScreen(currentlyShowing: false, gate: gate(.authorized, localNetwork: .denied)))
+    @Test(arguments: [
+        (PHAuthorizationStatus.denied, AccessState.allowed),
+        (.authorized, .denied),
+    ])
+    func screenAppearsWhenAccessIsRevoked(photos: PHAuthorizationStatus, localNetwork: AccessState) {
+        #expect(PermissionsGate.showsScreen(currentlyShowing: false, gate: Self.gate(photos, localNetwork: localNetwork)))
     }
 
-    func testScreenStaysUntilContinueEvenWhenSatisfied() {
-        XCTAssertTrue(PermissionsGate.showsScreen(currentlyShowing: true, gate: gate(.authorized)))
+    @Test func screenStaysUntilContinueEvenWhenSatisfied() {
+        #expect(PermissionsGate.showsScreen(currentlyShowing: true, gate: Self.gate(.authorized)))
     }
 
-    func testContinueTitleNamesTheFirstMissingPermission() {
-        XCTAssertEqual(gate(.notDetermined, localNetwork: .needsPrompt, keychain: .needsPrompt).continueTitle, "Allow Photos to continue")
-        XCTAssertEqual(gate(.authorized, localNetwork: .needsPrompt, keychain: .needsPrompt).continueTitle, "Allow Local Network to continue")
-        XCTAssertEqual(gate(.authorized, keychain: .needsPrompt).continueTitle, "Allow Keychain to continue")
-        XCTAssertEqual(gate(.authorized).continueTitle, "Continue")
+    @Test(arguments: [
+        (PHAuthorizationStatus.notDetermined, AccessState.needsPrompt, AccessState.needsPrompt, "Allow Photos to continue"),
+        (.authorized, .needsPrompt, .needsPrompt, "Allow Local Network to continue"),
+        (.authorized, .allowed, .needsPrompt, "Allow Keychain to continue"),
+        (.authorized, .allowed, .allowed, "Continue"),
+    ])
+    func continueTitleNamesTheFirstMissingPermission(
+        photos: PHAuthorizationStatus,
+        localNetwork: AccessState,
+        keychain: AccessState,
+        title: String
+    ) {
+        #expect(Self.gate(photos, localNetwork: localNetwork, keychain: keychain).continueTitle == title)
     }
 
-    func testSidebarIsSkeletonUntilPastTheStartupScreens() {
-        XCTAssertTrue(StartupPhase.permissions.hidesSidebar)
-        XCTAssertTrue(StartupPhase.gettingReady.hidesSidebar)
-        XCTAssertFalse(StartupPhase.signedOut.hidesSidebar)
-        XCTAssertFalse(StartupPhase.signedIn.hidesSidebar)
+    @Test(arguments: [
+        (StartupPhase.permissions, true),
+        (.gettingReady, true),
+        (.signedOut, false),
+        (.signedIn, false),
+    ])
+    func sidebarIsSkeletonUntilPastTheStartupScreens(phase: StartupPhase, hidesSidebar: Bool) {
+        #expect(phase.hidesSidebar == hidesSidebar)
     }
 
-    func testStartupOrder() {
-        XCTAssertEqual(StartupPhase.resolve(showsPermissions: true, isCheckingSession: true, isSignedIn: false), .permissions)
-        XCTAssertEqual(StartupPhase.resolve(showsPermissions: false, isCheckingSession: true, isSignedIn: false), .gettingReady)
-        XCTAssertEqual(StartupPhase.resolve(showsPermissions: false, isCheckingSession: false, isSignedIn: false), .signedOut)
-        XCTAssertEqual(StartupPhase.resolve(showsPermissions: false, isCheckingSession: false, isSignedIn: true), .signedIn)
+    @Test(arguments: [
+        (true, true, false, StartupPhase.permissions),
+        (false, true, false, .gettingReady),
+        (false, false, false, .signedOut),
+        (false, false, true, .signedIn),
+    ])
+    func startupOrder(showsPermissions: Bool, isCheckingSession: Bool, isSignedIn: Bool, expected: StartupPhase) {
+        #expect(
+            StartupPhase.resolve(
+                showsPermissions: showsPermissions,
+                isCheckingSession: isCheckingSession,
+                isSignedIn: isSignedIn
+            ) == expected
+        )
     }
 }
 
-final class KeychainGrantTests: XCTestCase {
-    func testGrantHoldsForTheSameCodeSignature() {
-        XCTAssertTrue(CodeSignedGrant.isCurrent(recorded: "abc", identity: "abc"))
+struct KeychainGrantTests {
+    @Test func grantHoldsForTheSameCodeSignature() {
+        #expect(CodeSignedGrant.isCurrent(recorded: "abc", identity: "abc"))
     }
 
-    func testGrantFromAnotherBuildIsStale() {
-        XCTAssertFalse(CodeSignedGrant.isCurrent(recorded: "abc", identity: "def"))
+    @Test func grantFromAnotherBuildIsStale() {
+        #expect(!CodeSignedGrant.isCurrent(recorded: "abc", identity: "def"))
     }
 
-    func testNoRecordOrUnreadableSignatureIsNotAGrant() {
-        XCTAssertFalse(CodeSignedGrant.isCurrent(recorded: nil, identity: "abc"))
-        XCTAssertFalse(CodeSignedGrant.isCurrent(recorded: "", identity: ""))
+    @Test(arguments: [(nil, "abc"), ("", "")] as [(String?, String)])
+    func noRecordOrUnreadableSignatureIsNotAGrant(recorded: String?, identity: String) {
+        #expect(!CodeSignedGrant.isCurrent(recorded: recorded, identity: identity))
     }
 }
 
-final class LocalNetworkProbeTests: XCTestCase {
-    func testReadyBrowserSaysNothingBecauseItIsReadyWhetherOrNotAccessIsAllowed() {
-        XCTAssertNil(LocalNetworkProbe.access(for: .ready))
+struct LocalNetworkProbeTests {
+    @Test func readyBrowserSaysNothingBecauseItIsReadyWhetherOrNotAccessIsAllowed() {
+        #expect(LocalNetworkProbe.access(for: .ready) == nil)
     }
 
-    func testFindingOurOwnAdvertisedServiceMeansAllowed() {
-        XCTAssertEqual(LocalNetworkProbe.access(foundNames: ["other", "probe-1"], own: "probe-1"), .allowed)
+    @Test func findingOurOwnAdvertisedServiceMeansAllowed() {
+        #expect(LocalNetworkProbe.access(foundNames: ["other", "probe-1"], own: "probe-1") == .allowed)
     }
 
-    func testNotFindingOurOwnServiceSaysNothing() {
-        XCTAssertNil(LocalNetworkProbe.access(foundNames: ["other"], own: "probe-1"))
-        XCTAssertNil(LocalNetworkProbe.access(foundNames: [], own: "probe-1"))
+    @Test(arguments: [["other"], []])
+    func notFindingOurOwnServiceSaysNothing(foundNames: [String]) {
+        #expect(LocalNetworkProbe.access(foundNames: foundNames, own: "probe-1") == nil)
     }
 
-    func testPolicyDenialMeansDenied() {
+    @Test func policyDenialMeansDenied() {
         let denied = NWBrowser.State.waiting(.dns(LocalNetworkProbe.policyDenied))
-        XCTAssertEqual(LocalNetworkProbe.access(for: denied), .denied)
+        #expect(LocalNetworkProbe.access(for: denied) == .denied)
     }
 
-    func testOtherWaitingReasonsSayNothingAboutPermission() {
-        XCTAssertNil(LocalNetworkProbe.access(for: .waiting(.dns(-65537))))
-        XCTAssertNil(LocalNetworkProbe.access(for: .setup))
+    @Test func otherWaitingReasonsSayNothingAboutPermission() {
+        #expect(LocalNetworkProbe.access(for: .waiting(.dns(-65537))) == nil)
+        #expect(LocalNetworkProbe.access(for: .setup) == nil)
     }
 }

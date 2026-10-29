@@ -1,61 +1,65 @@
-import XCTest
+import Foundation
+import Testing
 @testable import PhotoSync
 
-final class HomieAPIAuthTests: XCTestCase {
-    func testDecodesLoginResponse() throws {
+struct HomieAPIAuthTests {
+    @Test func decodesLoginResponse() throws {
         let body = Data(#"{"data":{"login":{"id":"user-1","username":"family","role":"ADMIN"}}}"#.utf8)
 
         let response = try JSONDecoder().decode(GraphQLResponse<LoginPayload>.self, from: body)
 
-        XCTAssertEqual(response.data?.login, HomieUser(id: "user-1", username: "family", role: .admin))
+        #expect(response.data?.login == HomieUser(id: "user-1", username: "family", role: .admin))
     }
 
-    func testDecodesAuthenticatedSession() throws {
+    @Test func decodesAuthenticatedSession() throws {
         let body = Data(#"{"data":{"session":{"user":{"id":"user-1","username":"family","role":"ADMIN"}}}}"#.utf8)
 
         let response = try JSONDecoder().decode(GraphQLResponse<SessionPayload>.self, from: body)
 
-        XCTAssertEqual(response.data?.session?.user?.username, "family")
+        #expect(response.data?.session?.user?.username == "family")
     }
 
-    func testDecodesMissingSession() throws {
+    @Test func decodesMissingSession() throws {
         let body = Data(#"{"data":{"session":null}}"#.utf8)
 
         let response = try JSONDecoder().decode(GraphQLResponse<SessionPayload>.self, from: body)
 
-        XCTAssertNil(response.data?.session)
+        #expect(response.data?.session == nil)
     }
 
-    func testExtractsSessionTokenFromSetCookie() {
+    @Test func extractsSessionTokenFromSetCookie() {
         let header = "homie_session=abc123; Path=/; Expires=Wed, 25 Nov 2026 12:00:00 GMT; HttpOnly; SameSite=Lax"
 
-        XCTAssertEqual(HomieAPI.sessionToken(fromSetCookieHeader: header), "abc123")
+        #expect(HomieAPI.sessionToken(fromSetCookieHeader: header) == "abc123")
     }
 
-    func testRejectsAnEmptySessionCookie() {
-        XCTAssertNil(HomieAPI.sessionToken(fromSetCookieHeader: "homie_session=; Path=/; HttpOnly"))
+    @Test func rejectsAnEmptySessionCookie() {
+        #expect(HomieAPI.sessionToken(fromSetCookieHeader: "homie_session=; Path=/; HttpOnly") == nil)
     }
 
-    func testIgnoresUnrelatedCookies() {
-        XCTAssertNil(HomieAPI.sessionToken(fromSetCookieHeader: "other=value; Path=/"))
+    @Test func ignoresUnrelatedCookies() {
+        #expect(HomieAPI.sessionToken(fromSetCookieHeader: "other=value; Path=/") == nil)
     }
 
-    func testClassifiesUnauthorizedGraphQLError() {
+    @Test func classifiesUnauthorizedGraphQLError() {
         guard case .unauthorized = HomieAPI.error(forGraphQLMessage: "unauthorized") else {
-            return XCTFail("Expected an unauthorized error")
+            Issue.record("Expected an unauthorized error")
+            return
         }
     }
 
-    func testClassifiesForbiddenGraphQLError() {
+    @Test func classifiesForbiddenGraphQLError() {
         guard case .forbidden = HomieAPI.error(forGraphQLMessage: "forbidden") else {
-            return XCTFail("Expected a forbidden error")
+            Issue.record("Expected a forbidden error")
+            return
         }
     }
 
-    func testPreservesOtherGraphQLErrors() {
+    @Test func preservesOtherGraphQLErrors() {
         guard case .graphQL(let message) = HomieAPI.error(forGraphQLMessage: "invalid username or password") else {
-            return XCTFail("Expected a GraphQL error")
+            Issue.record("Expected a GraphQL error")
+            return
         }
-        XCTAssertEqual(message, "invalid username or password")
+        #expect(message == "invalid username or password")
     }
 }

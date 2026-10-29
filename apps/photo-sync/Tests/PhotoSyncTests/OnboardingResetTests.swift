@@ -1,11 +1,12 @@
-import XCTest
+import Foundation
+import Testing
 @testable import PhotoSync
 
-final class OnboardingResetTests: XCTestCase {
-    @MainActor
-    func testResetClearsLocalStateAndRevokesCurrentSession() async {
-        let defaults = UserDefaults(suiteName: "OnboardingResetTests")!
-        defaults.removePersistentDomain(forName: "OnboardingResetTests")
+@MainActor
+struct OnboardingResetTests {
+    private let defaults = TestDefaults.make()
+
+    @Test func resetClearsLocalStateAndRevokesCurrentSession() async {
         defaults.set("http://localhost:3030", forKey: "HomieAPIURL")
         defaults.set("Local Homie", forKey: "HomieAPIName")
         defaults.set(false, forKey: "HomieAPIDiscovered")
@@ -25,13 +26,13 @@ final class OnboardingResetTests: XCTestCase {
 
         await reset.run(hostStore: store)
 
-        XCTAssertTrue(didClearSessions)
-        XCTAssertEqual(logout?.endpoint.absoluteString, "http://localhost:3030/graphql")
-        XCTAssertEqual(logout?.token, "session-token")
-        XCTAssertEqual(store.selected.graphQLURL, HomieAPI.defaultEndpoint)
-        XCTAssertNil(defaults.object(forKey: "photo-sync.uploadedVersions"))
-        XCTAssertNil(defaults.object(forKey: "photo-sync.geocodedPlaces"))
-        XCTAssertNil(defaults.object(forKey: "photo-sync.selectedAlbums"))
-        XCTAssertNil(defaults.object(forKey: "photo-sync.artworkAlbum"))
+        #expect(didClearSessions)
+        #expect(logout?.endpoint.absoluteString == "http://localhost:3030/graphql")
+        #expect(logout?.token == "session-token")
+        #expect(store.selected.graphQLURL == HomieAPI.defaultEndpoint)
+        #expect(defaults.object(forKey: "photo-sync.uploadedVersions") == nil)
+        #expect(defaults.object(forKey: "photo-sync.geocodedPlaces") == nil)
+        #expect(defaults.object(forKey: "photo-sync.selectedAlbums") == nil)
+        #expect(defaults.object(forKey: "photo-sync.artworkAlbum") == nil)
     }
 }

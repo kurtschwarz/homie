@@ -1,34 +1,34 @@
-import XCTest
+import Foundation
+import Testing
 @testable import PhotoSync
 
-final class PushedDrawingSkipTests: XCTestCase {
+@MainActor
+struct PushedDrawingSkipTests {
     private struct Asset: Identifiable { let id: String }
 
     private let album = [Asset(id: "photo-1"), Asset(id: "drawing-1"), Asset(id: "photo-2")]
+    private let defaults = TestDefaults.make()
 
-    func testSkipsAssetsHomieKnowsAreDrawings() {
+    @Test func skipsAssetsHomieKnowsAreDrawings() {
         let result = PhotoUploader.uploadable(album, excluding: ["drawing-1"])
 
-        XCTAssertEqual(result.map(\.id), ["photo-1", "photo-2"])
+        #expect(result.map(\.id) == ["photo-1", "photo-2"])
     }
 
-    @MainActor
-    func testSkipListDoesNotDependOnTheLocalLedgerSoResetDoesNotDuplicateArtwork() {
-        let defaults = UserDefaults(suiteName: "PushedDrawingSkipResetTests")!
-        defaults.removePersistentDomain(forName: "PushedDrawingSkipResetTests")
+    @Test func skipListDoesNotDependOnTheLocalLedgerSoResetDoesNotDuplicateArtwork() {
         let ledger = UploadLedger(defaults: defaults)
         ledger.savePushedDrawing("d1", assetID: "drawing-1")
 
         ledger.clear()
         let result = PhotoUploader.uploadable(album, excluding: ["drawing-1"])
 
-        XCTAssertNil(ledger.pushedAssetID(forDrawing: "d1"))
-        XCTAssertEqual(result.map(\.id), ["photo-1", "photo-2"])
+        #expect(ledger.pushedAssetID(forDrawing: "d1") == nil)
+        #expect(result.map(\.id) == ["photo-1", "photo-2"])
     }
 
-    func testUploadsADrawingAsAnOrdinaryPhotoOnceHomieForgetsIt() {
+    @Test func uploadsADrawingAsAnOrdinaryPhotoOnceHomieForgetsIt() {
         let result = PhotoUploader.uploadable(album, excluding: [])
 
-        XCTAssertEqual(result.map(\.id), ["photo-1", "drawing-1", "photo-2"])
+        #expect(result.map(\.id) == ["photo-1", "drawing-1", "photo-2"])
     }
 }

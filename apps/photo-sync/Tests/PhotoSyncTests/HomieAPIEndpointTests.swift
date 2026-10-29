@@ -1,50 +1,51 @@
-import XCTest
+import Foundation
+import Testing
 @testable import PhotoSync
 
-final class HomieAPIEndpointTests: XCTestCase {
+struct HomieAPIEndpointTests {
+    private let suite = TestDefaults.make()
+
     private func defaults(_ url: String?) -> UserDefaults {
-        let suite = UserDefaults(suiteName: "HomieAPIEndpointTests")!
-        suite.removePersistentDomain(forName: "HomieAPIEndpointTests")
         if let url { suite.set(url, forKey: "HomieAPIURL") }
         return suite
     }
 
-    func testDefaultsToThePi() {
+    @Test func defaultsToThePi() {
         let endpoint = HomieAPI.configuredEndpoint(defaults: defaults(nil), environment: [:])
 
-        XCTAssertEqual(endpoint.absoluteString, "http://homie/graphql")
+        #expect(endpoint.absoluteString == "http://homie/graphql")
     }
 
-    func testUserDefaultsOverrideWinsOverTheEnvironment() {
+    @Test func userDefaultsOverrideWinsOverTheEnvironment() {
         let endpoint = HomieAPI.configuredEndpoint(
             defaults: defaults("http://localhost:3030"),
             environment: ["HOMIE_API_URL": "http://elsewhere:3000"]
         )
 
-        XCTAssertEqual(endpoint.absoluteString, "http://localhost:3030/graphql")
+        #expect(endpoint.absoluteString == "http://localhost:3030/graphql")
     }
 
-    func testEnvironmentOverrideAppliesWithoutAUserDefault() {
+    @Test func environmentOverrideAppliesWithoutAUserDefault() {
         let endpoint = HomieAPI.configuredEndpoint(
             defaults: defaults(nil),
             environment: ["HOMIE_API_URL": "http://localhost:3030/"]
         )
 
-        XCTAssertEqual(endpoint.absoluteString, "http://localhost:3030/graphql")
+        #expect(endpoint.absoluteString == "http://localhost:3030/graphql")
     }
 
-    func testAnExplicitPathIsLeftAlone() {
+    @Test func anExplicitPathIsLeftAlone() {
         let endpoint = HomieAPI.configuredEndpoint(
             defaults: defaults("http://localhost:3030/graphql"),
             environment: [:]
         )
 
-        XCTAssertEqual(endpoint.absoluteString, "http://localhost:3030/graphql")
+        #expect(endpoint.absoluteString == "http://localhost:3030/graphql")
     }
 
-    func testGarbageOverrideFallsBackToTheDefault() {
+    @Test func garbageOverrideFallsBackToTheDefault() {
         let endpoint = HomieAPI.configuredEndpoint(defaults: defaults("not a url"), environment: [:])
 
-        XCTAssertEqual(endpoint, HomieAPI.defaultEndpoint)
+        #expect(endpoint == HomieAPI.defaultEndpoint)
     }
 }

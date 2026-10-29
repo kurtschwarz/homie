@@ -19,7 +19,7 @@ struct ContentView: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            SidebarView(selection: highlightedPane, isSignedIn: session.isSignedIn) { pane = $0 }
+            SidebarView(selection: highlightedPane, isSignedIn: session.isSignedIn, isLoading: isChecking) { pane = $0 }
             paneContent
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -41,14 +41,21 @@ struct ContentView: View {
         return pane == .status && showsPicker ? .albums : pane
     }
 
+    private var isChecking: Bool {
+        if case .checking = auth.state { return true }
+        return false
+    }
+
     @ViewBuilder
     private var paneContent: some View {
-        if pane.isAvailableSignedOut {
+        if isChecking {
+            GettingReadyView(hostName: hostStore.selected.name)
+        } else if pane.isAvailableSignedOut {
             PanePlaceholder(pane: pane)
         } else {
             switch auth.state {
             case .checking:
-                ProgressView("Checking your Homie session…")
+                EmptyView()
             case .signedOut:
                 SignInView(auth: auth, hostStore: hostStore)
             case .signedIn:

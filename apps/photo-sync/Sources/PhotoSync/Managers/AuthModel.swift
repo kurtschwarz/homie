@@ -9,7 +9,7 @@ final class AuthModel: ObservableObject {
         case signedIn(HomieUser)
     }
 
-    @Published private(set) var state: State = .checking
+    @Published private(set) var state: State
     @Published private(set) var isSigningIn = false
 
     private let api: HomieAPI
@@ -19,6 +19,7 @@ final class AuthModel: ObservableObject {
     init(api: HomieAPI = HomieAPI()) {
         self.api = api
         endpoint = api.endpoint
+        state = HomieSession.token(for: api.endpoint) == nil ? .signedOut(nil) : .checking
     }
 
     func restoreSession() async {

@@ -3,6 +3,7 @@ import SwiftUI
 struct SidebarView: View {
     let selection: AppPane
     let isSignedIn: Bool
+    var isLoading = false
     let onSelect: (AppPane) -> Void
 
     var body: some View {
@@ -16,14 +17,22 @@ struct SidebarView: View {
                         .padding(.horizontal, 10)
                         .padding(.top, 16)
                         .padding(.bottom, 4)
+                        .opacity(isLoading ? 0 : 1)
+                        .overlay(alignment: .leading) {
+                            if isLoading { SkeletonBar(width: 70, height: 10).padding(.leading, 10).padding(.top, 12) }
+                        }
                 }
                 ForEach(section.panes) { pane in
-                    SidebarRow(
-                        pane: pane,
-                        isSelected: selection == pane,
-                        isEnabled: isSignedIn || pane.isAvailableSignedOut,
-                        onSelect: { onSelect(pane) }
-                    )
+                    if isLoading {
+                        SkeletonRow(pane: pane)
+                    } else {
+                        SidebarRow(
+                            pane: pane,
+                            isSelected: selection == pane,
+                            isEnabled: isSignedIn || pane.isAvailableSignedOut,
+                            onSelect: { onSelect(pane) }
+                        )
+                    }
                 }
             }
             Spacer(minLength: 0)
@@ -35,6 +44,35 @@ struct SidebarView: View {
         .overlay(alignment: .trailing) {
             Rectangle().fill(Color.homieDivider).frame(width: 1)
         }
+    }
+}
+
+private struct SkeletonBar: View {
+    let width: CGFloat
+    let height: CGFloat
+    @State private var dimmed = false
+
+    var body: some View {
+        Capsule()
+            .fill(Color.white.opacity(dimmed ? 0.06 : 0.14))
+            .frame(width: width, height: height)
+            .animation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true), value: dimmed)
+            .onAppear { dimmed = true }
+    }
+}
+
+private struct SkeletonRow: View {
+    let pane: AppPane
+
+    var body: some View {
+        HStack(spacing: 10) {
+            PaneIconTile(pane: pane)
+            SkeletonBar(width: CGFloat(60 + (pane.title.count * 7) % 50), height: 10)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 10)
+        .frame(height: 36)
+        .accessibilityHidden(true)
     }
 }
 

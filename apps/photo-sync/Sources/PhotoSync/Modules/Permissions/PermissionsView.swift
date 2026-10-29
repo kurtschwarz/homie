@@ -7,7 +7,7 @@ struct PermissionsView: View {
     @ObservedObject var library: PhotoLibrary
     @Environment(\.openWindow) private var openWindow
 
-    private static let contentWidth: CGFloat = 340
+    private static let contentWidth: CGFloat = 388
 
     var body: some View {
         let gate = permissions.gate
@@ -112,13 +112,13 @@ struct PermissionsView: View {
                 .buttonStyle(.plain)
                 .font(.system(size: 12))
                 .foregroundStyle(Color.homieText.opacity(0.7))
-                .padding(.top, 12)
+                .padding(.top, 8)
 
             Button(gate.continueTitle) { permissions.continueIfSatisfied() }
                 .buttonStyle(HomieButtonStyle(prominent: true, fullWidth: true))
                 .disabled(!gate.isSatisfied)
                 .frame(width: Self.contentWidth)
-                .padding(.top, 14)
+                .padding(.top, 8)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

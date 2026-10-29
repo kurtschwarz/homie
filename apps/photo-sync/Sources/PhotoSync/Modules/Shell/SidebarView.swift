@@ -70,7 +70,7 @@ private struct SkeletonRow: View {
         HStack(spacing: 10) {
             PaneIconTile(pane: pane)
                 .grayscale(1)
-                .opacity(0.4)
+                .opacity(0.12)
             SkeletonBar(width: 90, height: 10)
             Spacer(minLength: 0)
         }

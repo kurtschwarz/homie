@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.8.0](https://github.com/kurtschwarz/homie/compare/homie-photos-v0.7.0...homie-photos-v0.8.0) (2026-10-29)
+
+
+### Features
+
+* **photo-sync:** build the About pane ([#96](https://github.com/kurtschwarz/homie/issues/96)) ([079edef](https://github.com/kurtschwarz/homie/commit/079edef2019cc174e542e5d9b43e368a40480f1a))
+* **photo-sync:** build the artwork pane ([#92](https://github.com/kurtschwarz/homie/issues/92)) ([fcc0460](https://github.com/kurtschwarz/homie/commit/fcc0460075b8fc3792a15811423788951ee6934d))
+* **photo-sync:** rebuild the albums pane layout ([#89](https://github.com/kurtschwarz/homie/issues/89)) ([f128ebd](https://github.com/kurtschwarz/homie/commit/f128ebda9e0bba21164132607e39debb4d18f06a))
+
 ## [0.7.0](https://github.com/kurtschwarz/homie/compare/homie-photos-v0.6.0...homie-photos-v0.7.0) (2026-10-29)
 
 

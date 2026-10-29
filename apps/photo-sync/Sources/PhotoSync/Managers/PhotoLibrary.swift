@@ -10,7 +10,6 @@ struct PhotoJPEG {
     let cgImage: CGImage
 }
 
-@MainActor
 final class PhotoLibrary: ObservableObject {
     @Published private(set) var authorization: PHAuthorizationStatus = PHPhotoLibrary.authorizationStatus(for: .readWrite)
     @Published private(set) var albums: [PhotoAlbum] = []

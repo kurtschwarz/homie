@@ -1,7 +1,7 @@
 import Foundation
 import Security
 
-enum HomieSession {
+nonisolated enum HomieSession {
     private static let service = "ar.schw.homie.photo-sync"
     private static let legacyAccount = "session-token"
 

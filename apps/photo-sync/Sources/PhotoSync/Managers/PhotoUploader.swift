@@ -1,4 +1,4 @@
-import CoreLocation
+@preconcurrency import CoreLocation
 import Combine
 import Foundation
 
@@ -9,7 +9,6 @@ struct AlbumProgress: Equatable {
     var isDone: Bool { total > 0 && completed >= total }
 }
 
-@MainActor
 final class PhotoUploader: ObservableObject {
     @Published private(set) var completed = 0
     @Published private(set) var total = 0

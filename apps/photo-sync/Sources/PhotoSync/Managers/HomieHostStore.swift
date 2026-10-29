@@ -1,7 +1,6 @@
 import Combine
 import Foundation
 
-@MainActor
 final class HomieHostStore: ObservableObject {
     @Published private(set) var selected: HomieHost
     @Published private(set) var health: HomieHealth?

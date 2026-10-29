@@ -2,7 +2,6 @@ import Foundation
 import Testing
 @testable import PhotoSync
 
-@MainActor
 struct OnboardingResetTests {
     private let defaults = TestDefaults.make()
 

@@ -2,7 +2,6 @@ import Foundation
 import Testing
 @testable import PhotoSync
 
-@MainActor
 struct PushedDrawingSkipTests {
     private struct Asset: Identifiable { let id: String }
 

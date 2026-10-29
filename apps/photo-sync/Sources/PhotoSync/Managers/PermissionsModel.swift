@@ -2,7 +2,6 @@ import AppKit
 import Combine
 import Foundation
 
-@MainActor
 final class PermissionsModel: ObservableObject {
     @Published private(set) var keychain: AccessState = .allowed
     @Published private(set) var localNetwork: AccessState = .allowed

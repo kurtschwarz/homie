@@ -3,7 +3,6 @@ import Foundation
 import Testing
 @testable import PhotoSync
 
-@MainActor
 struct UploadLedgerTests {
     private let defaults = TestDefaults.make()
     private let coordinate = CLLocationCoordinate2D(latitude: 40.7, longitude: -74)

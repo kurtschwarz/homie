@@ -18,6 +18,8 @@ final class PhotoUploader: ObservableObject {
     @Published private(set) var drawingProgress: AlbumProgress?
     @Published private(set) var drawingMessage: String?
 
+    private static let ledgerFlushInterval = 50
+
     private let library: PhotoLibrary
     private let api: HomieAPI
     private var ledger = UploadLedger()
@@ -178,7 +180,7 @@ final class PhotoUploader: ObservableObject {
                 _ = try await api.upload(input, jpeg: jpeg.data, filename: "\(photo.id).jpg")
                 ledger.markUploaded(photo)
                 finish(albumID: albumID)
-                if completed.isMultiple(of: 50) { ledger.flush() }
+                if completed.isMultiple(of: Self.ledgerFlushInterval) { ledger.flush() }
             } catch {
                 if error is CancellationError {
                     run.info("Sync cancelled")

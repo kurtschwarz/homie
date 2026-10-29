@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.7.0](https://github.com/kurtschwarz/homie/compare/homie-photos-v0.6.0...homie-photos-v0.7.0) (2026-10-29)
+
+
+### Features
+
+* **photo-sync:** log sync runs for diagnosis ([#74](https://github.com/kurtschwarz/homie/issues/74)) ([1a2a229](https://github.com/kurtschwarz/homie/commit/1a2a2296a5f6ffd2275ec266cdd1ef7e9a01243b))
+
+
+### Bug Fixes
+
+* **photo-sync:** stop geocode timeout cancelling next lookup ([#72](https://github.com/kurtschwarz/homie/issues/72)) ([ebee5f6](https://github.com/kurtschwarz/homie/commit/ebee5f664d288efc3bd82040e7e081477aeacbfb))
+
+
+### Performance Improvements
+
+* **photo-sync:** stop the upload ledger rewriting all of its state per photo ([#75](https://github.com/kurtschwarz/homie/issues/75)) ([7ef7240](https://github.com/kurtschwarz/homie/commit/7ef7240322bf822f30bf0b521436523894db2178))
+
 ## [0.6.0](https://github.com/kurtschwarz/homie/compare/homie-photos-v0.5.0...homie-photos-v0.6.0) (2026-10-29)
 
 

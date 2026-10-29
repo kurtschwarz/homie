@@ -48,7 +48,7 @@ struct SyncStatusView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     ForEach(albums) { album in
-                        SyncAlbumRow(album: album, library: library, progress: uploader.albumProgress[album.id], isUploading: uploader.isUploading)
+                        SyncAlbumRow(album: album, library: library, progress: uploader.albumProgress[album.id])
                     }
                     if let artworkAlbum {
                         ArtworkAlbumRow(album: artworkAlbum, library: library, progress: uploader.drawingProgress, isUploading: uploader.isUploading)
@@ -147,7 +147,6 @@ private struct SyncAlbumRow: View {
     let album: PhotoAlbum
     @ObservedObject var library: PhotoLibrary
     let progress: AlbumProgress?
-    let isUploading: Bool
 
     private var status: String {
         guard let progress else { return "Waiting" }

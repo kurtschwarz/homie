@@ -2,13 +2,6 @@ import CoreLocation
 import Combine
 import Foundation
 
-enum UploadState {
-    case uploading
-    case uploaded(String)
-    case skipped
-    case failed(String)
-}
-
 struct AlbumProgress: Equatable {
     var completed = 0
     var total = 0
@@ -18,7 +11,6 @@ struct AlbumProgress: Equatable {
 
 @MainActor
 final class PhotoUploader: ObservableObject {
-    @Published private(set) var states: [String: UploadState] = [:]
     @Published private(set) var completed = 0
     @Published private(set) var total = 0
     @Published private(set) var isUploading = false
@@ -126,7 +118,6 @@ final class PhotoUploader: ObservableObject {
         let batches = albumIDs.map { id in
             (id, Self.uploadable(library.assets(inAlbum: id), excluding: drawingAssetIDs))
         }
-        states.removeAll()
         albumProgress = Dictionary(uniqueKeysWithValues: batches.map { ($0.0, AlbumProgress(total: $0.1.count)) })
         total = batches.reduce(0) { $0 + $1.1.count }
         completed = 0
@@ -137,7 +128,7 @@ final class PhotoUploader: ObservableObject {
         }
     }
 
-    private func finish(_ photo: PhotoAsset, albumID: String, failed: Bool = false) {
+    private func finish(albumID: String, failed: Bool = false) {
         completed += 1
         albumProgress[albumID]?.completed += 1
         if failed { albumProgress[albumID]?.failed += 1 }
@@ -146,17 +137,14 @@ final class PhotoUploader: ObservableObject {
     private func uploadPhotos(_ photos: [PhotoAsset], albumID: String) async -> Bool {
         for photo in photos {
             if ledger.isUploaded(photo) {
-                states[photo.id] = .skipped
-                finish(photo, albumID: albumID)
+                finish(albumID: albumID)
                 continue
             }
             guard let takenAt = photo.takenAt else {
-                states[photo.id] = .failed("Skipped: capture date is unavailable.")
-                finish(photo, albumID: albumID, failed: true)
+                finish(albumID: albumID, failed: true)
                 continue
             }
 
-            states[photo.id] = .uploading
             do {
                 let place = await bestEffortPlace(for: photo.coordinate)
                 let jpeg = try await library.fullSizeJPEG(for: photo)
@@ -172,13 +160,11 @@ final class PhotoUploader: ObservableObject {
                     place: place,
                     focus: Saliency.focalRegion(for: jpeg.cgImage)
                 )
-                let uploaded = try await api.upload(input, jpeg: jpeg.data, filename: "\(photo.id).jpg")
+                _ = try await api.upload(input, jpeg: jpeg.data, filename: "\(photo.id).jpg")
                 ledger.markUploaded(photo)
-                states[photo.id] = .uploaded(uploaded.url)
-                finish(photo, albumID: albumID)
+                finish(albumID: albumID)
             } catch {
-                states[photo.id] = .failed(error.localizedDescription)
-                finish(photo, albumID: albumID, failed: true)
+                finish(albumID: albumID, failed: true)
                 if case HomieAPIError.unauthorized = error {
                     onAuthenticationRequired()
                     return false

@@ -3,8 +3,8 @@ import Photos
 import SwiftUI
 
 struct PermissionsView: View {
-    @ObservedObject var permissions: PermissionsModel
-    @ObservedObject var library: PhotoLibrary
+    let permissions: PermissionsModel
+    let library: PhotoLibrary
     @Environment(\.openWindow) private var openWindow
 
     private static let contentWidth: CGFloat = 388

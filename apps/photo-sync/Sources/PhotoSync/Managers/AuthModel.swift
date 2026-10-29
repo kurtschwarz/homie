@@ -1,15 +1,16 @@
-import Combine
 import Foundation
+import Observation
 
-final class AuthModel: ObservableObject {
+@Observable
+final class AuthModel {
     enum State {
         case checking
         case signedOut(String?)
         case signedIn(HomieUser)
     }
 
-    @Published private(set) var state: State
-    @Published private(set) var isSigningIn = false
+    private(set) var state: State
+    private(set) var isSigningIn = false
 
     private let api: HomieAPI
     private let endpoint: URL

@@ -1,9 +1,10 @@
-import Combine
 import Foundation
+import Observation
 
-final class HomieDiscovery: NSObject, ObservableObject {
-    @Published private(set) var hosts: [HomieHost] = []
-    @Published private(set) var isSearching = false
+@Observable
+final class HomieDiscovery: NSObject {
+    private(set) var hosts: [HomieHost] = []
+    private(set) var isSearching = false
 
     private let browser = NetServiceBrowser()
     private var services: [NetService] = []

@@ -3,8 +3,8 @@ import Photos
 import SwiftUI
 
 struct ContentView: View {
-    @ObservedObject private var hostStore: HomieHostStore
-    @ObservedObject private var session: SyncSession
+    private let hostStore: HomieHostStore
+    private let session: SyncSession
     @State private var pane: AppPane = .status
 
     private var auth: AuthModel { session.auth }

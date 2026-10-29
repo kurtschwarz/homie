@@ -3,7 +3,7 @@ import SwiftUI
 
 @main
 struct PhotoSyncApp: App {
-    @StateObject private var model = AppModel()
+    @State private var model = AppModel()
 
     var body: some Scene {
         MenuBarExtra {
@@ -46,7 +46,7 @@ struct PhotoSyncApp: App {
 }
 
 private struct MainWindow: Scene {
-    @ObservedObject var model: AppModel
+    let model: AppModel
 
     var body: some Scene {
         Window("Homie Photos", id: "main") {

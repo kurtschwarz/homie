@@ -1,10 +1,11 @@
-import Combine
 import Foundation
+import Observation
 import ServiceManagement
 
-final class LaunchAtLogin: ObservableObject {
-    @Published private(set) var isEnabled = SMAppService.mainApp.status == .enabled
-    @Published private(set) var errorMessage: String?
+@Observable
+final class LaunchAtLogin {
+    private(set) var isEnabled = SMAppService.mainApp.status == .enabled
+    private(set) var errorMessage: String?
 
     func set(_ enabled: Bool) {
         do {
@@ -17,22 +18,31 @@ final class LaunchAtLogin: ObservableObject {
     }
 }
 
-final class AppModel: ObservableObject {
+@Observable
+final class AppModel {
     let hostStore = HomieHostStore()
     let launchAtLogin = LaunchAtLogin()
-    @Published private(set) var session: SyncSession
+    private(set) var session: SyncSession
 
-    private var hostChanges: AnyCancellable?
-    private var polling: Task<Void, Never>?
+    @ObservationIgnored private var polling: Task<Void, Never>?
 
     init() {
         session = SyncSession(endpoint: hostStore.selected.graphQLURL)
-        hostChanges = hostStore.$contentIdentity.dropFirst().sink { [weak self] _ in
-            guard let self else { return }
-            self.session = SyncSession(endpoint: self.hostStore.selected.graphQLURL)
-            self.startPolling()
-        }
+        observeHost()
         startPolling()
+    }
+
+    private func observeHost() {
+        withObservationTracking {
+            _ = hostStore.contentIdentity
+        } onChange: { [weak self] in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                session = SyncSession(endpoint: hostStore.selected.graphQLURL)
+                startPolling()
+                observeHost()
+            }
+        }
     }
 
     private func startPolling() {

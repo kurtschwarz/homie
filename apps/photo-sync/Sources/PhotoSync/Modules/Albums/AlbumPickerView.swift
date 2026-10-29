@@ -3,8 +3,8 @@ import SwiftUI
 struct AlbumPickerView: View {
     static let estimatedBytesPerPhoto = 2.4 * 1_000_000
 
-    @ObservedObject var library: PhotoLibrary
-    @ObservedObject var selection: AlbumSelection
+    let library: PhotoLibrary
+    let selection: AlbumSelection
     let hostName: String
     let username: String
     let onStart: () -> Void
@@ -171,7 +171,7 @@ struct AlbumPickerView: View {
 
 private struct AlbumRow: View {
     let album: PhotoAlbum
-    @ObservedObject var library: PhotoLibrary
+    let library: PhotoLibrary
     let isSelected: Bool
 
     var body: some View {

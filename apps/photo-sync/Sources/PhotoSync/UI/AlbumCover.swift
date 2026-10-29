@@ -3,7 +3,7 @@ import SwiftUI
 
 struct AlbumCover: View {
     let album: PhotoAlbum
-    @ObservedObject var library: PhotoLibrary
+    let library: PhotoLibrary
     var size: CGFloat = 70
     @State private var image: NSImage?
 

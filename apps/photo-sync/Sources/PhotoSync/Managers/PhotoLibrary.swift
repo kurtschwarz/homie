@@ -1,5 +1,5 @@
 import AppKit
-import Combine
+import Observation
 import Photos
 import Vision
 
@@ -10,9 +10,10 @@ struct PhotoJPEG {
     let cgImage: CGImage
 }
 
-final class PhotoLibrary: ObservableObject {
-    @Published private(set) var authorization: PHAuthorizationStatus = PHPhotoLibrary.authorizationStatus(for: .readWrite)
-    @Published private(set) var albums: [PhotoAlbum] = []
+@Observable
+final class PhotoLibrary {
+    private(set) var authorization: PHAuthorizationStatus = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+    private(set) var albums: [PhotoAlbum] = []
 
     private let imageManager = PHCachingImageManager()
 

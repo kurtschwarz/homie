@@ -43,12 +43,7 @@ struct ContentView: View {
 
     private var showsPermissions: Bool { session.permissions.showsScreen }
 
-    private var isPickingAlbums: Bool { pane == .albums || !selection.hasSelection }
-
-    private var highlightedPane: AppPane {
-        let showsPicker = session.isSignedIn && session.hasPhotosAccess && isPickingAlbums
-        return pane == .status && showsPicker ? .albums : pane
-    }
+    private var highlightedPane: AppPane { pane }
 
     private var isChecking: Bool {
         if case .checking = auth.state { return true }
@@ -77,20 +72,20 @@ struct ContentView: View {
                 SignInView(auth: auth, hostStore: hostStore)
             }
         case .signedIn:
-            switch pane {
-            case .status, .albums:
-                photoLibraryContent
-            default:
+            switch SignedInScreen.resolve(pane: pane, hasSelection: selection.hasSelection) {
+            case .placeholder:
                 PanePlaceholder(pane: pane)
+            case let screen:
+                photoLibraryContent(screen)
             }
         }
     }
 
     @ViewBuilder
-    private var photoLibraryContent: some View {
+    private func photoLibraryContent(_ screen: SignedInScreen) -> some View {
         switch library.authorization {
         case .authorized, .limited:
-            albumFlow
+            albumFlow(screen)
                 .onAppear {
                     if library.albums.isEmpty { library.loadAlbums() }
                 }
@@ -100,8 +95,9 @@ struct ContentView: View {
     }
 
     @ViewBuilder
-    private var albumFlow: some View {
-        if isPickingAlbums {
+    private func albumFlow(_ screen: SignedInScreen) -> some View {
+        switch screen {
+        case .picker:
             AlbumPickerView(
                 library: library,
                 selection: selection,
@@ -113,7 +109,9 @@ struct ContentView: View {
                 },
                 onSignOut: { auth.signOut() }
             )
-        } else {
+        case .emptyStatus:
+            SyncEmptyView(onChooseAlbums: { pane = .albums })
+        default:
             SyncStatusView(
                 library: library,
                 selection: selection,

@@ -59,11 +59,6 @@ final class PermissionsModel: ObservableObject {
         keychain = await Task.detached { HomieSession.requestAccess(for: endpoint) }.value
     }
 
-    func resetSavedSignIn() {
-        HomieSession.resetSaved(for: endpoint)
-        keychain = HomieSession.probeAccess(for: endpoint)
-    }
-
     func openPhotosSettings() {
         guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Photos") else { return }
         NSWorkspace.shared.open(url)

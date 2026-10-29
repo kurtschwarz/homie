@@ -52,7 +52,7 @@ None of the three can be read silently, so asking is what raises the prompt:
 - **Local Network** has no status API, and a browser reports `ready` whether or not access was granted. The app advertises its own `_homie-photos-probe._tcp` service and browses for it: seeing itself means access is on, and a policy error means it is off.
 - **Keychain** access can only be tested by reading an item, which is what prompts. Launch only checks that the saved item exists, which never prompts.
 
-Local Network and the Keychain therefore remember the last **Allow** rather than re-checking at launch, and that record is tied to the app's code signature: re-signing the app invalidates both grants, so a rebuilt app asks again instead of showing a stale tick. Revoking either in System Settings is only noticed the next time the row is used. **Reset saved sign-in** deletes the stored session item so the next sign-in creates a fresh one.
+Local Network and the Keychain therefore remember the last **Allow** rather than re-checking at launch, and that record is tied to the app's code signature: re-signing the app invalidates both grants, so a rebuilt app asks again instead of showing a stale tick. Revoking either in System Settings is only noticed the next time the row is used.
 
 Choose **Homie Photos → Reset Homie Photos…** to return the app to onboarding. The reset removes saved hosts, sessions, upload history, and cached places, but macOS keeps the Photos permission. It also removes the local API override set by `just dev photo-sync`; run that recipe again to restore the development endpoint.
 

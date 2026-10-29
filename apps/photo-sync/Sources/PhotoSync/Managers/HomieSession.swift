@@ -59,12 +59,6 @@ enum HomieSession {
         return .allowed
     }
 
-    static func resetSaved(for endpoint: URL, defaults: UserDefaults = .standard) {
-        clear(for: endpoint)
-        SecItemDelete(itemQuery(account: legacyAccount) as CFDictionary)
-        defaults.removeObject(forKey: grantedKey)
-    }
-
     private static func savedAccounts(for endpoint: URL) -> [String] {
         [sessionAccount(for: endpoint), legacyAccount]
     }

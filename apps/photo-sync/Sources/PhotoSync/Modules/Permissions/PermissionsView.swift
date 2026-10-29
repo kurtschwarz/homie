@@ -108,11 +108,18 @@ struct PermissionsView: View {
             .background(Color.homieDivider, in: RoundedRectangle(cornerRadius: 12))
             .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.homieDivider, lineWidth: 1))
 
-            Button("Reset saved sign-in") { permissions.resetSavedSignIn() }
-                .buttonStyle(.plain)
-                .font(.system(size: 12))
-                .foregroundStyle(Color.homieText.opacity(0.7))
-                .padding(.top, 8)
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "shield")
+                    .font(.system(size: 14))
+                    .frame(width: 18)
+                Text("Photos go straight from your Mac to Homie on your Wi-Fi. Nothing is sent anywhere else.")
+                    .font(.system(size: 12))
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+            }
+            .foregroundStyle(Color.homieSectionHeading)
+            .frame(width: Self.contentWidth)
+            .padding(.top, 12)
 
             Button(gate.continueTitle) { permissions.continueIfSatisfied() }
                 .buttonStyle(HomieButtonStyle(prominent: true, fullWidth: true))

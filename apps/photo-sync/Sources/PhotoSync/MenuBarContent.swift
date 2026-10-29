@@ -5,7 +5,7 @@ struct MenuBarIcon: View {
     let session: SyncSession
 
     private var symbol: String? {
-        if session.uploader.isUploading { return "arrow.triangle.2.circlepath" }
+        if session.runner.isRunning { return "arrow.triangle.2.circlepath" }
         if session.needsSignIn || session.needsSetup || session.failedCount > 0 { return "exclamationmark.triangle" }
         return nil
     }
@@ -58,7 +58,7 @@ struct MenuBarContent: View {
             NSApp.activate(ignoringOtherApps: true)
         }
         Button("Sync Now") { session.startSync() }
-            .disabled(!session.isSignedIn || !session.hasPhotosAccess || !session.selection.hasSelection || session.uploader.isUploading)
+            .disabled(!session.isSignedIn || !session.hasPhotosAccess || !session.selection.hasSelection || session.runner.isRunning)
         Divider()
         Toggle("Start at Login", isOn: Binding(get: { launchAtLogin.isEnabled }, set: { launchAtLogin.set($0) }))
         if let error = launchAtLogin.errorMessage {

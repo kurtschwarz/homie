@@ -8,7 +8,7 @@ final class SyncSession {
 
     let auth: AuthModel
     let library: PhotoLibrary
-    let uploader: PhotoUploader
+    let runner: SyncRunner
     let selection: AlbumSelection
     let permissions: PermissionsModel
 
@@ -21,7 +21,11 @@ final class SyncSession {
         selection = AlbumSelection()
         let permissions = PermissionsModel(library: library, endpoint: endpoint)
         self.permissions = permissions
-        uploader = PhotoUploader(library: library, api: api, onAuthenticationRequired: { auth.sessionExpired() })
+        runner = SyncRunner(
+            drawings: DrawingPusher(service: api, album: library),
+            photos: PhotoUploader(source: library, service: api, places: PlaceLookup()),
+            onAuthenticationRequired: { auth.sessionExpired() }
+        )
     }
 
     var isSignedIn: Bool {
@@ -38,14 +42,14 @@ final class SyncSession {
 
     var needsSetup: Bool { isSignedIn && (!hasPhotosAccess || !selection.hasSelection) }
 
-    var failedCount: Int { uploader.albumProgress.values.reduce(0) { $0 + $1.failed } + (uploader.drawingProgress?.failed ?? 0) }
+    var failedCount: Int { runner.photos.albumProgress.values.reduce(0) { $0 + $1.failed } + (runner.drawings.progress?.failed ?? 0) }
 
     var statusLine: String {
         if needsSignIn { return "Sign in needed" }
         if case .checking = auth.state { return "Checking your Homie session…" }
-        if uploader.isUploading {
-            let done = uploader.completed + (uploader.drawingProgress?.completed ?? 0)
-            let total = uploader.total + (uploader.drawingProgress?.total ?? 0)
+        if runner.isRunning {
+            let done = runner.photos.completed + (runner.drawings.progress?.completed ?? 0)
+            let total = runner.photos.total + (runner.drawings.progress?.total ?? 0)
             return total > 0 ? "Syncing \(done.formatted()) of \(total.formatted())" : "Syncing…"
         }
         if needsSetup { return "Open Homie Photos to finish setup" }
@@ -73,7 +77,7 @@ final class SyncSession {
 
     func startSync() {
         let ids = library.albums.map(\.id).filter { selection.contains($0) }
-        uploader.sync(albumIDs: ids, artworkAlbumID: selection.artworkAlbumID) { [selection] in selection.markSynced() }
+        runner.sync(albumIDs: ids, artworkAlbumID: selection.artworkAlbumID) { [selection] in selection.markSynced() }
     }
 
     func syncIfDue() {
@@ -84,7 +88,7 @@ final class SyncSession {
             hasPhotosAccess: hasPhotosAccess,
             hasSelection: selection.hasSelection,
             keepSyncing: selection.keepSyncing,
-            isUploading: uploader.isUploading
+            isUploading: runner.isRunning
         ) else { return }
         startSync()
     }

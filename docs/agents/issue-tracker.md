@@ -4,7 +4,7 @@ Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all o
 
 ## Conventions
 
-- **Create an issue**: `gh issue create --title "..." --body "..."`. Use a heredoc for multi-line bodies.
+- **Create an issue**: `gh issue create --title "..." --body "..."`. Use a heredoc for multi-line bodies. Prefix the title per **Issue titles** and apply the type and component labels from **Issue labels** (below).
 - **Read an issue**: `gh issue view <number> --json number,title,body,labels,comments`.
 - **List issues**: `gh issue list --state open --json number,title,body,labels,comments --jq '[.[] | {number, title, body, labels: [.labels[].name], comments: [.comments[].body]}]'` with appropriate `--label` and `--state` filters.
 - **Make an issue a sub-issue of a parent**: `gh issue create --parent <parent> ...`, or `gh issue edit <parent> --add-sub-issue <child>` afterwards (`gh` 2.94+). Older `gh`: `gh api --method POST repos/<owner>/<repo>/issues/<parent>/sub_issues -F sub_issue_id=<child-db-id>` (database id, as in **Blocking** below). Without sub-issues, put `Part of #<parent>` at the top of the child body.
@@ -17,6 +17,53 @@ Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all o
 Infer the repo from `git remote -v`; `gh` does this automatically when run inside a clone.
 
 File issues only into the user's own repo. Never file into `mattpocock/skills` (the repo these skills come from) unless the user owns it. In a fork, `gh` can default to the upstream parent, so before the first `gh issue create` of a session, check the target with `gh repo view --json nameWithOwner` and confirm it with the user if it is not their repo.
+
+### Issue titles
+
+Prefix every issue title with the scope of the change, then a colon:
+
+```
+Homie Photos: search, filter, and sort the Albums list
+Homie API: return place names on the photo upload response
+```
+
+The scope matches the component label:
+
+| Component label      | Title prefix     |
+| -------------------- | ---------------- |
+| `app: homie-photos`  | `Homie Photos:`  |
+| `app: homie-display` | `Homie Display:` |
+| `app: homie-manager` | `Homie Manager:` |
+| `service: homie-api` | `Homie API:`     |
+
+A change spanning several components takes the prefix of the one it leads with. A change touching none of them takes no prefix. Don't use Conventional Commit syntax (`feat(photo-sync):`) in a title; that belongs on the commit.
+
+### Issue labels
+
+Every issue carries three kinds of label: one **type**, one or more **components**, and a **triage** state (see `triage-labels.md`).
+
+**Type**, exactly one:
+
+| Label         | Use for                                                |
+| ------------- | ------------------------------------------------------ |
+| `bug`         | Something is broken or behaves wrongly                 |
+| `enhancement` | New behaviour, or an improvement to existing behaviour |
+| `refactor`    | Internal restructuring with no change in behaviour     |
+
+These mirror the Conventional Commit type the work will land under: `fix:`, `feat:`, `refactor:`/`chore:`.
+
+**Component**, one per part of the repo the change touches:
+
+| Path               | Label                |
+| ------------------ | -------------------- |
+| `apps/photo-sync/` | `app: homie-photos`  |
+| `apps/display/`    | `app: homie-display` |
+| `apps/manager/`    | `app: homie-manager` |
+| `services/api/`    | `service: homie-api` |
+
+A change spanning several components gets several labels: an API field consumed by the manager is both `service: homie-api` and `app: homie-manager`. A change touching none of these paths (root tooling, `scripts/`, `docs/`) gets no component label.
+
+The labels are named after the products, not the directories: `apps/photo-sync/` is `app: homie-photos`.
 
 ## Pull requests as a triage surface
 

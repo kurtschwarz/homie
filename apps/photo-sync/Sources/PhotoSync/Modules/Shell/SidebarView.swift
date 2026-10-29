@@ -44,6 +44,8 @@ struct SidebarView: View {
         .overlay(alignment: .trailing) {
             Rectangle().fill(Color.homieDivider).frame(width: 1)
         }
+        .accessibilityElement(children: isLoading ? .ignore : .contain)
+        .accessibilityLabel(isLoading ? "Sidebar, loading" : "")
     }
 }
 
@@ -72,7 +74,6 @@ private struct SkeletonRow: View {
         }
         .padding(.horizontal, 10)
         .frame(height: 36)
-        .accessibilityHidden(true)
     }
 }
 

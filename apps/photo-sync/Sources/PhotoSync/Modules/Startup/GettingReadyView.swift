@@ -32,8 +32,6 @@ struct GettingReadyView: View {
             .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.homieDivider, lineWidth: 1))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Getting ready. Contacting \(hostName).")
     }
 }
 
@@ -73,5 +71,8 @@ private struct ChecklistRow: View {
         }
         .padding(.horizontal, 14)
         .frame(height: 44)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(title)
+        .accessibilityValue(isDone ? "Done" : "In progress")
     }
 }

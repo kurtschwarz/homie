@@ -15,7 +15,7 @@ enum HomieSession {
         return legacyToken
     }
 
-    private static let grantedKey = "keychainGrantedForCode"
+    private static let grantedKey = "photo-sync.keychainGrantedForCode"
 
     /// Reading an item's data is the only way to learn whether the keychain would prompt, and asking is
     /// what triggers the prompt. So launch only looks for the item's attributes, which never prompt, and

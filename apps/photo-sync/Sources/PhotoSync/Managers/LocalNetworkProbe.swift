@@ -7,7 +7,7 @@ import Network
 enum LocalNetworkProbe {
     static let policyDenied: Int32 = -65570
     static let serviceType = "_homie-photos-probe._tcp"
-    private static let grantedKey = "localNetworkGrantedForCode"
+    private static let grantedKey = "photo-sync.localNetworkGrantedForCode"
 
     static func access(for state: NWBrowser.State) -> AccessState? {
         if case .waiting(.dns(policyDenied)) = state { return .denied }

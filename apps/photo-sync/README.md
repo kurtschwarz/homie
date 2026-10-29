@@ -107,8 +107,8 @@ tccutil reset All ar.schw.homie.photo-sync  # Photos and Local Network together
 `tccutil` does not clear the app's own record of the last **Allow** for Local Network and the Keychain. Those records are tied to the code signature, so a rebuild clears them; to clear them without rebuilding, remove them directly:
 
 ```sh
-defaults delete ar.schw.homie.photo-sync localNetworkGrantedForCode
-defaults delete ar.schw.homie.photo-sync keychainGrantedForCode
+defaults delete ar.schw.homie.photo-sync photo-sync.localNetworkGrantedForCode
+defaults delete ar.schw.homie.photo-sync photo-sync.keychainGrantedForCode
 ```
 
 Local builds use an ad-hoc signature. The GitHub Actions build uses Developer ID signing and Apple notarization for distribution.

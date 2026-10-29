@@ -112,8 +112,8 @@ photo-sync:
 reset-macos-permissions:
     #!/usr/bin/env bash
     set -euo pipefail
-    defaults delete "{{photo_sync_bundle_id}}" localNetworkGrantedForCode 2>/dev/null || true
-    defaults delete "{{photo_sync_bundle_id}}" keychainGrantedForCode 2>/dev/null || true
+    defaults delete "{{photo_sync_bundle_id}}" photo-sync.localNetworkGrantedForCode 2>/dev/null || true
+    defaults delete "{{photo_sync_bundle_id}}" photo-sync.keychainGrantedForCode 2>/dev/null || true
     tccutil reset All "{{photo_sync_bundle_id}}"
 
 # Tear down the local dev stack: containers, networks, and named volumes.

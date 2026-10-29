@@ -163,14 +163,22 @@ private struct PermissionRow: View {
                     .foregroundStyle(Color.homieText.opacity(0.6))
             }
             Spacer(minLength: 0)
-            if !isDone {
-                if isBusy {
-                    ProgressView().controlSize(.small)
-                } else {
-                    Button(actionTitle, action: action)
-                        .buttonStyle(.link)
-                        .font(.system(size: 12, weight: .semibold))
-                }
+            if isBusy {
+                ProgressView().controlSize(.small)
+            } else {
+                Toggle(
+                    title,
+                    isOn: Binding(
+                        get: { isDone },
+                        set: { if $0 && !isDone { action() } }
+                    )
+                )
+                .toggleStyle(.switch)
+                .labelsHidden()
+                .controlSize(.small)
+                .tint(Color.homieGreen)
+                .disabled(isDone)
+                .accessibilityHint(actionTitle)
             }
         }
         .padding(.horizontal, 14)

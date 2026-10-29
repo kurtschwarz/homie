@@ -55,8 +55,12 @@ final class PermissionsModel {
         guard !isRequestingKeychain else { return }
         isRequestingKeychain = true
         defer { isRequestingKeychain = false }
-        let endpoint = endpoint
-        keychain = await Task.detached { HomieSession.requestAccess(for: endpoint) }.value
+        keychain = await Self.requestKeychainAccess(for: endpoint)
+    }
+
+    @concurrent
+    private static func requestKeychainAccess(for endpoint: URL) async -> AccessState {
+        HomieSession.requestAccess(for: endpoint)
     }
 
     func openPhotosSettings() {

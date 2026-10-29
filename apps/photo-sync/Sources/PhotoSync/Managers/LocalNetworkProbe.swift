@@ -1,5 +1,6 @@
 import Foundation
 import Network
+import Synchronization
 
 /// macOS has no API that reports Local Network access, and a browser reaches `ready` whether or not the
 /// user has answered. So the app advertises a service of its own and browses for it: seeing it means
@@ -70,15 +71,14 @@ nonisolated enum LocalNetworkProbe {
     }
 }
 
-private nonisolated final class Settled: @unchecked Sendable {
-    private let lock = NSLock()
-    private var done = false
+private nonisolated final class Settled: Sendable {
+    private let done = Mutex(false)
 
     func claim() -> Bool {
-        lock.lock()
-        defer { lock.unlock() }
-        if done { return false }
-        done = true
-        return true
+        done.withLock { done in
+            if done { return false }
+            done = true
+            return true
+        }
     }
 }

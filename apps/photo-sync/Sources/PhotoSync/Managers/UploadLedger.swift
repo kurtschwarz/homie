@@ -75,6 +75,11 @@ struct UploadLedger {
         }
     }
 
+    static func clear(defaults: UserDefaults = .standard) {
+        var ledger = UploadLedger(defaults: defaults)
+        ledger.clear()
+    }
+
     mutating func clear() {
         generation += 1
         defaults.set(generation, forKey: generationKey)

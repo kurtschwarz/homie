@@ -29,8 +29,7 @@ struct OnboardingReset {
         let endpoint = hostStore.selected.graphQLURL
         let token = tokenForEndpoint(endpoint)
         clearSessions()
-        var ledger = UploadLedger(defaults: defaults)
-        ledger.clear()
+        UploadLedger.clear(defaults: defaults)
         AlbumSelection.clear(defaults: defaults)
         hostStore.resetToDefault()
         if let token { await logout(endpoint, token) }

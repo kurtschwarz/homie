@@ -150,7 +150,7 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
             <HomieAnimation
               src={drawHintUrl}
               aria-label="A hand drawing a squiggle"
-              className="size-[calc(16rem*var(--hm-density))]"
+              className="size-[calc(24rem*var(--hm-density))]"
             />
             <p className="m-0 text-hm-lead font-medium">Draw anything with your finger</p>
           </div>

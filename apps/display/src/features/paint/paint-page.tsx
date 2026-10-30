@@ -150,7 +150,7 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
         )}
       </div>
 
-      <aside className="flex w-[calc(23rem*var(--hm-density))] flex-none flex-col gap-hm-24">
+      <aside className="relative flex w-[calc(23rem*var(--hm-density))] flex-none flex-col gap-hm-24">
         <header className="relative flex items-center justify-between">
           <h1 className="m-0 min-w-0 truncate text-hm-title font-semibold tracking-[-0.035em]">
             Painting
@@ -280,7 +280,7 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
           </div>
         </section>
 
-        <section className="relative flex flex-col gap-hm-12">
+        <section className="flex flex-col gap-hm-12">
           <h2 className="m-0 text-hm-eyebrow text-hm-ink-2 uppercase">Colours</h2>
           {mixOpen && (
             <MixPanel

@@ -1,6 +1,7 @@
 import goldFrameUrl from '@homie/ui/assets/gold-frame.svg?url'
-import homieIdleUrl from '@homie/ui/assets/homie-idle.svg?url'
+import drawHintUrl from '@homie/ui/assets/homie-draw-hint.lottie?url'
 import { Button } from '@homie/ui/components/button'
+import { HomieAnimation } from '@homie/ui/components/homie-animation'
 import { PersonBadge } from '@homie/ui/components/person-badge'
 import { useIdle } from '@homie/ui/hooks/use-idle'
 import { cn } from '@homie/ui/lib/utils'
@@ -56,6 +57,8 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
   const [mixOpen, setMixOpen] = React.useState(false)
   const [lastMix, setLastMix] = React.useState<string | null>(loadLastMix)
   const [palette, setPalette] = React.useState<string[]>(loadPalette)
+
+  const hintSlots = React.useMemo(() => ({ stroke: color }), [color])
 
   const closeMix = React.useCallback(() => setMixOpen(false), [])
   const changePalette = (next: string[]) => {
@@ -145,8 +148,13 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
           {...handlers}
         />
         {!dirty && (
-          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-hm-12 text-hm-ink-3">
-            <img src={homieIdleUrl} alt="" className="h-hm-128 w-auto" />
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-hm-4 text-hm-ink-3/70">
+            <HomieAnimation
+              src={drawHintUrl}
+              colorSlots={hintSlots}
+              aria-label="A hand drawing a squiggle"
+              className="-mb-hm-64 size-[calc(24rem*var(--hm-density))]"
+            />
             <p className="m-0 text-hm-lead font-medium">Draw anything with your finger</p>
           </div>
         )}

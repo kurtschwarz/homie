@@ -7,7 +7,9 @@ import { useIdle } from '@homie/ui/hooks/use-idle'
 import { cn } from '@homie/ui/lib/utils'
 import {
   Check,
+  CircleDashed,
   Eraser,
+  PaintBucket,
   Paintbrush,
   Plus,
   Rainbow,
@@ -34,6 +36,7 @@ const TOOL_OPTIONS: { tool: Tool; label: string; icon: typeof Paintbrush }[] = [
   { tool: 'brush', label: 'Brush', icon: Paintbrush },
   { tool: 'rainbow', label: 'Rainbow', icon: Rainbow },
   { tool: 'eraser', label: 'Eraser', icon: Eraser },
+  { tool: 'fill', label: 'Fill', icon: PaintBucket },
 ]
 
 const SIZE_OPTIONS: { size: SizeName; dot: string }[] = [
@@ -50,6 +53,7 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
   const [size, setSize] = React.useState<SizeName>('medium')
   const [color, setColor] = React.useState(COLOURS[7]?.value ?? '#5590db')
   const [smooth, setSmooth] = React.useState(true)
+  const [closeGaps, setCloseGaps] = React.useState(false)
   const [settingsOpen, setSettingsOpen] = React.useState(false)
   const settingsButtonRef = React.useRef<HTMLButtonElement>(null)
   const settingsPopoverRef = React.useRef<HTMLDivElement>(null)
@@ -89,6 +93,7 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
     color,
     size: SIZE_PX[size],
     smooth,
+    closeGaps,
   })
 
   const { data: artists = [] } = useArtists()
@@ -236,13 +241,44 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
                   />
                 </button>
               </div>
+              <div className="flex items-center gap-hm-16">
+                <span className="flex size-hm-56 flex-none items-center justify-center rounded-hm-control bg-hm-accent-soft text-hm-accent">
+                  <CircleDashed aria-hidden className="size-hm-28" strokeWidth={1.75} />
+                </span>
+                <div className="flex min-w-0 flex-1 flex-col gap-hm-4">
+                  <span className="text-hm-label-lg font-semibold">Close small gaps</span>
+                  <span className="text-hm-caption text-hm-ink-2">
+                    {closeGaps
+                      ? 'On. Fill treats tiny gaps in a shape as closed.'
+                      : 'Off. Fill leaks out of any gap.'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={closeGaps}
+                  aria-label="Close small gaps"
+                  onClick={() => setCloseGaps((value) => !value)}
+                  className={cn(
+                    'relative h-hm-40 w-hm-64 flex-none cursor-pointer rounded-full border-0 p-0 transition-colors',
+                    closeGaps ? 'bg-hm-accent' : 'bg-hm-line',
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'absolute top-hm-4 size-hm-32 rounded-full bg-white shadow-hm-raised transition-[left]',
+                      closeGaps ? 'left-[calc(100%-2.25rem*var(--hm-density))]' : 'left-hm-4',
+                    )}
+                  />
+                </button>
+              </div>
             </div>
           )}
         </header>
 
         <section className="flex flex-col gap-hm-12">
           <h2 className="m-0 text-hm-eyebrow text-hm-ink-2 uppercase">Tools</h2>
-          <div className="grid grid-cols-3 gap-hm-12">
+          <div className="grid grid-cols-2 gap-hm-12">
             {TOOL_OPTIONS.map(({ tool: option, label, icon: Icon }) => (
               <button
                 key={option}

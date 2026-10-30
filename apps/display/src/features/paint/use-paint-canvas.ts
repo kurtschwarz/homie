@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { floodFill, hexToRgb } from './flood-fill'
 import { createPaintHistory, type PaintRecord } from './paint-history'
 import { createStrokePlayer, playStroke, type StrokePlayer, type StrokeSpec } from './stroke-player'
 import type { Point } from './tools'
@@ -13,16 +14,34 @@ type ActiveStroke = {
   points: Point[]
 }
 
+function fillAt(
+  ctx: CanvasRenderingContext2D,
+  { x, y, color, closeGaps }: { x: number; y: number; color: string; closeGaps: boolean },
+) {
+  const { width, height } = ctx.canvas
+  const image = ctx.getImageData(0, 0, width, height)
+  const changed = floodFill(image.data, width, height, {
+    x: Math.floor(x),
+    y: Math.floor(y),
+    color: hexToRgb(color),
+    closeGaps,
+  })
+  if (changed > 0) ctx.putImageData(image, 0, 0)
+  return changed
+}
+
 function applyRecord(ctx: CanvasRenderingContext2D, record: PaintRecord) {
   if (record.kind === 'clear') {
     ctx.globalCompositeOperation = 'source-over'
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+  } else if (record.kind === 'fill') {
+    fillAt(ctx, record)
   } else {
     playStroke(ctx, record, record.points)
   }
 }
 
-export function usePaintCanvas(brush: StrokeSpec) {
+export function usePaintCanvas(brush: StrokeSpec & { closeGaps: boolean }) {
   const canvasRef = React.useRef<HTMLCanvasElement>(null)
   const brushRef = React.useRef(brush)
   brushRef.current = brush
@@ -104,10 +123,21 @@ export function usePaintCanvas(brush: StrokeSpec) {
     const canvas = event.currentTarget
     const ctx = canvas.getContext('2d')
     if (!ctx) return
+    const { tool, color, size, smooth, closeGaps } = brushRef.current
+
+    if (tool === 'fill') {
+      const point = pointAt(canvas, event.clientX, event.clientY)
+      const record = { kind: 'fill' as const, x: point.x, y: point.y, color, closeGaps }
+      if (fillAt(ctx, record) > 0) {
+        history.push(record)
+        sync()
+      }
+      return
+    }
+
     canvas.setPointerCapture(event.pointerId)
 
     const ratio = canvas.width / canvas.getBoundingClientRect().width
-    const { tool, color, size, smooth } = brushRef.current
     const spec = { tool, color, size: size * ratio, smooth }
     const player = createStrokePlayer(ctx, spec)
     const point = pointAt(canvas, event.clientX, event.clientY)

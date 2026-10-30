@@ -1,7 +1,10 @@
 import type { StrokeSpec } from './stroke-player'
 import type { Point } from './tools'
 
-export type PaintRecord = ({ kind: 'stroke'; points: Point[] } & StrokeSpec) | { kind: 'clear' }
+export type PaintRecord =
+  | ({ kind: 'stroke'; points: Point[] } & StrokeSpec)
+  | { kind: 'clear' }
+  | { kind: 'fill'; x: number; y: number; color: string; closeGaps: boolean }
 
 export type PaintHistoryDeps = {
   maxDepth: number
@@ -15,6 +18,7 @@ export type PaintHistoryDeps = {
 
 function leavesMarks(record: PaintRecord, before: boolean) {
   if (record.kind === 'clear') return false
+  if (record.kind === 'fill') return true
   return record.tool === 'eraser' ? before : true
 }
 

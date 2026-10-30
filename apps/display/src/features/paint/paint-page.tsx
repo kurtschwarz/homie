@@ -58,6 +58,8 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
   const [lastMix, setLastMix] = React.useState<string | null>(loadLastMix)
   const [palette, setPalette] = React.useState<string[]>(loadPalette)
 
+  const hintSlots = React.useMemo(() => ({ stroke: color }), [color])
+
   const closeMix = React.useCallback(() => setMixOpen(false), [])
   const changePalette = (next: string[]) => {
     setPalette(next)
@@ -149,6 +151,7 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-hm-4 text-hm-ink-3/70">
             <HomieAnimation
               src={drawHintUrl}
+              colorSlots={hintSlots}
               aria-label="A hand drawing a squiggle"
               className="-mb-hm-64 size-[calc(24rem*var(--hm-density))]"
             />

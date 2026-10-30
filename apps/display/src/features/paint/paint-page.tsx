@@ -8,6 +8,7 @@ import {
   Check,
   Eraser,
   Paintbrush,
+  Plus,
   Rainbow,
   SlidersHorizontal,
   Spline,
@@ -17,6 +18,8 @@ import {
 } from 'lucide-react'
 import * as React from 'react'
 import { Confetti } from './confetti'
+import { MixPanel } from './mix-panel'
+import { loadLastMix, loadPalette, saveLastMix, savePalette } from './palette'
 import { canvasToJpeg, uploadDrawing } from './save-drawing'
 import { COLOURS, SIZE_PX, type SizeName, type Tool } from './tools'
 import { useArtists } from './use-artists'
@@ -47,6 +50,23 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
   const [settingsOpen, setSettingsOpen] = React.useState(false)
   const settingsButtonRef = React.useRef<HTMLButtonElement>(null)
   const settingsPopoverRef = React.useRef<HTMLDivElement>(null)
+  const pickerRef = React.useRef<HTMLButtonElement>(null)
+  const [mixOpen, setMixOpen] = React.useState(false)
+  const [lastMix, setLastMix] = React.useState<string | null>(loadLastMix)
+  const [palette, setPalette] = React.useState<string[]>(loadPalette)
+
+  const closeMix = React.useCallback(() => setMixOpen(false), [])
+  const changePalette = (next: string[]) => {
+    setPalette(next)
+    savePalette(next)
+  }
+  const applyMix = (hex: string) => {
+    setColor(hex)
+    setLastMix(hex)
+    saveLastMix(hex)
+    setTool((current) => (current === 'eraser' ? 'brush' : current))
+    setMixOpen(false)
+  }
 
   React.useEffect(() => {
     if (!settingsOpen) return
@@ -260,8 +280,18 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
           </div>
         </section>
 
-        <section className="flex flex-col gap-hm-12">
+        <section className="relative flex flex-col gap-hm-12">
           <h2 className="m-0 text-hm-eyebrow text-hm-ink-2 uppercase">Colours</h2>
+          {mixOpen && (
+            <MixPanel
+              initial={lastMix ?? color}
+              palette={palette}
+              onPaletteChange={changePalette}
+              onUse={applyMix}
+              onClose={closeMix}
+              anchorRef={pickerRef}
+            />
+          )}
           <div className="grid grid-cols-4 gap-hm-12">
             {COLOURS.map(({ name, value }) => (
               <button
@@ -280,6 +310,30 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
                 style={{ background: value }}
               />
             ))}
+            <button
+              ref={pickerRef}
+              type="button"
+              aria-label="Mix your own colour"
+              aria-expanded={mixOpen}
+              aria-pressed={lastMix !== null && color === lastMix}
+              onClick={() => setMixOpen((open) => !open)}
+              className={cn(
+                'relative flex aspect-square cursor-pointer items-center justify-center rounded-full border border-hm-line p-0 [-webkit-tap-highlight-color:transparent] active:scale-(--hm-press-scale)',
+                lastMix !== null &&
+                  color === lastMix &&
+                  'outline-3 outline-offset-3 outline-hm-accent',
+              )}
+              style={{
+                background: lastMix ?? 'conic-gradient(#f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)',
+              }}
+            >
+              <span
+                aria-hidden
+                className="flex size-hm-28 items-center justify-center rounded-full bg-white text-hm-ink shadow-hm-raised"
+              >
+                <Plus aria-hidden className="size-hm-20" strokeWidth={2.5} />
+              </span>
+            </button>
           </div>
         </section>
 

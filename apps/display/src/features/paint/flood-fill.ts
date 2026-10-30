@@ -9,6 +9,7 @@ export type FloodFillOptions = {
 
 const TOLERANCE = 32
 const GAP_RADIUS = 4
+const EDGE_RADIUS = 2
 
 export function hexToRgb(hex: string): Rgb {
   const value = Number.parseInt(hex.replace('#', ''), 16)
@@ -126,8 +127,27 @@ export function floodFill(
 
   const [fr, fg, fb] = color
   let changed = 0
-  const inRegion = (px: number, py: number) =>
-    px >= 0 && py >= 0 && px < width && py < height && region[py * width + px] === 1
+  const ring = dilate(region, width, height, EDGE_RADIUS)
+  const original = data.slice()
+
+  // Finds the stroke colour behind an edge pixel: the nearby pixel furthest from the seed.
+  const strokeNear = (px: number, py: number): [number, number, number, number] | null => {
+    let best: [number, number, number, number] | null = null
+    for (let dy = -EDGE_RADIUS - 1; dy <= EDGE_RADIUS + 1; dy++) {
+      for (let dx = -EDGE_RADIUS - 1; dx <= EDGE_RADIUS + 1; dx++) {
+        const nx = px + dx
+        const ny = py + dy
+        if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue
+        const o = (ny * width + nx) * 4
+        const dr = (original[o] as number) - sr
+        const dg = (original[o + 1] as number) - sg
+        const db = (original[o + 2] as number) - sb
+        const distance = dr * dr + dg * dg + db * db
+        if (!best || distance > best[3]) best = [dr, dg, db, distance]
+      }
+    }
+    return best && best[3] > 0 ? best : null
+  }
 
   for (let py = 0; py < height; py++) {
     for (let px = 0; px < width; px++) {
@@ -142,22 +162,30 @@ export function floodFill(
         g = fg
         b = fb
       } else {
+        if (!ring[pixel]) continue
         const alpha = data[offset + 3] as number
-        if (alpha === 255) continue
-        const touches =
-          inRegion(px - 1, py) ||
-          inRegion(px + 1, py) ||
-          inRegion(px, py - 1) ||
-          inRegion(px, py + 1) ||
-          inRegion(px - 1, py - 1) ||
-          inRegion(px + 1, py - 1) ||
-          inRegion(px - 1, py + 1) ||
-          inRegion(px + 1, py + 1)
-        if (!touches) continue
-        const coverage = alpha / 255
-        r = Math.round((data[offset] as number) * coverage + fr * (1 - coverage))
-        g = Math.round((data[offset + 1] as number) * coverage + fg * (1 - coverage))
-        b = Math.round((data[offset + 2] as number) * coverage + fb * (1 - coverage))
+        if (alpha < 255) {
+          const coverage = alpha / 255
+          r = Math.round((data[offset] as number) * coverage + fr * (1 - coverage))
+          g = Math.round((data[offset + 1] as number) * coverage + fg * (1 - coverage))
+          b = Math.round((data[offset + 2] as number) * coverage + fb * (1 - coverage))
+        } else {
+          // Opaque edge pixel: a blend of the seed colour and a stroke colour. Swap the
+          // seed share of the blend for the fill colour.
+          if (sa !== 255) continue
+          const stroke = strokeNear(px, py)
+          if (!stroke) continue
+          const [dr, dg, db, distance] = stroke
+          const along =
+            (((data[offset] as number) - sr) * dr +
+              ((data[offset + 1] as number) - sg) * dg +
+              ((data[offset + 2] as number) - sb) * db) /
+            distance
+          const seedShare = 1 - Math.min(1, Math.max(0, along))
+          r = Math.round((data[offset] as number) + (fr - sr) * seedShare)
+          g = Math.round((data[offset + 1] as number) + (fg - sg) * seedShare)
+          b = Math.round((data[offset + 2] as number) + (fb - sb) * seedShare)
+        }
       }
 
       if (

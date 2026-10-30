@@ -91,6 +91,33 @@ describe('floodFill', () => {
     expect(isFilled(data, 20, 10, 2)).toBe(false)
   })
 
+  it('leaves no dark halo when refilling an opaque background with the stroke colour', () => {
+    const width = 20
+    const data = new Uint8ClampedArray(width * 7 * 4)
+    const yellow = [237, 198, 93]
+    const column = [0, 0.25, 0.75, 1, 0.75, 0.25, 0]
+    for (let y = 0; y < 7; y++) {
+      for (let x = 0; x < width; x++) {
+        const share = y < 6 && x >= 8 && x < 15 ? (column[x - 8] as number) : 0
+        const offset = (y * width + x) * 4
+        for (let c = 0; c < 3; c++) data[offset + c] = Math.round(share * (yellow[c] as number))
+        data[offset + 3] = 255
+      }
+    }
+
+    floodFill(data, width, 7, {
+      x: 1,
+      y: 3,
+      color: yellow as [number, number, number],
+      closeGaps: false,
+    })
+
+    for (let x = 0; x < width; x++) {
+      const offset = (3 * width + x) * 4
+      expect([data[offset], data[offset + 1], data[offset + 2]]).toEqual(yellow)
+    }
+  })
+
   it('changes nothing when the region already has the colour', () => {
     const data = blank(10, 10)
     floodFill(data, 10, 10, { x: 1, y: 1, color: RED, closeGaps: false })

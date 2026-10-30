@@ -3,7 +3,7 @@ import { createPaintHistory, type PaintRecord } from './paint-history'
 import { createStrokePlayer, playStroke, type StrokePlayer, type StrokeSpec } from './stroke-player'
 import type { Point } from './tools'
 
-const MAX_UNDO = 10
+const MAX_UNDO = 20
 const BACKING_LONG_EDGE = 2048
 
 type ActiveStroke = {

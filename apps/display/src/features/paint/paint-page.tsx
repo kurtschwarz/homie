@@ -27,6 +27,8 @@ import { usePaintCanvas } from './use-paint-canvas'
 
 const IDLE_MS = 3 * 60_000
 
+const RAINBOW = 'conic-gradient(#f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)'
+
 const TOOL_OPTIONS: { tool: Tool; label: string; icon: typeof Paintbrush }[] = [
   { tool: 'brush', label: 'Brush', icon: Paintbrush },
   { tool: 'rainbow', label: 'Rainbow', icon: Rainbow },
@@ -323,23 +325,24 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
                   color === lastMix &&
                   'outline-3 outline-offset-3 outline-hm-accent',
               )}
-              style={{
-                background: 'conic-gradient(#f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)',
-              }}
+              style={{ background: lastMix ?? RAINBOW }}
             >
-              {lastMix !== null && (
+              {lastMix === null ? (
                 <span
                   aria-hidden
-                  className="absolute inset-hm-8 rounded-full border-2 border-white"
-                  style={{ background: lastMix }}
-                />
+                  className="flex size-hm-28 items-center justify-center rounded-full bg-white text-hm-ink shadow-hm-raised"
+                >
+                  <Plus aria-hidden className="size-hm-20" strokeWidth={2.5} />
+                </span>
+              ) : (
+                <span
+                  aria-hidden
+                  className="absolute -right-hm-4 -bottom-hm-4 flex size-hm-36 items-center justify-center rounded-full border-2 border-white text-white shadow-hm-raised"
+                  style={{ background: RAINBOW }}
+                >
+                  <Plus aria-hidden className="size-hm-20" strokeWidth={3} />
+                </span>
               )}
-              <span
-                aria-hidden
-                className="flex size-hm-28 items-center justify-center rounded-full bg-white text-hm-ink shadow-hm-raised"
-              >
-                <Plus aria-hidden className="size-hm-20" strokeWidth={2.5} />
-              </span>
             </button>
           </div>
         </section>

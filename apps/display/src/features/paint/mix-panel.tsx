@@ -139,25 +139,9 @@ export function MixPanel({
         />
       </div>
 
-      <div className="flex items-center gap-hm-16">
-        <span
-          aria-hidden
-          className="size-hm-64 flex-none rounded-full border border-hm-line"
-          style={{ background: hex }}
-        />
-        <button
-          type="button"
-          onClick={() => onUse(hex)}
-          className="h-hm-64 flex-1 cursor-pointer rounded-hm-control border-0 text-hm-label-lg font-semibold [-webkit-tap-highlight-color:transparent] active:scale-(--hm-press-scale)"
-          style={{ background: hex, color: readableInk(hex) }}
-        >
-          Use it
-        </button>
-      </div>
-
-      <div className="flex flex-col gap-hm-12 border-t border-hm-line pt-hm-16">
+      <div className="flex flex-col gap-hm-8">
         <div className="flex items-center justify-between">
-          <h3 className="m-0 text-hm-eyebrow text-hm-ink-2 uppercase">My colours</h3>
+          <h3 className="m-0 text-hm-label-lg font-semibold text-hm-ink-2">My colours</h3>
           {palette.length > 0 && (
             <button
               type="button"
@@ -168,7 +152,7 @@ export function MixPanel({
             </button>
           )}
         </div>
-        <div className="grid grid-cols-4 gap-hm-12">
+        <div className="grid grid-cols-8 gap-hm-6">
           {slots.map((index) => {
             const saved = palette[index]
             if (saved) {
@@ -189,9 +173,9 @@ export function MixPanel({
                       type="button"
                       aria-label={`Delete saved colour ${saved}`}
                       onClick={() => onPaletteChange(removeColour(palette, index))}
-                      className="absolute -top-hm-6 -right-hm-6 flex size-hm-32 cursor-pointer items-center justify-center rounded-full border-0 bg-hm-ink p-0 text-white shadow-hm-raised"
+                      className="absolute -top-hm-6 -right-hm-6 flex size-hm-24 cursor-pointer items-center justify-center rounded-full border-0 bg-hm-ink p-0 text-white shadow-hm-raised"
                     >
-                      <X aria-hidden className="size-hm-20" />
+                      <X aria-hidden className="size-hm-14" />
                     </button>
                   )}
                 </div>
@@ -206,7 +190,7 @@ export function MixPanel({
                   onClick={save}
                   className="flex aspect-square cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-hm-line bg-transparent p-0 text-hm-ink-2 [-webkit-tap-highlight-color:transparent] active:scale-(--hm-press-scale)"
                 >
-                  <Plus aria-hidden className="size-hm-28" />
+                  <Plus aria-hidden className="size-hm-20" />
                 </button>
               )
             }
@@ -214,11 +198,27 @@ export function MixPanel({
               <span
                 key={`empty-${index}`}
                 aria-hidden
-                className="aspect-square rounded-full border border-hm-line bg-hm-line/40"
+                className="aspect-square rounded-full border-2 border-hm-line"
               />
             )
           })}
         </div>
+      </div>
+
+      <div className="flex items-center gap-hm-16">
+        <span
+          aria-hidden
+          className="size-hm-64 flex-none rounded-full border border-hm-line"
+          style={{ background: hex }}
+        />
+        <button
+          type="button"
+          onClick={() => onUse(hex)}
+          className="h-hm-64 flex-1 cursor-pointer rounded-hm-control border-0 text-hm-label-lg font-semibold [-webkit-tap-highlight-color:transparent] active:scale-(--hm-press-scale)"
+          style={{ background: hex, color: readableInk(hex) }}
+        >
+          Use it
+        </button>
       </div>
     </div>
   )

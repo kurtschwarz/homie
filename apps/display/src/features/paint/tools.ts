@@ -20,7 +20,6 @@ export const COLOURS = [
   { name: 'Purple', value: '#6a4abf' },
   { name: 'Pink', value: '#d4689c' },
   { name: 'Brown', value: '#835d37' },
-  { name: 'Grey', value: '#9ca0a6' },
 ]
 
 export type StrokeState = {

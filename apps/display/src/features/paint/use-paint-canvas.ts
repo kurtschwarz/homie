@@ -86,6 +86,8 @@ export function usePaintCanvas(brush: StrokeSpec) {
     return () => {
       observer.disconnect()
       baselineRef.current = null
+      stroke.current = null
+      history.reset()
     }
   }, [history, sync])
 

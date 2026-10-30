@@ -1,58 +1,101 @@
 import * as React from 'react'
-import {
-  type Point,
-  paintCurve,
-  paintSegment,
-  type StrokeState,
-  startStroke,
-  type Tool,
-} from './tools'
+import { createPaintHistory, type PaintRecord } from './paint-history'
+import { createStrokePlayer, playStroke, type StrokePlayer, type StrokeSpec } from './stroke-player'
+import type { Point } from './tools'
 
-const MAX_UNDO = 5
+const MAX_UNDO = 20
 const BACKING_LONG_EDGE = 2048
 
-type Brush = { tool: Tool; color: string; size: number; smooth: boolean }
+type ActiveStroke = {
+  id: number
+  player: StrokePlayer
+  spec: StrokeSpec
+  points: Point[]
+}
 
-export function usePaintCanvas(brush: Brush) {
+function applyRecord(ctx: CanvasRenderingContext2D, record: PaintRecord) {
+  if (record.kind === 'clear') {
+    ctx.globalCompositeOperation = 'source-over'
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+  } else {
+    playStroke(ctx, record, record.points)
+  }
+}
+
+export function usePaintCanvas(brush: StrokeSpec) {
   const canvasRef = React.useRef<HTMLCanvasElement>(null)
   const brushRef = React.useRef(brush)
   brushRef.current = brush
-  const history = React.useRef<ImageData[]>([])
-  const stroke = React.useRef<{
-    id: number
-    state: StrokeState
-    last: Point
-    mid: Point
-    smooth: boolean
-  } | null>(null)
+  const baselineRef = React.useRef<HTMLCanvasElement | null>(null)
+  const stroke = React.useRef<ActiveStroke | null>(null)
   const [dirty, setDirty] = React.useState(false)
   const [canUndo, setCanUndo] = React.useState(false)
+
+  const history = React.useMemo(
+    () =>
+      createPaintHistory({
+        maxDepth: MAX_UNDO,
+        bake: (record) => {
+          const ctx = baselineRef.current?.getContext('2d')
+          if (ctx) applyRecord(ctx, record)
+        },
+        restore: () => {
+          const baseline = baselineRef.current
+          const ctx = canvasRef.current?.getContext('2d')
+          if (!baseline || !ctx) return
+          ctx.globalCompositeOperation = 'source-over'
+          ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+          ctx.drawImage(baseline, 0, 0)
+        },
+        replay: (record) => {
+          const ctx = canvasRef.current?.getContext('2d')
+          if (ctx) applyRecord(ctx, record)
+        },
+      }),
+    [],
+  )
+
+  const sync = React.useCallback(() => {
+    setCanUndo(history.canUndo)
+    setDirty(history.hasMarks)
+  }, [history])
 
   React.useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
+    const baseline = document.createElement('canvas')
+    baselineRef.current = baseline
     const resize = () => {
       const { width, height } = canvas.getBoundingClientRect()
       if (!width || !height) return
       const scale = BACKING_LONG_EDGE / Math.max(width, height)
-      canvas.width = Math.round(width * scale)
-      canvas.height = Math.round(height * scale)
-      history.current = []
-      setCanUndo(false)
-      setDirty(false)
+      const w = Math.round(width * scale)
+      const h = Math.round(height * scale)
+      if (canvas.width === w && canvas.height === h && baseline.width === w) return
+      canvas.width = w
+      canvas.height = h
+      baseline.width = w
+      baseline.height = h
+      stroke.current = null
+      history.reset()
+      sync()
     }
     resize()
     const observer = new ResizeObserver(resize)
     observer.observe(canvas)
-    return () => observer.disconnect()
-  }, [])
+    return () => {
+      observer.disconnect()
+      baselineRef.current = null
+      stroke.current = null
+      history.reset()
+    }
+  }, [history, sync])
 
-  const pointAt = (event: React.PointerEvent<HTMLCanvasElement>): Point => {
-    const canvas = event.currentTarget
+  const pointAt = (canvas: HTMLCanvasElement, clientX: number, clientY: number): Point => {
     const rect = canvas.getBoundingClientRect()
     return {
-      x: ((event.clientX - rect.left) / rect.width) * canvas.width,
-      y: ((event.clientY - rect.top) / rect.height) * canvas.height,
+      x: ((clientX - rect.left) / rect.width) * canvas.width,
+      y: ((clientY - rect.top) / rect.height) * canvas.height,
     }
   }
 
@@ -63,39 +106,25 @@ export function usePaintCanvas(brush: Brush) {
     if (!ctx) return
     canvas.setPointerCapture(event.pointerId)
 
-    history.current.push(ctx.getImageData(0, 0, canvas.width, canvas.height))
-    if (history.current.length > MAX_UNDO) history.current.shift()
-    setCanUndo(true)
-    setDirty(true)
-
     const ratio = canvas.width / canvas.getBoundingClientRect().width
     const { tool, color, size, smooth } = brushRef.current
-    const state = startStroke(tool, color, size * ratio)
-    const point = pointAt(event)
-    stroke.current = { id: event.pointerId, state, last: point, mid: point, smooth }
-    paintSegment(ctx, state, point, { x: point.x + 0.01, y: point.y })
+    const spec = { tool, color, size: size * ratio, smooth }
+    const player = createStrokePlayer(ctx, spec)
+    const point = pointAt(canvas, event.clientX, event.clientY)
+    stroke.current = { id: event.pointerId, player, spec, points: [point] }
+    player.begin(point)
+    if (tool !== 'eraser') setDirty(true)
   }
 
   const onPointerMove = (event: React.PointerEvent<HTMLCanvasElement>) => {
     const current = stroke.current
     if (!current || current.id !== event.pointerId) return
-    const ctx = event.currentTarget.getContext('2d')
-    if (!ctx) return
+    const canvas = event.currentTarget
     const events = event.nativeEvent.getCoalescedEvents?.() ?? [event.nativeEvent]
-    const rect = event.currentTarget.getBoundingClientRect()
     for (const sample of events) {
-      const point = {
-        x: ((sample.clientX - rect.left) / rect.width) * event.currentTarget.width,
-        y: ((sample.clientY - rect.top) / rect.height) * event.currentTarget.height,
-      }
-      if (current.smooth) {
-        const mid = { x: (current.last.x + point.x) / 2, y: (current.last.y + point.y) / 2 }
-        paintCurve(ctx, current.state, current.mid, current.last, mid)
-        current.mid = mid
-      } else {
-        paintSegment(ctx, current.state, current.last, point)
-      }
-      current.last = point
+      const point = pointAt(canvas, sample.clientX, sample.clientY)
+      current.points.push(point)
+      current.player.move(point)
     }
   }
 
@@ -103,30 +132,24 @@ export function usePaintCanvas(brush: Brush) {
     const current = stroke.current
     if (current?.id !== event.pointerId) return
     stroke.current = null
-    const ctx = event.currentTarget.getContext('2d')
-    if (ctx && current.smooth) paintSegment(ctx, current.state, current.mid, current.last)
+    current.player.end()
+    history.push({ kind: 'stroke', ...current.spec, points: current.points })
+    sync()
   }
 
   const undo = () => {
-    const canvas = canvasRef.current
-    const ctx = canvas?.getContext('2d')
-    const previous = history.current.pop()
-    if (!ctx || !previous) return
-    ctx.globalCompositeOperation = 'source-over'
-    ctx.putImageData(previous, 0, 0)
-    setCanUndo(history.current.length > 0)
-    if (history.current.length === 0) setDirty(false)
+    if (stroke.current) return
+    if (history.undo()) sync()
   }
 
   const clear = () => {
     const canvas = canvasRef.current
     const ctx = canvas?.getContext('2d')
-    if (!canvas || !ctx) return
-    history.current = []
+    if (!canvas || !ctx || stroke.current || !history.hasMarks) return
     ctx.globalCompositeOperation = 'source-over'
     ctx.clearRect(0, 0, canvas.width, canvas.height)
-    setCanUndo(false)
-    setDirty(false)
+    history.push({ kind: 'clear' })
+    sync()
   }
 
   return {

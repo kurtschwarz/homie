@@ -146,11 +146,11 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
           {...handlers}
         />
         {!dirty && (
-          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-hm-12 text-hm-ink-3/70">
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-hm-4 text-hm-ink-3/70">
             <HomieAnimation
               src={drawHintUrl}
               aria-label="A hand drawing a squiggle"
-              className="size-[calc(24rem*var(--hm-density))]"
+              className="-mb-hm-64 size-[calc(24rem*var(--hm-density))]"
             />
             <p className="m-0 text-hm-lead font-medium">Draw anything with your finger</p>
           </div>

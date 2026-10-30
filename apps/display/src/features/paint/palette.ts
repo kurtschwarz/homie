@@ -1,23 +1,10 @@
+import * as storage from '../../lib/storage'
 import { isHex } from './colour'
 
 export const PALETTE_SIZE = 8
 
-const PALETTE_KEY = 'homie.display.paint.palette'
-const LAST_MIX_KEY = 'homie.display.paint.lastMix'
-
-type Store = Pick<Storage, 'getItem' | 'setItem'>
-
-/**
- * Returns the browser's `localStorage`, or `null` when it is missing or
- * access throws (for example when storage is blocked).
- */
-function defaultStore(): Store | null {
-  try {
-    return globalThis.localStorage ?? null
-  } catch {
-    return null
-  }
-}
+const PALETTE_STORAGE_KEY = 'homie.display.paint.palette'
+const LAST_MIX_STORAGE_KEY = 'homie.display.paint.lastMix'
 
 /**
  * Reads the saved colour palette.
@@ -30,9 +17,9 @@ function defaultStore(): Store | null {
  * @param store - Storage to read from. Defaults to `localStorage`.
  * @returns The saved colours, or an empty palette when nothing usable is stored.
  */
-export function loadPalette(store: Store | null = defaultStore()): string[] {
+export function loadPalette(store?: storage.Store | null): string[] {
   try {
-    const parsed: unknown = JSON.parse(store?.getItem(PALETTE_KEY) ?? '[]')
+    const parsed: unknown = JSON.parse(storage.read(PALETTE_STORAGE_KEY, store) ?? '[]')
     if (!Array.isArray(parsed)) return []
     const colours: string[] = []
     for (const entry of parsed) {
@@ -53,10 +40,8 @@ export function loadPalette(store: Store | null = defaultStore()): string[] {
  * @param palette - Hex colours to save.
  * @param store - Storage to write to. Defaults to `localStorage`.
  */
-export function savePalette(palette: string[], store: Store | null = defaultStore()) {
-  try {
-    store?.setItem(PALETTE_KEY, JSON.stringify(palette))
-  } catch {}
+export function savePalette(palette: string[], store?: storage.Store | null) {
+  storage.write(PALETTE_STORAGE_KEY, JSON.stringify(palette), store)
 }
 
 /**
@@ -65,13 +50,9 @@ export function savePalette(palette: string[], store: Store | null = defaultStor
  * @param store - Storage to read from. Defaults to `localStorage`.
  * @returns The lowercased hex colour, or `null` when nothing valid is stored.
  */
-export function loadLastMix(store: Store | null = defaultStore()): string | null {
-  try {
-    const value = store?.getItem(LAST_MIX_KEY)
-    return isHex(value) ? value.toLowerCase() : null
-  } catch {
-    return null
-  }
+export function loadLastMix(store?: storage.Store | null): string | null {
+  const value = storage.read(LAST_MIX_STORAGE_KEY, store)
+  return isHex(value) ? value.toLowerCase() : null
 }
 
 /**
@@ -80,10 +61,8 @@ export function loadLastMix(store: Store | null = defaultStore()): string | null
  * @param hex - The colour to remember, as `#rrggbb`.
  * @param store - Storage to write to. Defaults to `localStorage`.
  */
-export function saveLastMix(hex: string, store: Store | null = defaultStore()) {
-  try {
-    store?.setItem(LAST_MIX_KEY, hex)
-  } catch {}
+export function saveLastMix(hex: string, store?: storage.Store | null) {
+  storage.write(LAST_MIX_STORAGE_KEY, hex, store)
 }
 
 /**

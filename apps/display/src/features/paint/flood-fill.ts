@@ -8,7 +8,7 @@ export type FloodFillOptions = {
 }
 
 const TOLERANCE = 32
-const GAP_RADIUS = 4
+const GAP_RADIUS = 20
 const EDGE_RADIUS = 2
 
 export function hexToRgb(hex: string): Rgb {
@@ -89,40 +89,46 @@ export function floodFill(
     blocked[y * width + x] = 0
   }
 
-  let region: Uint8Array = new Uint8Array(total)
-  const open = (pixel: number) =>
-    region[pixel] === 0 && (blocked ? blocked[pixel] === 0 : true) && matches(pixel)
+  const flood = (allowed: (pixel: number) => boolean): Uint8Array => {
+    const region = new Uint8Array(total)
+    const open = (pixel: number) => region[pixel] === 0 && allowed(pixel)
 
-  const stack = [y * width + x]
-  while (stack.length > 0) {
-    const start = stack.pop() as number
-    if (!open(start)) continue
-    const row = Math.floor(start / width)
-    const rowStart = row * width
-    let left = start
-    while (left > rowStart && open(left - 1)) left--
-    let right = start
-    while (right < rowStart + width - 1 && open(right + 1)) right++
-    for (let p = left; p <= right; p++) region[p] = 1
+    const stack = [y * width + x]
+    while (stack.length > 0) {
+      const start = stack.pop() as number
+      if (!open(start)) continue
+      const row = Math.floor(start / width)
+      const rowStart = row * width
+      let left = start
+      while (left > rowStart && open(left - 1)) left--
+      let right = start
+      while (right < rowStart + width - 1 && open(right + 1)) right++
+      for (let p = left; p <= right; p++) region[p] = 1
 
-    for (const next of [row - 1, row + 1]) {
-      if (next < 0 || next >= height) continue
-      const nextStart = next * width
-      let inRun = false
-      for (let p = left; p <= right; p++) {
-        const isOpen = open(nextStart + (p - rowStart))
-        if (isOpen && !inRun) stack.push(nextStart + (p - rowStart))
-        inRun = isOpen
+      for (const next of [row - 1, row + 1]) {
+        if (next < 0 || next >= height) continue
+        const nextStart = next * width
+        let inRun = false
+        for (let p = left; p <= right; p++) {
+          const isOpen = open(nextStart + (p - rowStart))
+          if (isOpen && !inRun) stack.push(nextStart + (p - rowStart))
+          inRun = isOpen
+        }
       }
     }
+
+    return region
   }
 
+  let region: Uint8Array
   if (blocked) {
-    const grown = dilate(region, width, height, GAP_RADIUS)
-    for (let i = 0; i < total; i++)
-      if (grown[i] && !region[i] && matches(i)) grown[i] = 1
-      else grown[i] = region[i] as number
-    region = grown
+    const sealed = blocked
+    const core = flood((pixel) => sealed[pixel] === 0 && matches(pixel))
+    // Reclaim the pixels the dilation took, but only those reachable without crossing ink.
+    const grown = dilate(core, width, height, GAP_RADIUS)
+    region = flood((pixel) => grown[pixel] === 1 && matches(pixel))
+  } else {
+    region = flood(matches)
   }
 
   const [fr, fg, fb] = color

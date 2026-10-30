@@ -63,15 +63,17 @@ describe('floodFill', () => {
   })
 
   it('keeps a leaking shape sealed when closing small gaps', () => {
-    const data = blank(40, 40)
-    box(data, 40, 10, 10, 20)
-    for (let y = 15; y < 19; y++) data.fill(0, (y * 40 + 10) * 4, (y * 40 + 10) * 4 + 4)
+    const data = blank(160, 160)
+    box(data, 160, 20, 20, 120)
+    for (let y = 60; y < 90; y++) data.fill(0, (y * 160 + 20) * 4, (y * 160 + 20) * 4 + 4)
 
-    floodFill(data, 40, 40, { x: 20, y: 20, color: RED, closeGaps: true })
+    floodFill(data, 160, 160, { x: 80, y: 80, color: RED, closeGaps: true })
 
-    expect(isFilled(data, 40, 20, 20)).toBe(true)
-    expect(isFilled(data, 40, 11, 11)).toBe(true)
-    expect(isFilled(data, 40, 2, 2)).toBe(false)
+    expect(isFilled(data, 160, 80, 80)).toBe(true)
+    expect(isFilled(data, 160, 21, 21)).toBe(true)
+    expect(isFilled(data, 160, 21, 75)).toBe(true)
+    expect(isFilled(data, 160, 5, 5)).toBe(false)
+    expect(isFilled(data, 160, 5, 75)).toBe(false)
   })
 
   it('composites the fill beneath antialiased edges instead of eating them', () => {

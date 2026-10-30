@@ -26,11 +26,9 @@ export function createPaintHistory(deps: PaintHistoryDeps) {
     push(record: PaintRecord) {
       records.push(record)
       if (records.length > deps.maxDepth) {
-        const oldest = records.shift()
-        if (oldest) {
-          deps.bake(oldest)
-          baselineHasMarks = leavesMarks(oldest, baselineHasMarks)
-        }
+        const oldest = records.shift() as PaintRecord
+        deps.bake(oldest)
+        baselineHasMarks = leavesMarks(oldest, baselineHasMarks)
       }
     },
     undo(): boolean {

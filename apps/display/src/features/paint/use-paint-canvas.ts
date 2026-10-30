@@ -1,21 +1,28 @@
 import * as React from 'react'
-import { createPaintHistory } from './paint-history'
-import { createStrokePlayer, playStroke, type StrokePlayer } from './stroke-player'
-import type { Point, Tool } from './tools'
+import { createPaintHistory, type PaintRecord } from './paint-history'
+import { createStrokePlayer, playStroke, type StrokePlayer, type StrokeSpec } from './stroke-player'
+import type { Point } from './tools'
 
 const MAX_UNDO = 10
 const BACKING_LONG_EDGE = 2048
 
-type Brush = { tool: Tool; color: string; size: number; smooth: boolean }
-
 type ActiveStroke = {
   id: number
   player: StrokePlayer
-  spec: Brush
+  spec: StrokeSpec
   points: Point[]
 }
 
-export function usePaintCanvas(brush: Brush) {
+function applyRecord(ctx: CanvasRenderingContext2D, record: PaintRecord) {
+  if (record.kind === 'clear') {
+    ctx.globalCompositeOperation = 'source-over'
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+  } else {
+    playStroke(ctx, record, record.points)
+  }
+}
+
+export function usePaintCanvas(brush: StrokeSpec) {
   const canvasRef = React.useRef<HTMLCanvasElement>(null)
   const brushRef = React.useRef(brush)
   brushRef.current = brush
@@ -30,13 +37,7 @@ export function usePaintCanvas(brush: Brush) {
         maxDepth: MAX_UNDO,
         bake: (record) => {
           const ctx = baselineRef.current?.getContext('2d')
-          if (!ctx) return
-          if (record.kind === 'clear') {
-            ctx.globalCompositeOperation = 'source-over'
-            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
-          } else {
-            playStroke(ctx, record, record.points)
-          }
+          if (ctx) applyRecord(ctx, record)
         },
         restore: () => {
           const baseline = baselineRef.current
@@ -48,13 +49,7 @@ export function usePaintCanvas(brush: Brush) {
         },
         replay: (record) => {
           const ctx = canvasRef.current?.getContext('2d')
-          if (!ctx) return
-          if (record.kind === 'clear') {
-            ctx.globalCompositeOperation = 'source-over'
-            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
-          } else {
-            playStroke(ctx, record, record.points)
-          }
+          if (ctx) applyRecord(ctx, record)
         },
       }),
     [],
@@ -76,11 +71,12 @@ export function usePaintCanvas(brush: Brush) {
       const scale = BACKING_LONG_EDGE / Math.max(width, height)
       const w = Math.round(width * scale)
       const h = Math.round(height * scale)
-      if (canvas.width === w && canvas.height === h) return
+      if (canvas.width === w && canvas.height === h && baseline.width === w) return
       canvas.width = w
       canvas.height = h
       baseline.width = w
       baseline.height = h
+      stroke.current = null
       history.reset()
       sync()
     }
@@ -113,9 +109,9 @@ export function usePaintCanvas(brush: Brush) {
     const spec = { tool, color, size: size * ratio, smooth }
     const player = createStrokePlayer(ctx, spec)
     const point = pointAt(canvas, event.clientX, event.clientY)
-    stroke.current = { id: event.pointerId, player, spec: brushRef.current, points: [point] }
+    stroke.current = { id: event.pointerId, player, spec, points: [point] }
     player.begin(point)
-    setDirty(true)
+    if (tool !== 'eraser') setDirty(true)
   }
 
   const onPointerMove = (event: React.PointerEvent<HTMLCanvasElement>) => {
@@ -135,17 +131,7 @@ export function usePaintCanvas(brush: Brush) {
     if (current?.id !== event.pointerId) return
     stroke.current = null
     current.player.end()
-    const canvas = event.currentTarget
-    const ratio = canvas.width / canvas.getBoundingClientRect().width
-    const { tool, color, size, smooth } = current.spec
-    history.push({
-      kind: 'stroke',
-      tool,
-      color,
-      size: size * ratio,
-      smooth,
-      points: current.points,
-    })
+    history.push({ kind: 'stroke', ...current.spec, points: current.points })
     sync()
   }
 
@@ -157,7 +143,7 @@ export function usePaintCanvas(brush: Brush) {
   const clear = () => {
     const canvas = canvasRef.current
     const ctx = canvas?.getContext('2d')
-    if (!canvas || !ctx || stroke.current) return
+    if (!canvas || !ctx || stroke.current || !history.hasMarks) return
     ctx.globalCompositeOperation = 'source-over'
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     history.push({ kind: 'clear' })

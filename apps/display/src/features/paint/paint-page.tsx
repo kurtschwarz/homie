@@ -318,15 +318,22 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
               aria-pressed={lastMix !== null && color === lastMix}
               onClick={() => setMixOpen((open) => !open)}
               className={cn(
-                'relative flex aspect-square cursor-pointer items-center justify-center rounded-full border border-hm-line p-0 [-webkit-tap-highlight-color:transparent] active:scale-(--hm-press-scale)',
+                'relative flex aspect-square cursor-pointer items-center justify-center rounded-full border-2 border-white p-0 [-webkit-tap-highlight-color:transparent] active:scale-(--hm-press-scale)',
                 lastMix !== null &&
                   color === lastMix &&
                   'outline-3 outline-offset-3 outline-hm-accent',
               )}
               style={{
-                background: lastMix ?? 'conic-gradient(#f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)',
+                background: 'conic-gradient(#f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)',
               }}
             >
+              {lastMix !== null && (
+                <span
+                  aria-hidden
+                  className="absolute inset-hm-8 rounded-full border-2 border-white"
+                  style={{ background: lastMix }}
+                />
+              )}
               <span
                 aria-hidden
                 className="flex size-hm-28 items-center justify-center rounded-full bg-white text-hm-ink shadow-hm-raised"

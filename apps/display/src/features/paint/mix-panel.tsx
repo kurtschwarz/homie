@@ -1,7 +1,7 @@
 import { cn } from '@homie/ui/lib/utils'
 import { Plus, X } from 'lucide-react'
 import * as React from 'react'
-import { type Hsv, hexToHsv, hsvToHex } from './colour'
+import { type Hsv, hexToHsv, hsvToHex, readableInk } from './colour'
 import { addColour, PALETTE_SIZE, removeColour } from './palette'
 
 function useDrag(onMove: (x: number, y: number) => void) {
@@ -134,7 +134,7 @@ export function MixPanel({
       >
         <span
           aria-hidden
-          className="pointer-events-none absolute top-1/2 size-hm-48 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-white shadow-hm-raised"
+          className="pointer-events-none absolute top-1/2 size-hm-36 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-white shadow-hm-raised"
           style={{ left: `${(hsv.h / 360) * 100}%`, background: `hsl(${hsv.h} 100% 50%)` }}
         />
       </div>
@@ -148,7 +148,8 @@ export function MixPanel({
         <button
           type="button"
           onClick={() => onUse(hex)}
-          className="h-hm-64 flex-1 cursor-pointer rounded-hm-control border-0 bg-hm-accent text-hm-label-lg font-semibold text-white [-webkit-tap-highlight-color:transparent] active:scale-(--hm-press-scale)"
+          className="h-hm-64 flex-1 cursor-pointer rounded-hm-control border-0 text-hm-label-lg font-semibold [-webkit-tap-highlight-color:transparent] active:scale-(--hm-press-scale)"
+          style={{ background: hex, color: readableInk(hex) }}
         >
           Use it
         </button>

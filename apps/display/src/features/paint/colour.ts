@@ -18,6 +18,13 @@ export function hsvToHex({ h, s, v }: Hsv): string {
   return `#${byte(5)}${byte(3)}${byte(1)}`
 }
 
+export function readableInk(hex: string): string {
+  const r = Number.parseInt(hex.slice(1, 3), 16)
+  const g = Number.parseInt(hex.slice(3, 5), 16)
+  const b = Number.parseInt(hex.slice(5, 7), 16)
+  return 0.299 * r + 0.587 * g + 0.114 * b > 160 ? '#16171a' : '#ffffff'
+}
+
 export function hexToHsv(hex: string): Hsv {
   const r = Number.parseInt(hex.slice(1, 3), 16) / 255
   const g = Number.parseInt(hex.slice(3, 5), 16) / 255

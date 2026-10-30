@@ -63,17 +63,41 @@ describe('floodFill', () => {
   })
 
   it('keeps a leaking shape sealed when closing small gaps', () => {
-    const data = blank(160, 160)
-    box(data, 160, 20, 20, 120)
-    for (let y = 60; y < 90; y++) data.fill(0, (y * 160 + 20) * 4, (y * 160 + 20) * 4 + 4)
+    const data = blank(520, 520)
+    box(data, 520, 80, 80, 360)
+    for (let y = 100; y < 160; y++) data.fill(0, (y * 520 + 80) * 4, (y * 520 + 80) * 4 + 4)
 
-    floodFill(data, 160, 160, { x: 80, y: 80, color: RED, closeGaps: true })
+    floodFill(data, 520, 520, { x: 260, y: 260, color: RED, closeGaps: true })
 
-    expect(isFilled(data, 160, 80, 80)).toBe(true)
-    expect(isFilled(data, 160, 21, 21)).toBe(true)
-    expect(isFilled(data, 160, 21, 75)).toBe(true)
-    expect(isFilled(data, 160, 5, 5)).toBe(false)
-    expect(isFilled(data, 160, 5, 75)).toBe(false)
+    expect(isFilled(data, 520, 260, 260)).toBe(true)
+    expect(isFilled(data, 520, 82, 82)).toBe(true)
+    expect(isFilled(data, 520, 82, 130)).toBe(true)
+    expect(isFilled(data, 520, 5, 5)).toBe(false)
+    expect(isFilled(data, 520, 5, 130)).toBe(false)
+  })
+
+  it('fills a gapped ring right up to the ink without spilling out of the gap', () => {
+    const size = 300
+    const data = blank(size, size)
+    for (let py = 0; py < size; py++) {
+      for (let px = 0; px < size; px++) {
+        const dx = px - 150
+        const dy = py - 150
+        const distance = Math.hypot(dx, dy)
+        const inGap = dx > 0 && Math.abs(dy) < 30
+        if (Math.abs(distance - 100) <= 5 && !inGap) setInk(data, size, px, py)
+      }
+    }
+
+    floodFill(data, size, size, { x: 150, y: 150, color: RED, closeGaps: true })
+
+    for (let py = 0; py < size; py++) {
+      for (let px = 0; px < size; px++) {
+        const distance = Math.hypot(px - 150, py - 150)
+        if (distance <= 94) expect(isFilled(data, size, px, py)).toBe(true)
+        if (distance >= 112) expect(isFilled(data, size, px, py)).toBe(false)
+      }
+    }
   })
 
   it('composites the fill beneath antialiased edges instead of eating them', () => {

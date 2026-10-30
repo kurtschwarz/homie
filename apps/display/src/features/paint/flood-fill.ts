@@ -8,8 +8,10 @@ export type FloodFillOptions = {
 }
 
 const TOLERANCE = 32
-const GAP_RADIUS = 20
+const GAP_RADIUS = 60
 const EDGE_RADIUS = 2
+const SMOOTH_RADIUS = 8
+const CLAIM_REACH = Math.ceil(GAP_RADIUS * 1.5) + 4
 
 export function hexToRgb(hex: string): Rgb {
   const value = Number.parseInt(hex.replace('#', ''), 16)
@@ -48,6 +50,34 @@ function dilate(src: Uint8Array, width: number, height: number, radius: number):
 
   sweep(src, horizontal, height, width, width, 1)
   sweep(horizontal, out, width, height, 1, width)
+  return out
+}
+
+/** Counts set pixels in the (2 * radius + 1) square around every pixel. */
+function boxCount(mask: Uint8Array, width: number, height: number, radius: number): Uint16Array {
+  const horizontal = new Uint16Array(mask.length)
+  for (let y = 0; y < height; y++) {
+    const row = y * width
+    let sum = 0
+    for (let x = 0; x <= Math.min(radius, width - 1); x++) sum += mask[row + x] as number
+    for (let x = 0; x < width; x++) {
+      horizontal[row + x] = sum
+      if (x + radius + 1 < width) sum += mask[row + x + radius + 1] as number
+      if (x - radius >= 0) sum -= mask[row + x - radius] as number
+    }
+  }
+
+  const out = new Uint16Array(mask.length)
+  for (let x = 0; x < width; x++) {
+    let sum = 0
+    for (let y = 0; y <= Math.min(radius, height - 1); y++)
+      sum += horizontal[y * width + x] as number
+    for (let y = 0; y < height; y++) {
+      out[y * width + x] = sum
+      if (y + radius + 1 < height) sum += horizontal[(y + radius + 1) * width + x] as number
+      if (y - radius >= 0) sum -= horizontal[(y - radius) * width + x] as number
+    }
+  }
   return out
 }
 
@@ -124,9 +154,66 @@ export function floodFill(
   if (blocked) {
     const sealed = blocked
     const core = flood((pixel) => sealed[pixel] === 0 && matches(pixel))
-    // Reclaim the pixels the dilation took, but only those reachable without crossing ink.
-    const grown = dilate(core, width, height, GAP_RADIUS)
-    region = flood((pixel) => grown[pixel] === 1 && matches(pixel))
+    // The dilation sealed a band along the ink. Give each band pixel to whichever side
+    // reaches it first (the filled core or the rest of the open area), and stop the filled
+    // side one dilation radius out, so the fill returns to the ink without spilling out
+    // through the gap. Distances are 8-connected to match the square dilation.
+    const label = new Uint8Array(total)
+    const depth = new Uint8Array(total)
+    const queue = new Int32Array(total)
+    let head = 0
+    let tail = 0
+    for (let i = 0; i < total; i++) {
+      if (sealed[i] === 0 && matches(i)) {
+        label[i] = core[i] === 1 ? 1 : 2
+        queue[tail++] = i
+      }
+    }
+    const claim = (from: number, to: number) => {
+      if (label[to] !== 0 || !matches(to)) return
+      const next = (depth[from] as number) + 1
+      if (label[from] === 1 && next > CLAIM_REACH) return
+      label[to] = label[from] as number
+      depth[to] = Math.min(next, 255)
+      queue[tail++] = to
+    }
+    while (head < tail) {
+      const p = queue[head++] as number
+      const px = p % width
+      const hasUp = p >= width
+      const hasDown = p < total - width
+      if (px > 0) {
+        claim(p, p - 1)
+        if (hasUp) claim(p, p - width - 1)
+        if (hasDown) claim(p, p + width - 1)
+      }
+      if (px < width - 1) {
+        claim(p, p + 1)
+        if (hasUp) claim(p, p - width + 1)
+        if (hasDown) claim(p, p + width + 1)
+      }
+      if (hasUp) claim(p, p - width)
+      if (hasDown) claim(p, p + width)
+    }
+    // The cut across the gap comes out ragged: ties fall by scan order and the reach cap
+    // stops the fill on a stepped line. A majority vote over a small window evens it out.
+    // Ink pixels sit out of the vote; matching pixels the fill did not reach count against it.
+    const fillMask = new Uint8Array(total)
+    const otherMask = new Uint8Array(total)
+    for (let i = 0; i < total; i++) {
+      if (label[i] === 1) fillMask[i] = 1
+      else if (matches(i)) otherMask[i] = 1
+    }
+    const fillVotes = boxCount(fillMask, width, height, SMOOTH_RADIUS)
+    const otherVotes = boxCount(otherMask, width, height, SMOOTH_RADIUS)
+    region = new Uint8Array(total)
+    for (let i = 0; i < total; i++) {
+      if (sealed[i] === 0) {
+        if (label[i] === 1) region[i] = 1
+      } else if (matches(i) && (fillVotes[i] as number) > (otherVotes[i] as number)) {
+        region[i] = 1
+      }
+    }
   } else {
     region = flood(matches)
   }
@@ -155,6 +242,18 @@ export function floodFill(
     return best && best[3] > 0 ? best : null
   }
 
+  // In gap mode the region also ends in a cut across the gap, where there is no ink to blend
+  // against. Soften that edge by the share of region among the matching pixels around it.
+  let cutCover: Uint16Array | null = null
+  let cutMatch: Uint16Array | null = null
+  let matchMask: Uint8Array | null = null
+  if (blocked && sa === 255) {
+    matchMask = new Uint8Array(total)
+    for (let i = 0; i < total; i++) if (matches(i)) matchMask[i] = 1
+    cutCover = boxCount(region, width, height, 1)
+    cutMatch = boxCount(matchMask, width, height, 1)
+  }
+
   for (let py = 0; py < height; py++) {
     for (let px = 0; px < width; px++) {
       const pixel = py * width + px
@@ -163,7 +262,16 @@ export function floodFill(
       let g: number
       let b: number
 
-      if (region[pixel]) {
+      const share =
+        cutCover && cutMatch && matchMask?.[pixel] === 1
+          ? (cutCover[pixel] as number) / (cutMatch[pixel] as number)
+          : 0
+
+      if (share > 0 && share < 1) {
+        r = Math.round((original[offset] as number) * (1 - share) + fr * share)
+        g = Math.round((original[offset + 1] as number) * (1 - share) + fg * share)
+        b = Math.round((original[offset + 2] as number) * (1 - share) + fb * share)
+      } else if (region[pixel]) {
         r = fr
         g = fg
         b = fb

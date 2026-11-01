@@ -14,38 +14,49 @@ export function hexToRgb(hex: string): Rgb {
   return [(value >> 16) & 255, (value >> 8) & 255, value & 255]
 }
 
-/** Marks every pixel within `radius` (Chebyshev) of a set pixel. */
-function dilate(src: Uint8Array, width: number, height: number, radius: number): Uint8Array {
+type Bounds = { x0: number; y0: number; x1: number; y1: number }
+
+/** Marks every pixel within `radius` (Chebyshev) of a set pixel, inside `bounds`. */
+function dilate(
+  src: Uint8Array,
+  width: number,
+  radius: number,
+  { x0, y0, x1, y1 }: Bounds,
+): Uint8Array {
   const horizontal = new Uint8Array(src.length)
   const out = new Uint8Array(src.length)
 
-  const sweep = (
-    from: Uint8Array,
-    to: Uint8Array,
-    lines: number,
-    length: number,
-    lineStride: number,
-    stride: number,
-  ) => {
-    for (let line = 0; line < lines; line++) {
-      const base = line * lineStride
-      let distance = radius + 1
-      for (let i = 0; i < length; i++) {
-        const index = base + i * stride
-        distance = from[index] ? 0 : distance + 1
-        if (distance <= radius) to[index] = 1
-      }
-      distance = radius + 1
-      for (let i = length - 1; i >= 0; i--) {
-        const index = base + i * stride
-        distance = from[index] ? 0 : distance + 1
-        if (distance <= radius) to[index] = 1
-      }
+  for (let y = y0; y <= y1; y++) {
+    const base = y * width
+    let distance = radius + 1
+    for (let x = x0; x <= x1; x++) {
+      const index = base + x
+      distance = src[index] ? 0 : distance + 1
+      if (distance <= radius) horizontal[index] = 1
+    }
+    distance = radius + 1
+    for (let x = x1; x >= x0; x--) {
+      const index = base + x
+      distance = src[index] ? 0 : distance + 1
+      if (distance <= radius) horizontal[index] = 1
     }
   }
 
-  sweep(src, horizontal, height, width, width, 1)
-  sweep(horizontal, out, width, height, 1, width)
+  for (let x = x0; x <= x1; x++) {
+    let distance = radius + 1
+    for (let y = y0; y <= y1; y++) {
+      const index = y * width + x
+      distance = horizontal[index] ? 0 : distance + 1
+      if (distance <= radius) out[index] = 1
+    }
+    distance = radius + 1
+    for (let y = y1; y >= y0; y--) {
+      const index = y * width + x
+      distance = horizontal[index] ? 0 : distance + 1
+      if (distance <= radius) out[index] = 1
+    }
+  }
+
   return out
 }
 
@@ -86,6 +97,11 @@ export function floodFill(
   const region = new Uint8Array(total)
   const open = (pixel: number) => region[pixel] === 0 && matching[pixel] === 1
 
+  let minX = x
+  let maxX = x
+  let minY = y
+  let maxY = y
+
   const stack = [y * width + x]
   while (stack.length > 0) {
     const start = stack.pop() as number
@@ -97,6 +113,11 @@ export function floodFill(
     let right = start
     while (right < rowStart + width - 1 && open(right + 1)) right++
     for (let p = left; p <= right; p++) region[p] = 1
+
+    if (row < minY) minY = row
+    if (row > maxY) maxY = row
+    if (left - rowStart < minX) minX = left - rowStart
+    if (right - rowStart > maxX) maxX = right - rowStart
 
     for (const next of [row - 1, row + 1]) {
       if (next < 0 || next >= height) continue
@@ -112,8 +133,20 @@ export function floodFill(
 
   const [fr, fg, fb] = color
   let changed = 0
-  const ring = dilate(region, width, height, EDGE_RADIUS)
-  const original = data.slice()
+
+  // Everything from here on only touches the filled region and the edge around it, so it
+  // works inside that box rather than walking the whole canvas. The padding covers the
+  // edge ring plus the window strokeNear reads around it.
+  const pad = 2 * EDGE_RADIUS + 1
+  const bounds: Bounds = {
+    x0: Math.max(0, minX - pad),
+    y0: Math.max(0, minY - pad),
+    x1: Math.min(width - 1, maxX + pad),
+    y1: Math.min(height - 1, maxY + pad),
+  }
+  const ring = dilate(region, width, EDGE_RADIUS, bounds)
+  const rowOffset = bounds.y0 * width * 4
+  const original = data.slice(rowOffset, (bounds.y1 + 1) * width * 4)
 
   // Finds the stroke colour behind an edge pixel: the nearby pixel furthest from the seed.
   const strokeNear = (px: number, py: number): [number, number, number, number] | null => {
@@ -122,8 +155,8 @@ export function floodFill(
       for (let dx = -EDGE_RADIUS - 1; dx <= EDGE_RADIUS + 1; dx++) {
         const nx = px + dx
         const ny = py + dy
-        if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue
-        const o = (ny * width + nx) * 4
+        if (nx < bounds.x0 || ny < bounds.y0 || nx > bounds.x1 || ny > bounds.y1) continue
+        const o = (ny * width + nx) * 4 - rowOffset
         const dr = (original[o] as number) - sr
         const dg = (original[o + 1] as number) - sg
         const db = (original[o + 2] as number) - sb
@@ -134,8 +167,8 @@ export function floodFill(
     return best && best[3] > 0 ? best : null
   }
 
-  for (let py = 0; py < height; py++) {
-    for (let px = 0; px < width; px++) {
+  for (let py = bounds.y0; py <= bounds.y1; py++) {
+    for (let px = bounds.x0; px <= bounds.x1; px++) {
       const pixel = py * width + px
       // Background well clear of the fill keeps its colour.
       if (region[pixel] === 0 && ring[pixel] === 0) continue

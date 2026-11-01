@@ -79,6 +79,42 @@ describe('floodFill', () => {
     expect(isFilled(data, 20, 10, 2)).toBe(false)
   })
 
+  it('composites the edge of a small shape far from the canvas origin', () => {
+    const size = 120
+    const data = new Uint8ClampedArray(size * size * 4)
+    const yellow: [number, number, number] = [237, 198, 93]
+    // An opaque dark canvas with a yellow box, its border half blended into the background.
+    for (let i = 0; i < size * size; i++) {
+      const offset = i * 4
+      data[offset] = 22
+      data[offset + 1] = 23
+      data[offset + 2] = 26
+      data[offset + 3] = 255
+    }
+    for (let py = 80; py < 110; py++) {
+      for (let px = 80; px < 110; px++) {
+        const onBorder = px === 80 || px === 109 || py === 80 || py === 109
+        const offset = (py * size + px) * 4
+        const share = onBorder ? 0.5 : 1
+        data[offset] = Math.round(22 * (1 - share) + (yellow[0] as number) * share)
+        data[offset + 1] = Math.round(23 * (1 - share) + (yellow[1] as number) * share)
+        data[offset + 2] = Math.round(26 * (1 - share) + (yellow[2] as number) * share)
+      }
+    }
+
+    floodFill(data, size, size, { x: 95, y: 95, color: RED })
+
+    const inside = (95 * size + 95) * 4
+    expect([data[inside], data[inside + 1], data[inside + 2]]).toEqual([255, 0, 0])
+    // The half-blended border takes the fill in place of the yellow it was blended from.
+    const border = (95 * size + 80) * 4
+    expect(data[border]).toBeGreaterThan(100)
+    expect(data[border + 1]).toBeLessThan(60)
+    // Background well away from the shape is untouched.
+    const far = (10 * size + 10) * 4
+    expect([data[far], data[far + 1], data[far + 2]]).toEqual([22, 23, 26])
+  })
+
   it('leaves no dark halo when refilling an opaque background with the stroke colour', () => {
     const width = 20
     const data = new Uint8ClampedArray(width * 7 * 4)

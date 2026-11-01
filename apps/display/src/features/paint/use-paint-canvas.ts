@@ -7,6 +7,11 @@ import type { Point } from './tools'
 const MAX_UNDO = 20
 const BACKING_LONG_EDGE = 2048
 
+/** Every fill reads the whole canvas back, which the flag keeps off the GPU and cheap. */
+function context(canvas: HTMLCanvasElement | null | undefined) {
+  return canvas?.getContext('2d', { willReadFrequently: true }) ?? null
+}
+
 type ActiveStroke = {
   id: number
   player: StrokePlayer
@@ -54,19 +59,19 @@ export function usePaintCanvas(brush: StrokeSpec) {
       createPaintHistory({
         maxDepth: MAX_UNDO,
         bake: (record) => {
-          const ctx = baselineRef.current?.getContext('2d')
+          const ctx = context(baselineRef.current)
           if (ctx) applyRecord(ctx, record)
         },
         restore: () => {
           const baseline = baselineRef.current
-          const ctx = canvasRef.current?.getContext('2d')
+          const ctx = context(canvasRef.current)
           if (!baseline || !ctx) return
           ctx.globalCompositeOperation = 'source-over'
           ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
           ctx.drawImage(baseline, 0, 0)
         },
         replay: (record) => {
-          const ctx = canvasRef.current?.getContext('2d')
+          const ctx = context(canvasRef.current)
           if (ctx) applyRecord(ctx, record)
         },
       }),
@@ -120,7 +125,7 @@ export function usePaintCanvas(brush: StrokeSpec) {
   const onPointerDown = (event: React.PointerEvent<HTMLCanvasElement>) => {
     if (stroke.current) return
     const canvas = event.currentTarget
-    const ctx = canvas.getContext('2d')
+    const ctx = context(canvas)
     if (!ctx) return
     const { tool, color, size, smooth } = brushRef.current
 
@@ -173,7 +178,7 @@ export function usePaintCanvas(brush: StrokeSpec) {
 
   const clear = () => {
     const canvas = canvasRef.current
-    const ctx = canvas?.getContext('2d')
+    const ctx = context(canvas)
     if (!canvas || !ctx || stroke.current || !history.hasMarks) return
     ctx.globalCompositeOperation = 'source-over'
     ctx.clearRect(0, 0, canvas.width, canvas.height)

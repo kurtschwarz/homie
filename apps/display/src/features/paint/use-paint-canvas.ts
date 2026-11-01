@@ -1,10 +1,16 @@
 import * as React from 'react'
+import { floodFill, hexToRgb } from './flood-fill'
 import { createPaintHistory, type PaintRecord } from './paint-history'
 import { createStrokePlayer, playStroke, type StrokePlayer, type StrokeSpec } from './stroke-player'
 import type { Point } from './tools'
 
 const MAX_UNDO = 20
 const BACKING_LONG_EDGE = 2048
+
+/** Every fill reads the whole canvas back, which the flag keeps off the GPU and cheap. */
+function context(canvas: HTMLCanvasElement | null | undefined) {
+  return canvas?.getContext('2d', { willReadFrequently: true }) ?? null
+}
 
 type ActiveStroke = {
   id: number
@@ -13,10 +19,27 @@ type ActiveStroke = {
   points: Point[]
 }
 
+function fillAt(
+  ctx: CanvasRenderingContext2D,
+  { x, y, color }: { x: number; y: number; color: string },
+) {
+  const { width, height } = ctx.canvas
+  const image = ctx.getImageData(0, 0, width, height)
+  const changed = floodFill(image.data, width, height, {
+    x: Math.floor(x),
+    y: Math.floor(y),
+    color: hexToRgb(color),
+  })
+  if (changed > 0) ctx.putImageData(image, 0, 0)
+  return changed
+}
+
 function applyRecord(ctx: CanvasRenderingContext2D, record: PaintRecord) {
   if (record.kind === 'clear') {
     ctx.globalCompositeOperation = 'source-over'
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+  } else if (record.kind === 'fill') {
+    fillAt(ctx, record)
   } else {
     playStroke(ctx, record, record.points)
   }
@@ -36,19 +59,19 @@ export function usePaintCanvas(brush: StrokeSpec) {
       createPaintHistory({
         maxDepth: MAX_UNDO,
         bake: (record) => {
-          const ctx = baselineRef.current?.getContext('2d')
+          const ctx = context(baselineRef.current)
           if (ctx) applyRecord(ctx, record)
         },
         restore: () => {
           const baseline = baselineRef.current
-          const ctx = canvasRef.current?.getContext('2d')
+          const ctx = context(canvasRef.current)
           if (!baseline || !ctx) return
           ctx.globalCompositeOperation = 'source-over'
           ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
           ctx.drawImage(baseline, 0, 0)
         },
         replay: (record) => {
-          const ctx = canvasRef.current?.getContext('2d')
+          const ctx = context(canvasRef.current)
           if (ctx) applyRecord(ctx, record)
         },
       }),
@@ -102,12 +125,23 @@ export function usePaintCanvas(brush: StrokeSpec) {
   const onPointerDown = (event: React.PointerEvent<HTMLCanvasElement>) => {
     if (stroke.current) return
     const canvas = event.currentTarget
-    const ctx = canvas.getContext('2d')
+    const ctx = context(canvas)
     if (!ctx) return
+    const { tool, color, size, smooth } = brushRef.current
+
+    if (tool === 'fill') {
+      const point = pointAt(canvas, event.clientX, event.clientY)
+      const record = { kind: 'fill' as const, x: point.x, y: point.y, color }
+      if (fillAt(ctx, record) > 0) {
+        history.push(record)
+        sync()
+      }
+      return
+    }
+
     canvas.setPointerCapture(event.pointerId)
 
     const ratio = canvas.width / canvas.getBoundingClientRect().width
-    const { tool, color, size, smooth } = brushRef.current
     const spec = { tool, color, size: size * ratio, smooth }
     const player = createStrokePlayer(ctx, spec)
     const point = pointAt(canvas, event.clientX, event.clientY)
@@ -144,7 +178,7 @@ export function usePaintCanvas(brush: StrokeSpec) {
 
   const clear = () => {
     const canvas = canvasRef.current
-    const ctx = canvas?.getContext('2d')
+    const ctx = context(canvas)
     if (!canvas || !ctx || stroke.current || !history.hasMarks) return
     ctx.globalCompositeOperation = 'source-over'
     ctx.clearRect(0, 0, canvas.width, canvas.height)

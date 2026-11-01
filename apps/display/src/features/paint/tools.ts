@@ -1,10 +1,8 @@
-export type Tool = 'brush' | 'rainbow' | 'eraser'
+export type Tool = 'brush' | 'rainbow' | 'eraser' | 'fill'
 
 export type Point = { x: number; y: number }
 
 export type SizeName = 'small' | 'medium' | 'large'
-
-export const TOOLS: Tool[] = ['brush', 'rainbow', 'eraser']
 
 export const SIZE_PX: Record<SizeName, number> = { small: 6, medium: 14, large: 30 }
 

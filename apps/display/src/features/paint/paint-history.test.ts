@@ -87,6 +87,14 @@ describe('paint history', () => {
     expect(history.hasMarks).toBe(false)
   })
 
+  it('counts a fill as marks, even after it is baked', () => {
+    const { history } = setup(1)
+    history.push({ kind: 'fill', x: 1, y: 1, color: '#d24a35' })
+    expect(history.hasMarks).toBe(true)
+    history.push(stroke('eraser'))
+    expect(history.hasMarks).toBe(true)
+  })
+
   it('reset drops records and marks', () => {
     const { history } = setup()
     history.push(stroke())

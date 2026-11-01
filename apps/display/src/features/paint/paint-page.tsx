@@ -8,6 +8,7 @@ import { cn } from '@homie/ui/lib/utils'
 import {
   Check,
   Eraser,
+  PaintBucket,
   Paintbrush,
   Plus,
   Rainbow,
@@ -34,6 +35,7 @@ const TOOL_OPTIONS: { tool: Tool; label: string; icon: typeof Paintbrush }[] = [
   { tool: 'brush', label: 'Brush', icon: Paintbrush },
   { tool: 'rainbow', label: 'Rainbow', icon: Rainbow },
   { tool: 'eraser', label: 'Eraser', icon: Eraser },
+  { tool: 'fill', label: 'Fill', icon: PaintBucket },
 ]
 
 const SIZE_OPTIONS: { size: SizeName; dot: string }[] = [
@@ -242,7 +244,7 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
 
         <section className="flex flex-col gap-hm-12">
           <h2 className="m-0 text-hm-eyebrow text-hm-ink-2 uppercase">Tools</h2>
-          <div className="grid grid-cols-3 gap-hm-12">
+          <div className="grid grid-cols-2 gap-hm-12">
             {TOOL_OPTIONS.map(({ tool: option, label, icon: Icon }) => (
               <button
                 key={option}

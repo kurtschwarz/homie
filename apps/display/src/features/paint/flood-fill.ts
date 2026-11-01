@@ -101,6 +101,7 @@ export function floodFill(
   let maxX = x
   let minY = y
   let maxY = y
+  let filled = 0
 
   const stack = [y * width + x]
   while (stack.length > 0) {
@@ -113,6 +114,7 @@ export function floodFill(
     let right = start
     while (right < rowStart + width - 1 && open(right + 1)) right++
     for (let p = left; p <= right; p++) region[p] = 1
+    filled += right - left + 1
 
     if (row < minY) minY = row
     if (row > maxY) maxY = row
@@ -144,9 +146,15 @@ export function floodFill(
     x1: Math.min(width - 1, maxX + pad),
     y1: Math.min(height - 1, maxY + pad),
   }
-  const ring = dilate(region, width, EDGE_RADIUS, bounds)
+  // A region that fills its own box has no edge to blend against, so the ring and the
+  // snapshot it would be blended from are both dead weight. A fill that reaches every
+  // corner of the canvas lands here without anything asking whether the canvas was empty.
+  const boxed = filled === (bounds.x1 - bounds.x0 + 1) * (bounds.y1 - bounds.y0 + 1)
+  const ring = boxed ? region : dilate(region, width, EDGE_RADIUS, bounds)
   const rowOffset = bounds.y0 * width * 4
-  const original = data.slice(rowOffset, (bounds.y1 + 1) * width * 4)
+  const original = boxed
+    ? new Uint8ClampedArray(0)
+    : data.slice(rowOffset, (bounds.y1 + 1) * width * 4)
 
   // Finds the stroke colour behind an edge pixel: the nearby pixel furthest from the seed.
   const strokeNear = (px: number, py: number): [number, number, number, number] | null => {
@@ -167,45 +175,59 @@ export function floodFill(
     return best && best[3] > 0 ? best : null
   }
 
+  // The inside of the region is one flat colour, so it goes a whole pixel at a time rather
+  // than a channel at a time. Packing through a byte view keeps the order right either way
+  // round the machine stores its integers.
+  const packer = new Uint32Array(1)
+  const packerBytes = new Uint8Array(packer.buffer)
+  packerBytes[0] = fr
+  packerBytes[1] = fg
+  packerBytes[2] = fb
+  packerBytes[3] = 255
+  const packed = packer[0] as number
+  const pixels = new Uint32Array(data.buffer, data.byteOffset, total)
+
   for (let py = bounds.y0; py <= bounds.y1; py++) {
     for (let px = bounds.x0; px <= bounds.x1; px++) {
       const pixel = py * width + px
+
+      if (region[pixel] === 1) {
+        if (pixels[pixel] !== packed) {
+          pixels[pixel] = packed
+          changed++
+        }
+        continue
+      }
       // Background well clear of the fill keeps its colour.
-      if (region[pixel] === 0 && ring[pixel] === 0) continue
+      if (ring[pixel] === 0) continue
 
       const offset = pixel * 4
       let r: number
       let g: number
       let b: number
 
-      if (region[pixel]) {
-        r = fr
-        g = fg
-        b = fb
+      const alpha = data[offset + 3] as number
+      if (alpha < 255) {
+        const coverage = alpha / 255
+        r = Math.round((data[offset] as number) * coverage + fr * (1 - coverage))
+        g = Math.round((data[offset + 1] as number) * coverage + fg * (1 - coverage))
+        b = Math.round((data[offset + 2] as number) * coverage + fb * (1 - coverage))
       } else {
-        const alpha = data[offset + 3] as number
-        if (alpha < 255) {
-          const coverage = alpha / 255
-          r = Math.round((data[offset] as number) * coverage + fr * (1 - coverage))
-          g = Math.round((data[offset + 1] as number) * coverage + fg * (1 - coverage))
-          b = Math.round((data[offset + 2] as number) * coverage + fb * (1 - coverage))
-        } else {
-          // Opaque edge pixel: a blend of the seed colour and a stroke colour. Swap the
-          // seed share of the blend for the fill colour.
-          if (sa !== 255) continue
-          const stroke = strokeNear(px, py)
-          if (!stroke) continue
-          const [dr, dg, db, distance] = stroke
-          const along =
-            (((data[offset] as number) - sr) * dr +
-              ((data[offset + 1] as number) - sg) * dg +
-              ((data[offset + 2] as number) - sb) * db) /
-            distance
-          const seedShare = 1 - Math.min(1, Math.max(0, along))
-          r = Math.round((data[offset] as number) + (fr - sr) * seedShare)
-          g = Math.round((data[offset + 1] as number) + (fg - sg) * seedShare)
-          b = Math.round((data[offset + 2] as number) + (fb - sb) * seedShare)
-        }
+        // Opaque edge pixel: a blend of the seed colour and a stroke colour. Swap the
+        // seed share of the blend for the fill colour.
+        if (sa !== 255) continue
+        const stroke = strokeNear(px, py)
+        if (!stroke) continue
+        const [dr, dg, db, distance] = stroke
+        const along =
+          (((data[offset] as number) - sr) * dr +
+            ((data[offset + 1] as number) - sg) * dg +
+            ((data[offset + 2] as number) - sb) * db) /
+          distance
+        const seedShare = 1 - Math.min(1, Math.max(0, along))
+        r = Math.round((data[offset] as number) + (fr - sr) * seedShare)
+        g = Math.round((data[offset + 1] as number) + (fg - sg) * seedShare)
+        b = Math.round((data[offset + 2] as number) + (fb - sb) * seedShare)
       }
 
       if (

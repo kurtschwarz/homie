@@ -33,7 +33,7 @@ describe('floodFill', () => {
   it('fills a blank canvas edge to edge', () => {
     const data = blank(20, 20)
 
-    const changed = floodFill(data, 20, 20, { x: 5, y: 5, color: RED, closeGaps: false })
+    const changed = floodFill(data, 20, 20, { x: 5, y: 5, color: RED })
 
     expect(changed).toBe(400)
     expect(isFilled(data, 20, 0, 0)).toBe(true)
@@ -44,7 +44,7 @@ describe('floodFill', () => {
     const data = blank(40, 40)
     box(data, 40, 10, 10, 20)
 
-    floodFill(data, 40, 40, { x: 20, y: 20, color: RED, closeGaps: false })
+    floodFill(data, 40, 40, { x: 20, y: 20, color: RED })
 
     expect(isFilled(data, 40, 20, 20)).toBe(true)
     expect(isFilled(data, 40, 11, 11)).toBe(true)
@@ -57,47 +57,9 @@ describe('floodFill', () => {
     box(data, 40, 10, 10, 20)
     for (let y = 15; y < 19; y++) data.fill(0, (y * 40 + 10) * 4, (y * 40 + 10) * 4 + 4)
 
-    floodFill(data, 40, 40, { x: 20, y: 20, color: RED, closeGaps: false })
+    floodFill(data, 40, 40, { x: 20, y: 20, color: RED })
 
     expect(isFilled(data, 40, 2, 2)).toBe(true)
-  })
-
-  it('keeps a leaking shape sealed when closing small gaps', () => {
-    const data = blank(520, 520)
-    box(data, 520, 80, 80, 360)
-    for (let y = 100; y < 160; y++) data.fill(0, (y * 520 + 80) * 4, (y * 520 + 80) * 4 + 4)
-
-    floodFill(data, 520, 520, { x: 260, y: 260, color: RED, closeGaps: true })
-
-    expect(isFilled(data, 520, 260, 260)).toBe(true)
-    expect(isFilled(data, 520, 82, 82)).toBe(true)
-    expect(isFilled(data, 520, 82, 130)).toBe(true)
-    expect(isFilled(data, 520, 5, 5)).toBe(false)
-    expect(isFilled(data, 520, 5, 130)).toBe(false)
-  })
-
-  it('fills a gapped ring right up to the ink without spilling out of the gap', () => {
-    const size = 300
-    const data = blank(size, size)
-    for (let py = 0; py < size; py++) {
-      for (let px = 0; px < size; px++) {
-        const dx = px - 150
-        const dy = py - 150
-        const distance = Math.hypot(dx, dy)
-        const inGap = dx > 0 && Math.abs(dy) < 30
-        if (Math.abs(distance - 100) <= 5 && !inGap) setInk(data, size, px, py)
-      }
-    }
-
-    floodFill(data, size, size, { x: 150, y: 150, color: RED, closeGaps: true })
-
-    for (let py = 0; py < size; py++) {
-      for (let px = 0; px < size; px++) {
-        const distance = Math.hypot(px - 150, py - 150)
-        if (distance <= 94) expect(isFilled(data, size, px, py)).toBe(true)
-        if (distance >= 112) expect(isFilled(data, size, px, py)).toBe(false)
-      }
-    }
   })
 
   it('composites the fill beneath antialiased edges instead of eating them', () => {
@@ -108,7 +70,7 @@ describe('floodFill', () => {
       data[offset + 3] = 128
     }
 
-    floodFill(data, 20, 5, { x: 2, y: 2, color: RED, closeGaps: false })
+    floodFill(data, 20, 5, { x: 2, y: 2, color: RED })
 
     const edge = (2 * 20 + 9) * 4
     expect(data[edge + 3]).toBe(255)
@@ -135,7 +97,6 @@ describe('floodFill', () => {
       x: 1,
       y: 3,
       color: yellow as [number, number, number],
-      closeGaps: false,
     })
 
     for (let x = 0; x < width; x++) {
@@ -146,9 +107,9 @@ describe('floodFill', () => {
 
   it('changes nothing when the region already has the colour', () => {
     const data = blank(10, 10)
-    floodFill(data, 10, 10, { x: 1, y: 1, color: RED, closeGaps: false })
+    floodFill(data, 10, 10, { x: 1, y: 1, color: RED })
 
-    const changed = floodFill(data, 10, 10, { x: 1, y: 1, color: RED, closeGaps: false })
+    const changed = floodFill(data, 10, 10, { x: 1, y: 1, color: RED })
 
     expect(changed).toBe(0)
   })

@@ -4,7 +4,7 @@ import type { Point } from './tools'
 export type PaintRecord =
   | ({ kind: 'stroke'; points: Point[] } & StrokeSpec)
   | { kind: 'clear' }
-  | { kind: 'fill'; x: number; y: number; color: string; closeGaps: boolean }
+  | { kind: 'fill'; x: number; y: number; color: string }
 
 export type PaintHistoryDeps = {
   maxDepth: number

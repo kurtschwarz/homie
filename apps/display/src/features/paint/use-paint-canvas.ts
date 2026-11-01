@@ -16,7 +16,7 @@ type ActiveStroke = {
 
 function fillAt(
   ctx: CanvasRenderingContext2D,
-  { x, y, color, closeGaps }: { x: number; y: number; color: string; closeGaps: boolean },
+  { x, y, color }: { x: number; y: number; color: string },
 ) {
   const { width, height } = ctx.canvas
   const image = ctx.getImageData(0, 0, width, height)
@@ -24,7 +24,6 @@ function fillAt(
     x: Math.floor(x),
     y: Math.floor(y),
     color: hexToRgb(color),
-    closeGaps,
   })
   if (changed > 0) ctx.putImageData(image, 0, 0)
   return changed
@@ -41,7 +40,7 @@ function applyRecord(ctx: CanvasRenderingContext2D, record: PaintRecord) {
   }
 }
 
-export function usePaintCanvas(brush: StrokeSpec & { closeGaps: boolean }) {
+export function usePaintCanvas(brush: StrokeSpec) {
   const canvasRef = React.useRef<HTMLCanvasElement>(null)
   const brushRef = React.useRef(brush)
   brushRef.current = brush
@@ -123,11 +122,11 @@ export function usePaintCanvas(brush: StrokeSpec & { closeGaps: boolean }) {
     const canvas = event.currentTarget
     const ctx = canvas.getContext('2d')
     if (!ctx) return
-    const { tool, color, size, smooth, closeGaps } = brushRef.current
+    const { tool, color, size, smooth } = brushRef.current
 
     if (tool === 'fill') {
       const point = pointAt(canvas, event.clientX, event.clientY)
-      const record = { kind: 'fill' as const, x: point.x, y: point.y, color, closeGaps }
+      const record = { kind: 'fill' as const, x: point.x, y: point.y, color }
       if (fillAt(ctx, record) > 0) {
         history.push(record)
         sync()

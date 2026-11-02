@@ -99,8 +99,13 @@ export function SizeSlider({
       ))}
       <span
         aria-hidden
-        className="pointer-events-none absolute top-1/2 size-hm-30 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-white shadow-hm-raised"
-        style={{ left: along(value), background: color }}
+        className="pointer-events-none absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-white shadow-hm-raised"
+        style={{
+          left: along(value),
+          width: `calc(${Math.max(30, value) / 16}rem * var(--hm-density))`,
+          height: `calc(${Math.max(30, value) / 16}rem * var(--hm-density))`,
+          background: color,
+        }}
       />
     </div>
   )

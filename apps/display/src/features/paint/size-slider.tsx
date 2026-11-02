@@ -17,10 +17,12 @@ function describe(width: number) {
 export function SizeSlider({
   value,
   color,
+  stickerUrl,
   onChange,
 }: {
   value: number
   color: string
+  stickerUrl?: string
   onChange: (value: number) => void
 }) {
   const trackRef = React.useRef<HTMLDivElement>(null)
@@ -83,30 +85,56 @@ export function SizeSlider({
         className="absolute left-hm-32 top-1/2 h-hm-8 -translate-y-1/2 rounded-hm-3"
         style={{ width: `calc(${along(value)} - ${INSET})`, background: color }}
       />
-      {BRUSH_SNAPS.map((snap) => (
-        <span
-          key={snap}
+      {BRUSH_SNAPS.map((snap) => {
+        const size = `calc(${snap / 16}rem * var(--hm-density))`
+        const common = {
+          left: along(snap),
+          width: size,
+          height: size,
+          opacity: value === snap ? 1 : 0.35,
+        }
+        return stickerUrl ? (
+          <img
+            key={snap}
+            aria-hidden
+            alt=""
+            src={stickerUrl}
+            className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 object-contain"
+            style={common}
+          />
+        ) : (
+          <span
+            key={snap}
+            aria-hidden
+            className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full shadow-[0_0_0_1px_rgba(0,0,0,.14)]"
+            style={{ ...common, background: color }}
+          />
+        )
+      })}
+      {stickerUrl ? (
+        <img
           aria-hidden
-          className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full shadow-[0_0_0_1px_rgba(0,0,0,.14)]"
+          alt=""
+          src={stickerUrl}
+          className="pointer-events-none absolute top-1/2 -translate-x-1/2 -translate-y-1/2 object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,.3)]"
           style={{
-            left: along(snap),
-            width: `calc(${snap / 16}rem * var(--hm-density))`,
-            height: `calc(${snap / 16}rem * var(--hm-density))`,
-            background: color,
-            opacity: value === snap ? 1 : 0.35,
+            left: along(value),
+            width: `calc(${Math.max(30, value) / 16}rem * var(--hm-density))`,
+            height: `calc(${Math.max(30, value) / 16}rem * var(--hm-density))`,
           }}
         />
-      ))}
-      <span
-        aria-hidden
-        className="pointer-events-none absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-white shadow-hm-raised"
-        style={{
-          left: along(value),
-          width: `calc(${Math.max(30, value) / 16}rem * var(--hm-density))`,
-          height: `calc(${Math.max(30, value) / 16}rem * var(--hm-density))`,
-          background: color,
-        }}
-      />
+      ) : (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-white shadow-hm-raised"
+          style={{
+            left: along(value),
+            width: `calc(${Math.max(30, value) / 16}rem * var(--hm-density))`,
+            height: `calc(${Math.max(30, value) / 16}rem * var(--hm-density))`,
+            background: color,
+          }}
+        />
+      )}
     </div>
   )
 }

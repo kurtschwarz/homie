@@ -384,7 +384,8 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
         <span aria-hidden className="mx-hm-8 h-hm-76 w-[2px] flex-none rounded-full bg-hm-line" />
         <SizeSlider
           value={size}
-          color={tool === 'eraser' ? 'var(--hm-ink-3)' : color}
+          color={tool === 'eraser' || tool === 'sticker' ? 'var(--hm-ink-3)' : color}
+          stickerUrl={tool === 'sticker' ? activeSticker?.url : undefined}
           onChange={setSize}
         />
       </div>

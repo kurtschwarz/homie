@@ -1,8 +1,8 @@
 import { cn } from '@homie/ui/lib/utils'
 import { Plus, X } from 'lucide-react'
 import * as React from 'react'
-import { type Hsv, hexToHsv, hsvToHex, readableInk } from './colour'
-import { addColour, PALETTE_SIZE, removeColour } from './palette'
+import { type Hsv, hexToHsv, hsvToHex, readableInk } from '../colour'
+import { addColour, PALETTE_SIZE, removeColour } from '../palette'
 
 function useDrag(onMove: (x: number, y: number) => void) {
   const apply = (event: React.PointerEvent<HTMLDivElement>) => {

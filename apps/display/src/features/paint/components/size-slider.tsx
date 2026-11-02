@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { BRUSH_MAX, BRUSH_MIN, BRUSH_SNAPS, clampBrushWidth, snapBrushWidth } from './tools'
+import { BRUSH_MAX, BRUSH_MIN, BRUSH_SNAPS, clampBrushWidth, snapBrushWidth } from '../tools'
 
 const INSET = 'calc(2rem * var(--hm-density))'
 const SPAN = BRUSH_MAX - BRUSH_MIN

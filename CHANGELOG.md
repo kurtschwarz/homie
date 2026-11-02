@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.9.0](https://github.com/kurtschwarz/homie/compare/homie-v0.8.1...homie-v0.9.0) (2026-11-02)
+
+
+### Features
+
+* **display:** add a fill tool to paint ([#104](https://github.com/kurtschwarz/homie/issues/104)) ([5607a7b](https://github.com/kurtschwarz/homie/commit/5607a7b5ab392029113fd5373b7a6292998986ee))
+* **display:** add a sticker tool to paint ([#107](https://github.com/kurtschwarz/homie/issues/107)) ([032b991](https://github.com/kurtschwarz/homie/commit/032b9918a9fea157f2d80f5d688bba6710a015d2))
+* **display:** animate a drawing hand in paint empty state ([#101](https://github.com/kurtschwarz/homie/issues/101)) ([252fb2b](https://github.com/kurtschwarz/homie/commit/252fb2bdfe5e64c065cad8408836515d191f8268))
+* **display:** mix your own colour in the paint UI ([#99](https://github.com/kurtschwarz/homie/issues/99)) ([7ce3bff](https://github.com/kurtschwarz/homie/commit/7ce3bffbc36e38eac2dc2790e8641aae4ec8aed4))
+* **display:** replace paint undo snapshots with a rolling baseline ([#102](https://github.com/kurtschwarz/homie/issues/102)) ([66a6e7a](https://github.com/kurtschwarz/homie/commit/66a6e7a8be12350dee8e18407b6512222cd697a2))
+* **photo-sync:** add permissions gate ([#58](https://github.com/kurtschwarz/homie/issues/58)) ([c0da329](https://github.com/kurtschwarz/homie/commit/c0da3290120df8f2bc54e04feedd5de8b290dc51))
+
 ## [0.8.1](https://github.com/kurtschwarz/homie/compare/homie-v0.8.0...homie-v0.8.1) (2026-10-28)
 
 

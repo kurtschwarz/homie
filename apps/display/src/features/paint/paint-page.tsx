@@ -36,8 +36,9 @@ const RAINBOW = 'conic-gradient(#f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)'
 const TOOL_OPTIONS: { tool: Tool; label: string; icon: typeof Paintbrush }[] = [
   { tool: 'brush', label: 'Brush', icon: Paintbrush },
   { tool: 'rainbow', label: 'Rainbow', icon: Rainbow },
-  { tool: 'eraser', label: 'Eraser', icon: Eraser },
   { tool: 'fill', label: 'Fill', icon: PaintBucket },
+  { tool: 'sticker', label: 'Stickers', icon: Sticker },
+  { tool: 'eraser', label: 'Eraser', icon: Eraser },
 ]
 
 const SIZE_OPTIONS: { size: SizeName; dot: string }[] = [
@@ -252,7 +253,7 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
 
         <section className="flex flex-col gap-hm-12">
           <h2 className="m-0 text-hm-eyebrow text-hm-ink-2 uppercase">Tools</h2>
-          <div className="grid grid-cols-2 gap-hm-12">
+          <div className="grid grid-cols-3 gap-hm-12">
             {TOOL_OPTIONS.map(({ tool: option, label, icon: Icon }) => (
               <button
                 key={option}
@@ -271,21 +272,6 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
                 {label}
               </button>
             ))}
-            <button
-              type="button"
-              aria-pressed={tool === 'sticker'}
-              onClick={() => setTool('sticker')}
-              className={cn(
-                tile,
-                'col-span-2 h-[calc(6.5rem*var(--hm-density))]',
-                tool === 'sticker'
-                  ? 'border-hm-accent bg-hm-accent-soft text-hm-accent'
-                  : 'border-hm-line text-hm-ink-2',
-              )}
-            >
-              <Sticker aria-hidden className="size-hm-40" strokeWidth={1.75} />
-              Stickers
-            </button>
           </div>
         </section>
 

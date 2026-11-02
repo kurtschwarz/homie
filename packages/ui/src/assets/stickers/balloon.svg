@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 -10 120 120" width="120" height="120" stroke-linecap="round" stroke-linejoin="round">
+  <title>Balloon sticker</title>
+  <g>
+  <path d="M50 80Q42 87 50 95" fill="none" stroke="#FFFFFF" stroke-width="14.5"/>
+  <path d="M50 8C74 8 84 28 84 42C84 62 66 76 50 76C34 76 16 62 16 42C16 28 26 8 50 8Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="15"/>
+  <path d="M45 81L55 81L50 75Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="12"/>
+  <path d="M30 32Q34 22 44 19" fill="none" stroke="#FFFFFF" stroke-width="17"/>
+  </g>
+  <path d="M50 80Q42 87 50 95" fill="none" stroke="#6B7280" stroke-width="2.5"/>
+  <path d="M50 8C74 8 84 28 84 42C84 62 66 76 50 76C34 76 16 62 16 42C16 28 26 8 50 8Z" fill="#3E8EDE" stroke="#2B6FB8" stroke-width="3"/>
+  <path d="M45 81L55 81L50 75Z" fill="#2B6FB8"/>
+  <path d="M30 32Q34 22 44 19" fill="none" stroke="#A9D0F5" stroke-width="5"/>
+</svg>

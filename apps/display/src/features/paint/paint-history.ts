@@ -5,6 +5,7 @@ export type PaintRecord =
   | ({ kind: 'stroke'; points: Point[] } & StrokeSpec)
   | { kind: 'clear' }
   | { kind: 'fill'; x: number; y: number; color: string }
+  | { kind: 'sticker'; x: number; y: number; size: number; image: CanvasImageSource }
 
 export type PaintHistoryDeps = {
   maxDepth: number
@@ -18,7 +19,7 @@ export type PaintHistoryDeps = {
 
 function leavesMarks(record: PaintRecord, before: boolean) {
   if (record.kind === 'clear') return false
-  if (record.kind === 'fill') return true
+  if (record.kind === 'fill' || record.kind === 'sticker') return true
   return record.tool === 'eraser' ? before : true
 }
 

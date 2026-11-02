@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 -10 120 120" width="120" height="120" stroke-linecap="round" stroke-linejoin="round">
+  <title>Smiley sticker</title>
+  <g>
+  <path d="M6 50a44 44 0 1 0 88 0a44 44 0 1 0 -88 0Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="16"/>
+  <path d="M33 40a4 7 0 1 0 8 0a4 7 0 1 0 -8 0Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="12"/>
+  <path d="M59 40a4 7 0 1 0 8 0a4 7 0 1 0 -8 0Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="12"/>
+  <path d="M19 58a6 6 0 1 0 12 0a6 6 0 1 0 -12 0Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="12"/>
+  <path d="M69 58a6 6 0 1 0 12 0a6 6 0 1 0 -12 0Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="12"/>
+  <path d="M31 58Q50 78 69 58" fill="none" stroke="#FFFFFF" stroke-width="17"/>
+  </g>
+  <path d="M6 50a44 44 0 1 0 88 0a44 44 0 1 0 -88 0Z" fill="#F6C445" stroke="#E3A21E" stroke-width="4"/>
+  <path d="M33 40a4 7 0 1 0 8 0a4 7 0 1 0 -8 0Z" fill="#5A3B0A"/>
+  <path d="M59 40a4 7 0 1 0 8 0a4 7 0 1 0 -8 0Z" fill="#5A3B0A"/>
+  <path d="M19 58a6 6 0 1 0 12 0a6 6 0 1 0 -12 0Z" fill="#F2A36B"/>
+  <path d="M69 58a6 6 0 1 0 12 0a6 6 0 1 0 -12 0Z" fill="#F2A36B"/>
+  <path d="M31 58Q50 78 69 58" fill="none" stroke="#5A3B0A" stroke-width="5"/>
+</svg>

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 -10 120 120" width="120" height="120" stroke-linecap="round" stroke-linejoin="round">
+  <title>Sun sticker</title>
+  <g>
+  <path d="M82 50L94 50M72.6 72.6L81.1 81.1M50 82L50 94M27.4 72.6L18.9 81.1M18 50L6 50M27.4 27.4L18.9 18.9M50 18L50 6M72.6 27.4L81.1 18.9" fill="none" stroke="#FFFFFF" stroke-width="19"/>
+  <path d="M24 50a26 26 0 1 0 52 0a26 26 0 1 0 -52 0Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="15"/>
+  <path d="M39 47a3 3 0 1 0 6 0a3 3 0 1 0 -6 0Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="12"/>
+  <path d="M55 47a3 3 0 1 0 6 0a3 3 0 1 0 -6 0Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="12"/>
+  <path d="M42 57Q50 64 58 57" fill="none" stroke="#FFFFFF" stroke-width="15"/>
+  </g>
+  <path d="M82 50L94 50M72.6 72.6L81.1 81.1M50 82L50 94M27.4 72.6L18.9 81.1M18 50L6 50M27.4 27.4L18.9 18.9M50 18L50 6M72.6 27.4L81.1 18.9" fill="none" stroke="#F28C28" stroke-width="7"/>
+  <path d="M24 50a26 26 0 1 0 52 0a26 26 0 1 0 -52 0Z" fill="#F6C445" stroke="#F28C28" stroke-width="3"/>
+  <path d="M39 47a3 3 0 1 0 6 0a3 3 0 1 0 -6 0Z" fill="#7A4A0A"/>
+  <path d="M55 47a3 3 0 1 0 6 0a3 3 0 1 0 -6 0Z" fill="#7A4A0A"/>
+  <path d="M42 57Q50 64 58 57" fill="none" stroke="#7A4A0A" stroke-width="3"/>
+</svg>

@@ -1,4 +1,4 @@
-export type Tool = 'brush' | 'rainbow' | 'eraser' | 'fill'
+export type Tool = 'brush' | 'rainbow' | 'eraser' | 'fill' | 'sticker'
 
 export type Point = { x: number; y: number }
 

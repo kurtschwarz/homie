@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 -10 120 120" width="120" height="120" stroke-linecap="round" stroke-linejoin="round">
+  <title>Lightning sticker</title>
+  <g>
+  <path d="M58 6L20 56L46 56L38 94L80 40L54 40Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="16"/>
+  </g>
+  <path d="M58 6L20 56L46 56L38 94L80 40L54 40Z" fill="#F28C28" stroke="#D0631A" stroke-width="4"/>
+</svg>

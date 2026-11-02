@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 -10 120 120" width="120" height="120" stroke-linecap="round" stroke-linejoin="round">
+  <title>Heart sticker</title>
+  <g>
+  <path d="M50 88C20 68 6 50 10 32C14 15 35 11 50 28C65 11 86 15 90 32C94 50 80 68 50 88Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="15"/>
+  <path d="M24 34Q27 24 37 24" fill="none" stroke="#FFFFFF" stroke-width="17"/>
+  </g>
+  <path d="M50 88C20 68 6 50 10 32C14 15 35 11 50 28C65 11 86 15 90 32C94 50 80 68 50 88Z" fill="#E2402A" stroke="#B92C1B" stroke-width="3"/>
+  <path d="M24 34Q27 24 37 24" fill="none" stroke="#F59A8E" stroke-width="5"/>
+</svg>

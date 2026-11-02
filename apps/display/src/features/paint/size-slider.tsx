@@ -80,8 +80,8 @@ export function SizeSlider({
     >
       <div className="absolute inset-x-hm-32 top-1/2 h-hm-8 -translate-y-1/2 rounded-hm-3 bg-hm-line" />
       <div
-        className="absolute left-hm-32 top-1/2 h-hm-8 -translate-y-1/2 rounded-hm-3 bg-hm-accent"
-        style={{ width: `calc(${along(value)} - ${INSET})` }}
+        className="absolute left-hm-32 top-1/2 h-hm-8 -translate-y-1/2 rounded-hm-3"
+        style={{ width: `calc(${along(value)} - ${INSET})`, background: color }}
       />
       {BRUSH_SNAPS.map((snap) => (
         <span

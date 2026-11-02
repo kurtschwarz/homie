@@ -27,6 +27,7 @@ import { MusicPlayer } from './music-player'
 import { loadLastMix, loadPalette, saveLastMix, savePalette } from './palette'
 import { canvasToJpeg, uploadDrawing } from './save-drawing'
 import { SizeSlider } from './size-slider'
+import { DEFAULT_STICKER_ID, stickerSize, useStickers } from './stickers'
 import { BRUSH_DEFAULT, COLOURS, effectiveBrushWidth, type Tool } from './tools'
 import { useArtists } from './use-artists'
 import { usePaintCanvas } from './use-paint-canvas'
@@ -45,7 +46,7 @@ const TOOL_OPTIONS: {
   { tool: 'fill', label: 'Fill', icon: PaintBucket },
   { tool: 'rainbow', label: 'Rainbow', icon: Rainbow },
   { tool: 'eraser', label: 'Eraser', icon: Eraser },
-  { tool: null, label: 'Stickers', icon: Sticker, disabled: true },
+  { tool: 'sticker', label: 'Stickers', icon: Sticker },
   { tool: null, label: 'More', icon: Ellipsis, disabled: true },
 ]
 
@@ -97,6 +98,9 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
     document.addEventListener('pointerdown', dismiss, true)
     return () => document.removeEventListener('pointerdown', dismiss, true)
   }, [settingsOpen])
+  const stickers = useStickers()
+  const [stickerId, setStickerId] = React.useState(DEFAULT_STICKER_ID)
+  const activeSticker = stickers.find((item) => item.id === stickerId) ?? stickers[0]
   const { canvasRef, dirty, canUndo, undo, clear, handlers } = usePaintCanvas(
     {
       tool,
@@ -104,7 +108,7 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
       size: effectiveBrushWidth(tool, size),
       smooth,
     },
-    null,
+    activeSticker ? { image: activeSticker.image, size: stickerSize(size) } : null,
   )
 
   const { data: artists = [] } = useArtists()
@@ -288,69 +292,94 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
         </div>
       </aside>
 
-      <div className="relative flex min-w-0 items-center justify-center gap-hm-12 rounded-[calc(1.625rem*var(--hm-density))] bg-white px-hm-20 py-hm-16 shadow-[0_0_0_1px_var(--hm-line),0_calc(0.5rem*var(--hm-density))_calc(1.5rem*var(--hm-density))_rgba(0,0,0,.08)]">
-        {COLOURS.map(({ name, value }) => (
-          <button
-            key={value}
-            type="button"
-            aria-label={name}
-            aria-pressed={color === value}
-            onClick={() => {
-              setColor(value)
-              if (tool === 'eraser') setTool('brush')
-            }}
-            className={cn(
-              swatch,
-              value === '#ffffff' && 'shadow-[inset_0_0_0_1px_var(--hm-line)]',
-              color === value && 'outline-3 outline-offset-3 outline-hm-accent',
-            )}
-            style={{ background: value }}
-          />
-        ))}
-        <div className="relative flex-none">
-          {mixOpen && (
-            <MixPanel
-              initial={lastMix ?? color}
-              palette={palette}
-              onPaletteChange={changePalette}
-              onUse={applyMix}
-              onClose={closeMix}
-              anchorRef={pickerRef}
-            />
+      <div className="relative flex min-w-0 items-center gap-hm-12 rounded-[calc(1.625rem*var(--hm-density))] bg-white px-hm-20 py-hm-16 shadow-[0_0_0_1px_var(--hm-line),0_calc(0.5rem*var(--hm-density))_calc(1.5rem*var(--hm-density))_rgba(0,0,0,.08)]">
+        <div className="flex min-w-0 flex-1 items-center justify-center gap-hm-12">
+          {tool === 'sticker' ? (
+            stickers.map(({ id, name, url }) => (
+              <button
+                key={id}
+                type="button"
+                aria-label={name}
+                aria-pressed={activeSticker?.id === id}
+                onClick={() => setStickerId(id)}
+                className={cn(
+                  swatch,
+                  'rounded-hm-20 bg-white p-hm-8',
+                  activeSticker?.id === id
+                    ? 'bg-hm-accent-soft shadow-[inset_0_0_0_calc(0.1875rem*var(--hm-density))_var(--hm-accent)]'
+                    : 'shadow-[inset_0_0_0_1px_var(--hm-line)]',
+                )}
+              >
+                <img aria-hidden alt="" src={url} className="size-full object-contain" />
+              </button>
+            ))
+          ) : (
+            <>
+              {COLOURS.map(({ name, value }) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-label={name}
+                  aria-pressed={color === value}
+                  onClick={() => {
+                    setColor(value)
+                    if (tool === 'eraser') setTool('brush')
+                  }}
+                  className={cn(
+                    swatch,
+                    value === '#ffffff' && 'shadow-[inset_0_0_0_1px_var(--hm-line)]',
+                    color === value && 'outline-3 outline-offset-3 outline-hm-accent',
+                  )}
+                  style={{ background: value }}
+                />
+              ))}
+              <div className="relative flex-none">
+                {mixOpen && (
+                  <MixPanel
+                    initial={lastMix ?? color}
+                    palette={palette}
+                    onPaletteChange={changePalette}
+                    onUse={applyMix}
+                    onClose={closeMix}
+                    anchorRef={pickerRef}
+                  />
+                )}
+                <button
+                  ref={pickerRef}
+                  type="button"
+                  aria-label="Mix your own colour"
+                  aria-expanded={mixOpen}
+                  aria-pressed={lastMix !== null && color === lastMix}
+                  onClick={() => setMixOpen((open) => !open)}
+                  className={cn(
+                    swatch,
+                    'relative flex items-center justify-center p-0',
+                    lastMix !== null &&
+                      color === lastMix &&
+                      'outline-3 outline-offset-3 outline-hm-accent',
+                  )}
+                  style={{ background: lastMix ?? RAINBOW }}
+                >
+                  {lastMix === null ? (
+                    <span
+                      aria-hidden
+                      className="flex size-hm-28 items-center justify-center rounded-full bg-white text-hm-ink shadow-hm-raised"
+                    >
+                      <Plus aria-hidden className="size-hm-20" strokeWidth={2.5} />
+                    </span>
+                  ) : (
+                    <span
+                      aria-hidden
+                      className="absolute -right-hm-4 -bottom-hm-4 flex size-hm-36 items-center justify-center rounded-full border-2 border-white text-white shadow-hm-raised"
+                      style={{ background: RAINBOW }}
+                    >
+                      <Plus aria-hidden className="size-hm-20" strokeWidth={3} />
+                    </span>
+                  )}
+                </button>
+              </div>
+            </>
           )}
-          <button
-            ref={pickerRef}
-            type="button"
-            aria-label="Mix your own colour"
-            aria-expanded={mixOpen}
-            aria-pressed={lastMix !== null && color === lastMix}
-            onClick={() => setMixOpen((open) => !open)}
-            className={cn(
-              swatch,
-              'relative flex items-center justify-center p-0',
-              lastMix !== null &&
-                color === lastMix &&
-                'outline-3 outline-offset-3 outline-hm-accent',
-            )}
-            style={{ background: lastMix ?? RAINBOW }}
-          >
-            {lastMix === null ? (
-              <span
-                aria-hidden
-                className="flex size-hm-28 items-center justify-center rounded-full bg-white text-hm-ink shadow-hm-raised"
-              >
-                <Plus aria-hidden className="size-hm-20" strokeWidth={2.5} />
-              </span>
-            ) : (
-              <span
-                aria-hidden
-                className="absolute -right-hm-4 -bottom-hm-4 flex size-hm-36 items-center justify-center rounded-full border-2 border-white text-white shadow-hm-raised"
-                style={{ background: RAINBOW }}
-              >
-                <Plus aria-hidden className="size-hm-20" strokeWidth={3} />
-              </span>
-            )}
-          </button>
         </div>
         <span aria-hidden className="mx-hm-8 h-hm-76 w-[2px] flex-none rounded-full bg-hm-line" />
         <SizeSlider

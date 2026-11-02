@@ -33,8 +33,10 @@ export const STICKER_ART: StickerArt[] = [
 
 export const DEFAULT_STICKER_ID = 'star'
 
-/** Sticker edge length in CSS px for each size tile. */
-export const STICKER_PX = { small: 90, medium: 160, large: 260 }
+/** Sticker edge length in CSS px for a brush width, so the slider sizes stickers too. */
+export function stickerSize(width: number) {
+  return Math.round(90 + (width - 6) * 7)
+}
 
 async function decode({ url, ...art }: StickerArt): Promise<Sticker | null> {
   const image = new Image()

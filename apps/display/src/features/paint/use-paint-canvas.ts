@@ -34,8 +34,28 @@ function fillAt(
   return changed
 }
 
+type StickerDrag = {
+  id: number
+  snapshot: HTMLCanvasElement
+  point: Point
+  image: CanvasImageSource
+  size: number
+}
+
+export type StickerBrush = { image: CanvasImageSource; size: number }
+
+function drawSticker(
+  ctx: CanvasRenderingContext2D,
+  { x, y, size, image }: { x: number; y: number; size: number; image: CanvasImageSource },
+) {
+  ctx.globalCompositeOperation = 'source-over'
+  ctx.drawImage(image, x - size / 2, y - size / 2, size, size)
+}
+
 function applyRecord(ctx: CanvasRenderingContext2D, record: PaintRecord) {
-  if (record.kind === 'clear') {
+  if (record.kind === 'sticker') {
+    drawSticker(ctx, record)
+  } else if (record.kind === 'clear') {
     ctx.globalCompositeOperation = 'source-over'
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
   } else if (record.kind === 'fill') {
@@ -45,10 +65,13 @@ function applyRecord(ctx: CanvasRenderingContext2D, record: PaintRecord) {
   }
 }
 
-export function usePaintCanvas(brush: StrokeSpec) {
+export function usePaintCanvas(brush: StrokeSpec, sticker: StickerBrush | null) {
   const canvasRef = React.useRef<HTMLCanvasElement>(null)
   const brushRef = React.useRef(brush)
   brushRef.current = brush
+  const stickerRef = React.useRef(sticker)
+  stickerRef.current = sticker
+  const drag = React.useRef<StickerDrag | null>(null)
   const baselineRef = React.useRef<HTMLCanvasElement | null>(null)
   const stroke = React.useRef<ActiveStroke | null>(null)
   const [dirty, setDirty] = React.useState(false)
@@ -100,6 +123,7 @@ export function usePaintCanvas(brush: StrokeSpec) {
       baseline.width = w
       baseline.height = h
       stroke.current = null
+      drag.current = null
       history.reset()
       sync()
     }
@@ -110,6 +134,7 @@ export function usePaintCanvas(brush: StrokeSpec) {
       observer.disconnect()
       baselineRef.current = null
       stroke.current = null
+      drag.current = null
       history.reset()
     }
   }, [history, sync])
@@ -123,11 +148,28 @@ export function usePaintCanvas(brush: StrokeSpec) {
   }
 
   const onPointerDown = (event: React.PointerEvent<HTMLCanvasElement>) => {
-    if (stroke.current) return
+    if (stroke.current || drag.current) return
     const canvas = event.currentTarget
     const ctx = context(canvas)
     if (!ctx) return
     const { tool, color, size, smooth } = brushRef.current
+
+    if (tool === 'sticker') {
+      const brushSticker = stickerRef.current
+      if (!brushSticker) return
+      canvas.setPointerCapture(event.pointerId)
+      const snapshot = document.createElement('canvas')
+      snapshot.width = canvas.width
+      snapshot.height = canvas.height
+      context(snapshot)?.drawImage(canvas, 0, 0)
+      const ratio = canvas.width / canvas.getBoundingClientRect().width
+      const point = pointAt(canvas, event.clientX, event.clientY)
+      const placed = { image: brushSticker.image, size: brushSticker.size * ratio }
+      drag.current = { id: event.pointerId, snapshot, point, ...placed }
+      drawSticker(ctx, { ...point, ...placed })
+      setDirty(true)
+      return
+    }
 
     if (tool === 'fill') {
       const point = pointAt(canvas, event.clientX, event.clientY)
@@ -151,6 +193,18 @@ export function usePaintCanvas(brush: StrokeSpec) {
   }
 
   const onPointerMove = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    const dragging = drag.current
+    if (dragging && dragging.id === event.pointerId) {
+      const canvas = event.currentTarget
+      const ctx = context(canvas)
+      if (!ctx) return
+      dragging.point = pointAt(canvas, event.clientX, event.clientY)
+      ctx.globalCompositeOperation = 'source-over'
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      ctx.drawImage(dragging.snapshot, 0, 0)
+      drawSticker(ctx, { ...dragging.point, image: dragging.image, size: dragging.size })
+      return
+    }
     const current = stroke.current
     if (!current || current.id !== event.pointerId) return
     const canvas = event.currentTarget
@@ -163,6 +217,18 @@ export function usePaintCanvas(brush: StrokeSpec) {
   }
 
   const onPointerEnd = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    const dragging = drag.current
+    if (dragging?.id === event.pointerId) {
+      drag.current = null
+      history.push({
+        kind: 'sticker',
+        ...dragging.point,
+        size: dragging.size,
+        image: dragging.image,
+      })
+      sync()
+      return
+    }
     const current = stroke.current
     if (current?.id !== event.pointerId) return
     stroke.current = null
@@ -172,14 +238,14 @@ export function usePaintCanvas(brush: StrokeSpec) {
   }
 
   const undo = () => {
-    if (stroke.current) return
+    if (stroke.current || drag.current) return
     if (history.undo()) sync()
   }
 
   const clear = () => {
     const canvas = canvasRef.current
     const ctx = context(canvas)
-    if (!canvas || !ctx || stroke.current || !history.hasMarks) return
+    if (!canvas || !ctx || stroke.current || drag.current || !history.hasMarks) return
     ctx.globalCompositeOperation = 'source-over'
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     history.push({ kind: 'clear' })

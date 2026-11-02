@@ -14,6 +14,7 @@ import {
   Rainbow,
   SlidersHorizontal,
   Spline,
+  Sticker,
   Trash2,
   Undo2,
   X,
@@ -23,6 +24,7 @@ import { Confetti } from './confetti'
 import { MixPanel } from './mix-panel'
 import { loadLastMix, loadPalette, saveLastMix, savePalette } from './palette'
 import { canvasToJpeg, uploadDrawing } from './save-drawing'
+import { DEFAULT_STICKER_ID, STICKER_PX, useStickers } from './stickers'
 import { COLOURS, SIZE_PX, type SizeName, type Tool } from './tools'
 import { useArtists } from './use-artists'
 import { usePaintCanvas } from './use-paint-canvas'
@@ -86,12 +88,18 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
     document.addEventListener('pointerdown', dismiss, true)
     return () => document.removeEventListener('pointerdown', dismiss, true)
   }, [settingsOpen])
-  const { canvasRef, dirty, canUndo, undo, clear, handlers } = usePaintCanvas({
-    tool,
-    color,
-    size: SIZE_PX[size],
-    smooth,
-  })
+  const stickers = useStickers()
+  const [stickerId, setStickerId] = React.useState(DEFAULT_STICKER_ID)
+  const activeSticker = stickers.find((item) => item.id === stickerId) ?? stickers[0]
+  const { canvasRef, dirty, canUndo, undo, clear, handlers } = usePaintCanvas(
+    {
+      tool,
+      color,
+      size: SIZE_PX[size],
+      smooth,
+    },
+    activeSticker ? { image: activeSticker.image, size: STICKER_PX[size] } : null,
+  )
 
   const { data: artists = [] } = useArtists()
   const [artistId, setArtistId] = React.useState<string | null>(null)
@@ -263,6 +271,21 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
                 {label}
               </button>
             ))}
+            <button
+              type="button"
+              aria-pressed={tool === 'sticker'}
+              onClick={() => setTool('sticker')}
+              className={cn(
+                tile,
+                'col-span-2 h-[calc(6.5rem*var(--hm-density))]',
+                tool === 'sticker'
+                  ? 'border-hm-accent bg-hm-accent-soft text-hm-accent'
+                  : 'border-hm-line text-hm-ink-2',
+              )}
+            >
+              <Sticker aria-hidden className="size-hm-40" strokeWidth={1.75} />
+              Stickers
+            </button>
           </div>
         </section>
 
@@ -282,80 +305,117 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
                   size === option ? 'border-hm-accent bg-hm-accent-soft' : 'border-hm-line',
                 )}
               >
-                <span
-                  aria-hidden
-                  className={cn('rounded-full', dot)}
-                  style={{ background: tool === 'eraser' ? 'var(--hm-ink-3)' : color }}
-                />
+                {tool === 'sticker' && activeSticker ? (
+                  <img
+                    aria-hidden
+                    alt=""
+                    src={activeSticker.url}
+                    className={cn('object-contain', dot)}
+                  />
+                ) : (
+                  <span
+                    aria-hidden
+                    className={cn('rounded-full', dot)}
+                    style={{ background: tool === 'eraser' ? 'var(--hm-ink-3)' : color }}
+                  />
+                )}
               </button>
             ))}
           </div>
         </section>
 
-        <section className="flex flex-col gap-hm-12">
-          <h2 className="m-0 text-hm-eyebrow text-hm-ink-2 uppercase">Colours</h2>
-          {mixOpen && (
-            <MixPanel
-              initial={lastMix ?? color}
-              palette={palette}
-              onPaletteChange={changePalette}
-              onUse={applyMix}
-              onClose={closeMix}
-              anchorRef={pickerRef}
-            />
-          )}
-          <div className="grid grid-cols-4 gap-hm-12">
-            {COLOURS.map(({ name, value }) => (
-              <button
-                key={value}
-                type="button"
-                aria-label={name}
-                aria-pressed={color === value}
-                onClick={() => {
-                  setColor(value)
-                  if (tool === 'eraser') setTool('brush')
-                }}
-                className={cn(
-                  'aspect-square cursor-pointer rounded-full border border-hm-line [-webkit-tap-highlight-color:transparent] active:scale-(--hm-press-scale)',
-                  color === value && 'outline-3 outline-offset-3 outline-hm-accent',
-                )}
-                style={{ background: value }}
+        {tool === 'sticker' ? (
+          <section className="flex flex-col gap-hm-12">
+            <h2 className="m-0 text-hm-eyebrow text-hm-ink-2 uppercase">
+              Stickers · Press and drag to place
+            </h2>
+            <div className="grid grid-cols-4 gap-hm-12">
+              {stickers.map(({ id, name, url }) => (
+                <button
+                  key={id}
+                  type="button"
+                  aria-label={name}
+                  aria-pressed={activeSticker?.id === id}
+                  onClick={() => setStickerId(id)}
+                  className={cn(
+                    tile,
+                    'aspect-square p-hm-6',
+                    activeSticker?.id === id
+                      ? 'border-hm-accent bg-hm-accent-soft'
+                      : 'border-hm-line',
+                  )}
+                >
+                  <img aria-hidden alt="" src={url} className="size-full object-contain" />
+                </button>
+              ))}
+            </div>
+          </section>
+        ) : (
+          <section className="flex flex-col gap-hm-12">
+            <h2 className="m-0 text-hm-eyebrow text-hm-ink-2 uppercase">Colours</h2>
+            {mixOpen && (
+              <MixPanel
+                initial={lastMix ?? color}
+                palette={palette}
+                onPaletteChange={changePalette}
+                onUse={applyMix}
+                onClose={closeMix}
+                anchorRef={pickerRef}
               />
-            ))}
-            <button
-              ref={pickerRef}
-              type="button"
-              aria-label="Mix your own colour"
-              aria-expanded={mixOpen}
-              aria-pressed={lastMix !== null && color === lastMix}
-              onClick={() => setMixOpen((open) => !open)}
-              className={cn(
-                'relative flex aspect-square cursor-pointer items-center justify-center rounded-full border-2 border-white p-0 [-webkit-tap-highlight-color:transparent] active:scale-(--hm-press-scale)',
-                lastMix !== null &&
-                  color === lastMix &&
-                  'outline-3 outline-offset-3 outline-hm-accent',
-              )}
-              style={{ background: lastMix ?? RAINBOW }}
-            >
-              {lastMix === null ? (
-                <span
-                  aria-hidden
-                  className="flex size-hm-28 items-center justify-center rounded-full bg-white text-hm-ink shadow-hm-raised"
-                >
-                  <Plus aria-hidden className="size-hm-20" strokeWidth={2.5} />
-                </span>
-              ) : (
-                <span
-                  aria-hidden
-                  className="absolute -right-hm-4 -bottom-hm-4 flex size-hm-36 items-center justify-center rounded-full border-2 border-white text-white shadow-hm-raised"
-                  style={{ background: RAINBOW }}
-                >
-                  <Plus aria-hidden className="size-hm-20" strokeWidth={3} />
-                </span>
-              )}
-            </button>
-          </div>
-        </section>
+            )}
+            <div className="grid grid-cols-4 gap-hm-12">
+              {COLOURS.map(({ name, value }) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-label={name}
+                  aria-pressed={color === value}
+                  onClick={() => {
+                    setColor(value)
+                    if (tool === 'eraser') setTool('brush')
+                  }}
+                  className={cn(
+                    'aspect-square cursor-pointer rounded-full border border-hm-line [-webkit-tap-highlight-color:transparent] active:scale-(--hm-press-scale)',
+                    color === value && 'outline-3 outline-offset-3 outline-hm-accent',
+                  )}
+                  style={{ background: value }}
+                />
+              ))}
+              <button
+                ref={pickerRef}
+                type="button"
+                aria-label="Mix your own colour"
+                aria-expanded={mixOpen}
+                aria-pressed={lastMix !== null && color === lastMix}
+                onClick={() => setMixOpen((open) => !open)}
+                className={cn(
+                  'relative flex aspect-square cursor-pointer items-center justify-center rounded-full border-2 border-white p-0 [-webkit-tap-highlight-color:transparent] active:scale-(--hm-press-scale)',
+                  lastMix !== null &&
+                    color === lastMix &&
+                    'outline-3 outline-offset-3 outline-hm-accent',
+                )}
+                style={{ background: lastMix ?? RAINBOW }}
+              >
+                {lastMix === null ? (
+                  <span
+                    aria-hidden
+                    className="flex size-hm-28 items-center justify-center rounded-full bg-white text-hm-ink shadow-hm-raised"
+                  >
+                    <Plus aria-hidden className="size-hm-20" strokeWidth={2.5} />
+                  </span>
+                ) : (
+                  <span
+                    aria-hidden
+                    className="absolute -right-hm-4 -bottom-hm-4 flex size-hm-36 items-center justify-center rounded-full border-2 border-white text-white shadow-hm-raised"
+                    style={{ background: RAINBOW }}
+                  >
+                    <Plus aria-hidden className="size-hm-20" strokeWidth={3} />
+                  </span>
+                )}
+              </button>
+            </div>
+          </section>
+        )}
 
         <div className="mt-auto flex flex-col gap-hm-12">
           <div className="grid grid-cols-2 gap-hm-12">

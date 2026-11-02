@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 -10 120 120" width="120" height="120" stroke-linecap="round" stroke-linejoin="round">
+  <title>Crown sticker</title>
+  <g>
+  <path d="M12 80L16 32L34 54L50 22L66 54L84 32L88 80Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="16"/>
+  <path d="M11 30a5 5 0 1 0 10 0a5 5 0 1 0 -10 0Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="15"/>
+  <path d="M45 20a5 5 0 1 0 10 0a5 5 0 1 0 -10 0Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="15"/>
+  <path d="M79 30a5 5 0 1 0 10 0a5 5 0 1 0 -10 0Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="15"/>
+  <path d="M27 68a5 5 0 1 0 10 0a5 5 0 1 0 -10 0Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="12"/>
+  <path d="M45 68a5 5 0 1 0 10 0a5 5 0 1 0 -10 0Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="12"/>
+  <path d="M63 68a5 5 0 1 0 10 0a5 5 0 1 0 -10 0Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="12"/>
+  </g>
+  <path d="M12 80L16 32L34 54L50 22L66 54L84 32L88 80Z" fill="#F6C445" stroke="#E3A21E" stroke-width="4"/>
+  <path d="M11 30a5 5 0 1 0 10 0a5 5 0 1 0 -10 0Z" fill="#F6C445" stroke="#E3A21E" stroke-width="3"/>
+  <path d="M45 20a5 5 0 1 0 10 0a5 5 0 1 0 -10 0Z" fill="#F6C445" stroke="#E3A21E" stroke-width="3"/>
+  <path d="M79 30a5 5 0 1 0 10 0a5 5 0 1 0 -10 0Z" fill="#F6C445" stroke="#E3A21E" stroke-width="3"/>
+  <path d="M27 68a5 5 0 1 0 10 0a5 5 0 1 0 -10 0Z" fill="#E2402A"/>
+  <path d="M45 68a5 5 0 1 0 10 0a5 5 0 1 0 -10 0Z" fill="#3E8EDE"/>
+  <path d="M63 68a5 5 0 1 0 10 0a5 5 0 1 0 -10 0Z" fill="#4CBF8C"/>
+</svg>

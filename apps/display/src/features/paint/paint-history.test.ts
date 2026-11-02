@@ -103,3 +103,37 @@ describe('paint history', () => {
     expect(history.hasMarks).toBe(false)
   })
 })
+
+describe('paint history stickers', () => {
+  const sticker: PaintRecord = {
+    kind: 'sticker',
+    x: 5,
+    y: 5,
+    size: 100,
+    image: {} as CanvasImageSource,
+  }
+
+  it('counts a sticker as a mark and undoes it', () => {
+    const { history } = setup()
+    history.push(sticker)
+    expect(history.hasMarks).toBe(true)
+    history.undo()
+    expect(history.hasMarks).toBe(false)
+  })
+
+  it('replays a sticker after undoing a later record', () => {
+    const { history, replayed } = setup()
+    history.push(sticker)
+    history.push(stroke())
+    history.undo()
+    expect(replayed).toEqual([sticker])
+  })
+
+  it('bakes a sticker when evicted and keeps the marks', () => {
+    const { history, baked } = setup(1)
+    history.push(sticker)
+    history.push(stroke('eraser'))
+    expect(baked).toEqual([sticker])
+    expect(history.hasMarks).toBe(true)
+  })
+})

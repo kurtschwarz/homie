@@ -2,9 +2,37 @@ export type Tool = 'brush' | 'rainbow' | 'eraser' | 'fill' | 'sticker'
 
 export type Point = { x: number; y: number }
 
-export type SizeName = 'small' | 'medium' | 'large'
+export const BRUSH_MIN = 2
+export const BRUSH_MAX = 80
+export const BRUSH_DEFAULT = 22
+export const BRUSH_SNAPS = [6, 10, 22, 40, 64]
 
-export const SIZE_PX: Record<SizeName, number> = { small: 6, medium: 14, large: 30 }
+const SNAP_RANGE = 3
+const ERASER_MAX_WIDTH = 100
+
+export function clampBrushWidth(width: number) {
+  return Math.min(BRUSH_MAX, Math.max(BRUSH_MIN, Math.round(width)))
+}
+
+/** Pulls a width onto the nearest snap target within reach; the smaller target wins a tie. */
+export function snapBrushWidth(width: number) {
+  const clamped = clampBrushWidth(width)
+  let best = clamped
+  let bestDistance = SNAP_RANGE + 1
+  for (const target of BRUSH_SNAPS) {
+    const distance = Math.abs(target - clamped)
+    if (distance <= SNAP_RANGE && distance < bestDistance) {
+      best = target
+      bestDistance = distance
+    }
+  }
+  return best
+}
+
+/** The eraser draws at twice the brush width, so its brush stops growing once it hits the cap. */
+export function effectiveBrushWidth(tool: Tool, width: number) {
+  return tool === 'eraser' ? Math.min(width, ERASER_MAX_WIDTH / 2) : width
+}
 
 export const COLOURS = [
   { name: 'Black', value: '#16171a' },

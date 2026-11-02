@@ -48,8 +48,13 @@ function drawSticker(
   ctx: CanvasRenderingContext2D,
   { x, y, size, image }: { x: number; y: number; size: number; image: CanvasImageSource },
 ) {
+  ctx.save()
   ctx.globalCompositeOperation = 'source-over'
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.3)'
+  ctx.shadowBlur = size * 0.06
+  ctx.shadowOffsetY = size * 0.03
   ctx.drawImage(image, x - size / 2, y - size / 2, size, size)
+  ctx.restore()
 }
 
 function applyRecord(ctx: CanvasRenderingContext2D, record: PaintRecord) {

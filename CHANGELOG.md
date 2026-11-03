@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/kurtschwarz/homie/compare/homie-v0.9.0...homie-v0.10.0) (2026-11-03)
+
+
+### Features
+
+* **display:** rework the paint UI around a bottom toolbar ([#108](https://github.com/kurtschwarz/homie/issues/108)) ([162214d](https://github.com/kurtschwarz/homie/commit/162214d6f88d88f0266bef03168fd53e3959594b))
+
 ## [0.9.0](https://github.com/kurtschwarz/homie/compare/homie-v0.8.1...homie-v0.9.0) (2026-11-02)
 
 

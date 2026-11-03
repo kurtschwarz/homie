@@ -1,5 +1,50 @@
 import { describe, expect, it } from 'vitest'
-import { nextSegmentStyle, paintCurve, startStroke } from './tools'
+import {
+  BRUSH_MAX,
+  BRUSH_MIN,
+  clampBrushWidth,
+  effectiveBrushWidth,
+  nextSegmentStyle,
+  paintCurve,
+  snapBrushWidth,
+  startStroke,
+} from './tools'
+
+describe('snapBrushWidth', () => {
+  it('snaps to a target within 3', () => {
+    expect(snapBrushWidth(8)).toBe(6)
+    expect(snapBrushWidth(24)).toBe(22)
+    expect(snapBrushWidth(43)).toBe(40)
+    expect(snapBrushWidth(61)).toBe(64)
+  })
+
+  it('leaves in-between widths alone', () => {
+    expect(snapBrushWidth(15)).toBe(15)
+    expect(snapBrushWidth(30)).toBe(30)
+    expect(snapBrushWidth(44)).toBe(44)
+  })
+
+  it('lets the smaller target win a tie', () => {
+    expect(snapBrushWidth(8)).toBe(6)
+  })
+
+  it('clamps to the brush range', () => {
+    expect(snapBrushWidth(-10)).toBe(BRUSH_MIN)
+    expect(snapBrushWidth(500)).toBe(BRUSH_MAX)
+    expect(clampBrushWidth(3.6)).toBe(4)
+  })
+})
+
+describe('effectiveBrushWidth', () => {
+  it('caps the eraser so it draws at most 100', () => {
+    expect(effectiveBrushWidth('eraser', 80)).toBe(50)
+    expect(effectiveBrushWidth('eraser', 20)).toBe(20)
+  })
+
+  it('leaves other tools alone', () => {
+    expect(effectiveBrushWidth('brush', 80)).toBe(80)
+  })
+})
 
 describe('paintCurve', () => {
   it('draws a quadratic curve through the control point', () => {

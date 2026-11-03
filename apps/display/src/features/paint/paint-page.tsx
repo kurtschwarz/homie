@@ -7,6 +7,7 @@ import { useIdle } from '@homie/ui/hooks/use-idle'
 import { cn } from '@homie/ui/lib/utils'
 import {
   Check,
+  Ellipsis,
   Eraser,
   PaintBucket,
   Paintbrush,
@@ -20,12 +21,14 @@ import {
   X,
 } from 'lucide-react'
 import * as React from 'react'
+import { MixPanel } from './components/mix-panel'
+import { MusicPlayer } from './components/music-player'
+import { SizeSlider } from './components/size-slider'
 import { Confetti } from './confetti'
-import { MixPanel } from './mix-panel'
 import { loadLastMix, loadPalette, saveLastMix, savePalette } from './palette'
 import { canvasToJpeg, uploadDrawing } from './save-drawing'
-import { DEFAULT_STICKER_ID, STICKER_PX, useStickers } from './stickers'
-import { COLOURS, SIZE_PX, type SizeName, type Tool } from './tools'
+import { DEFAULT_STICKER_ID, stickerSize, useStickers } from './stickers'
+import { BRUSH_DEFAULT, COLOURS, effectiveBrushWidth, type Tool } from './tools'
 import { useArtists } from './use-artists'
 import { usePaintCanvas } from './use-paint-canvas'
 
@@ -33,26 +36,32 @@ const IDLE_MS = 3 * 60_000
 
 const RAINBOW = 'conic-gradient(#f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)'
 
-const TOOL_OPTIONS: { tool: Tool; label: string; icon: typeof Paintbrush }[] = [
+const TOOL_OPTIONS: {
+  tool: Tool | null
+  label: string
+  icon: typeof Paintbrush
+  disabled?: boolean
+}[] = [
   { tool: 'brush', label: 'Brush', icon: Paintbrush },
-  { tool: 'rainbow', label: 'Rainbow', icon: Rainbow },
   { tool: 'fill', label: 'Fill', icon: PaintBucket },
-  { tool: 'sticker', label: 'Stickers', icon: Sticker },
+  { tool: 'rainbow', label: 'Rainbow', icon: Rainbow },
   { tool: 'eraser', label: 'Eraser', icon: Eraser },
-]
-
-const SIZE_OPTIONS: { size: SizeName; dot: string }[] = [
-  { size: 'small', dot: 'size-hm-10' },
-  { size: 'medium', dot: 'size-hm-20' },
-  { size: 'large', dot: 'size-hm-36' },
+  { tool: 'sticker', label: 'Stickers', icon: Sticker },
+  { tool: null, label: 'More', icon: Ellipsis, disabled: true },
 ]
 
 const tile =
-  'flex cursor-pointer flex-col items-center justify-center gap-hm-2 rounded-hm-control leading-none border-2 bg-hm-surface text-[calc(1.125rem*var(--hm-density))] font-medium [-webkit-tap-highlight-color:transparent] active:scale-(--hm-press-scale)'
+  'flex h-[calc(6.5rem*var(--hm-density))] cursor-pointer flex-col items-center justify-center gap-hm-6 rounded-hm-20 border-0 p-0 leading-none text-[calc(1.1875rem*var(--hm-density))] font-medium [-webkit-tap-highlight-color:transparent] active:scale-(--hm-press-scale)'
+
+const swatch =
+  'size-[calc(3.875rem*var(--hm-density))] flex-none cursor-pointer rounded-full border-0 [-webkit-tap-highlight-color:transparent] active:scale-(--hm-press-scale)'
+
+const finishTile =
+  'flex cursor-pointer flex-col items-center justify-center gap-hm-6 rounded-hm-22 border-0 bg-white text-[calc(1.1875rem*var(--hm-density))] leading-none font-medium text-hm-ink shadow-hm-raised [-webkit-tap-highlight-color:transparent] active:scale-(--hm-press-scale) disabled:pointer-events-none disabled:opacity-50'
 
 export function PaintPage({ onClose }: { onClose: () => void }) {
   const [tool, setTool] = React.useState<Tool>('brush')
-  const [size, setSize] = React.useState<SizeName>('medium')
+  const [size, setSize] = React.useState(BRUSH_DEFAULT)
   const [color, setColor] = React.useState(COLOURS[7]?.value ?? '#5590db')
   const [smooth, setSmooth] = React.useState(true)
   const [settingsOpen, setSettingsOpen] = React.useState(false)
@@ -96,10 +105,10 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
     {
       tool,
       color,
-      size: SIZE_PX[size],
+      size: effectiveBrushWidth(tool, size),
       smooth,
     },
-    activeSticker ? { image: activeSticker.image, size: STICKER_PX[size] } : null,
+    activeSticker ? { image: activeSticker.image, size: stickerSize(size) } : null,
   )
 
   const { data: artists = [] } = useArtists()
@@ -150,8 +159,8 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
   useIdle(true, onClose, IDLE_MS)
 
   return (
-    <main className="fixed inset-0 flex h-dvh w-screen gap-hm-column bg-hm-shell p-hm-screen text-hm-ink">
-      <div className="relative min-w-0 flex-1 overflow-hidden rounded-hm-panel bg-white shadow-hm-float">
+    <main className="fixed inset-0 grid h-dvh w-screen grid-cols-[minmax(0,1fr)_calc(26.25rem*var(--hm-density))] grid-rows-[minmax(0,1fr)_calc(8rem*var(--hm-density))] gap-x-hm-28 gap-y-hm-24 bg-hm-surface p-hm-32 text-hm-ink">
+      <div className="relative min-w-0 overflow-hidden rounded-hm-28 bg-white">
         <canvas
           ref={canvasRef}
           aria-label="Drawing canvas"
@@ -171,19 +180,19 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
         )}
       </div>
 
-      <aside className="relative flex w-[calc(23rem*var(--hm-density))] flex-none flex-col gap-hm-24">
+      <aside className="relative flex min-h-0 flex-col gap-hm-24">
         <header className="relative flex items-center justify-between">
-          <h1 className="m-0 min-w-0 truncate text-hm-title font-semibold tracking-[-0.035em]">
+          <h1 className="m-0 min-w-0 truncate text-[calc(2.125rem*var(--hm-density))] leading-none font-semibold tracking-[-0.02em]">
             Painting
           </h1>
-          <div className="flex flex-none items-center gap-hm-8">
+          <div className="flex flex-none items-center gap-hm-10">
             <Button
               ref={settingsButtonRef}
               variant="outline"
-              aria-label="Settings"
+              aria-label="Advanced options"
               aria-expanded={settingsOpen}
               className={cn(
-                'size-hm-64 px-0',
+                'size-[calc(4.5rem*var(--hm-density))] rounded-hm-20 px-0',
                 settingsOpen && 'border-hm-accent bg-hm-accent-soft text-hm-accent',
               )}
               onClick={() => setSettingsOpen((open) => !open)}
@@ -192,8 +201,8 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
             </Button>
             <Button
               variant="outline"
-              aria-label="Close painting"
-              className="size-hm-64 px-0"
+              aria-label="Close without saving"
+              className="size-[calc(4.5rem*var(--hm-density))] rounded-hm-20 px-0"
               onClick={onClose}
             >
               <X aria-hidden />
@@ -252,20 +261,23 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
         </header>
 
         <section className="flex flex-col gap-hm-12">
-          <h2 className="m-0 text-hm-eyebrow text-hm-ink-2 uppercase">Tools</h2>
-          <div className="grid grid-cols-3 gap-hm-12">
-            {TOOL_OPTIONS.map(({ tool: option, label, icon: Icon }) => (
+          <h2 className="m-0 text-[calc(1.125rem*var(--hm-density))] font-semibold tracking-[0.08em] text-hm-ink-2 uppercase">
+            Tools
+          </h2>
+          <div className="grid grid-cols-2 gap-hm-10">
+            {TOOL_OPTIONS.map(({ tool: option, label, icon: Icon, disabled }) => (
               <button
-                key={option}
+                key={label}
                 type="button"
-                aria-pressed={tool === option}
-                onClick={() => setTool(option)}
+                disabled={disabled}
+                aria-pressed={disabled ? undefined : tool === option}
+                onClick={() => option && setTool(option)}
                 className={cn(
                   tile,
-                  'h-[calc(6.5rem*var(--hm-density))]',
-                  tool === option
-                    ? 'border-hm-accent bg-hm-accent-soft text-hm-accent'
-                    : 'border-hm-line text-hm-ink-2',
+                  disabled && 'pointer-events-none opacity-40',
+                  tool === option && !disabled
+                    ? 'bg-hm-accent-soft text-hm-accent shadow-[inset_0_0_0_calc(0.1875rem*var(--hm-density))_var(--hm-accent)]'
+                    : 'bg-white text-hm-ink-2 shadow-[inset_0_0_0_1px_var(--hm-line)]',
                 )}
               >
                 <Icon aria-hidden className="size-hm-40" strokeWidth={1.75} />
@@ -275,81 +287,34 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
           </div>
         </section>
 
-        <section className="flex flex-col gap-hm-12">
-          <h2 className="m-0 text-hm-eyebrow text-hm-ink-2 uppercase">Size</h2>
-          <div className="grid grid-cols-3 gap-hm-12">
-            {SIZE_OPTIONS.map(({ size: option, dot }) => (
+        <div className="mt-auto h-[calc(8rem*var(--hm-density))] flex-none">
+          <MusicPlayer />
+        </div>
+      </aside>
+
+      <div className="relative flex min-w-0 items-center gap-hm-12 rounded-[calc(1.625rem*var(--hm-density))] bg-white px-hm-20 py-hm-16 shadow-[0_0_0_1px_var(--hm-line),0_calc(0.5rem*var(--hm-density))_calc(1.5rem*var(--hm-density))_rgba(0,0,0,.08)]">
+        <div className="flex min-w-0 flex-1 items-center justify-center gap-hm-12">
+          {tool === 'sticker' ? (
+            stickers.map(({ id, name, url }) => (
               <button
-                key={option}
+                key={id}
                 type="button"
-                aria-label={`${option} size`}
-                aria-pressed={size === option}
-                onClick={() => setSize(option)}
+                aria-label={name}
+                aria-pressed={activeSticker?.id === id}
+                onClick={() => setStickerId(id)}
                 className={cn(
-                  tile,
-                  'h-[calc(5rem*var(--hm-density))]',
-                  size === option ? 'border-hm-accent bg-hm-accent-soft' : 'border-hm-line',
+                  swatch,
+                  'rounded-hm-20 bg-white p-hm-8',
+                  activeSticker?.id === id
+                    ? 'bg-hm-accent-soft shadow-[inset_0_0_0_calc(0.1875rem*var(--hm-density))_var(--hm-accent)]'
+                    : 'shadow-[inset_0_0_0_1px_var(--hm-line)]',
                 )}
               >
-                {tool === 'sticker' && activeSticker ? (
-                  <img
-                    aria-hidden
-                    alt=""
-                    src={activeSticker.url}
-                    className={cn('object-contain', dot)}
-                  />
-                ) : (
-                  <span
-                    aria-hidden
-                    className={cn('rounded-full', dot)}
-                    style={{ background: tool === 'eraser' ? 'var(--hm-ink-3)' : color }}
-                  />
-                )}
+                <img aria-hidden alt="" src={url} className="size-full object-contain" />
               </button>
-            ))}
-          </div>
-        </section>
-
-        {tool === 'sticker' ? (
-          <section className="flex flex-col gap-hm-12">
-            <h2 className="m-0 text-hm-eyebrow text-hm-ink-2 uppercase">
-              Stickers · Press and drag to place
-            </h2>
-            <div className="grid grid-cols-4 gap-hm-12">
-              {stickers.map(({ id, name, url }) => (
-                <button
-                  key={id}
-                  type="button"
-                  aria-label={name}
-                  aria-pressed={activeSticker?.id === id}
-                  onClick={() => setStickerId(id)}
-                  className={cn(
-                    tile,
-                    'aspect-square p-hm-6',
-                    activeSticker?.id === id
-                      ? 'border-hm-accent bg-hm-accent-soft'
-                      : 'border-hm-line',
-                  )}
-                >
-                  <img aria-hidden alt="" src={url} className="size-full object-contain" />
-                </button>
-              ))}
-            </div>
-          </section>
-        ) : (
-          <section className="flex flex-col gap-hm-12">
-            <h2 className="m-0 text-hm-eyebrow text-hm-ink-2 uppercase">Colours</h2>
-            {mixOpen && (
-              <MixPanel
-                initial={lastMix ?? color}
-                palette={palette}
-                onPaletteChange={changePalette}
-                onUse={applyMix}
-                onClose={closeMix}
-                anchorRef={pickerRef}
-              />
-            )}
-            <div className="grid grid-cols-4 gap-hm-12">
+            ))
+          ) : (
+            <>
               {COLOURS.map(({ name, value }) => (
                 <button
                   key={value}
@@ -361,65 +326,98 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
                     if (tool === 'eraser') setTool('brush')
                   }}
                   className={cn(
-                    'aspect-square cursor-pointer rounded-full border border-hm-line [-webkit-tap-highlight-color:transparent] active:scale-(--hm-press-scale)',
+                    swatch,
+                    value === '#ffffff' && 'shadow-[inset_0_0_0_1px_var(--hm-line)]',
                     color === value && 'outline-3 outline-offset-3 outline-hm-accent',
                   )}
                   style={{ background: value }}
                 />
               ))}
-              <button
-                ref={pickerRef}
-                type="button"
-                aria-label="Mix your own colour"
-                aria-expanded={mixOpen}
-                aria-pressed={lastMix !== null && color === lastMix}
-                onClick={() => setMixOpen((open) => !open)}
-                className={cn(
-                  'relative flex aspect-square cursor-pointer items-center justify-center rounded-full border-2 border-white p-0 [-webkit-tap-highlight-color:transparent] active:scale-(--hm-press-scale)',
-                  lastMix !== null &&
-                    color === lastMix &&
-                    'outline-3 outline-offset-3 outline-hm-accent',
+              <div className="relative flex-none">
+                {mixOpen && (
+                  <MixPanel
+                    initial={lastMix ?? color}
+                    palette={palette}
+                    onPaletteChange={changePalette}
+                    onUse={applyMix}
+                    onClose={closeMix}
+                    anchorRef={pickerRef}
+                  />
                 )}
-                style={{ background: lastMix ?? RAINBOW }}
-              >
-                {lastMix === null ? (
-                  <span
-                    aria-hidden
-                    className="flex size-hm-28 items-center justify-center rounded-full bg-white text-hm-ink shadow-hm-raised"
-                  >
-                    <Plus aria-hidden className="size-hm-20" strokeWidth={2.5} />
-                  </span>
-                ) : (
-                  <span
-                    aria-hidden
-                    className="absolute -right-hm-4 -bottom-hm-4 flex size-hm-36 items-center justify-center rounded-full border-2 border-white text-white shadow-hm-raised"
-                    style={{ background: RAINBOW }}
-                  >
-                    <Plus aria-hidden className="size-hm-20" strokeWidth={3} />
-                  </span>
-                )}
-              </button>
-            </div>
-          </section>
-        )}
-
-        <div className="mt-auto flex flex-col gap-hm-12">
-          <div className="grid grid-cols-2 gap-hm-12">
-            <Button variant="outline" disabled={!canUndo} onClick={undo}>
-              <Undo2 aria-hidden />
-              Undo
-            </Button>
-            <Button variant="outline" disabled={!dirty} onClick={clear}>
-              <Trash2 aria-hidden />
-              Clear
-            </Button>
-          </div>
-          <Button variant="solid" block onClick={finish}>
-            <Check aria-hidden />
-            Done
-          </Button>
+                <button
+                  ref={pickerRef}
+                  type="button"
+                  aria-label="Mix your own colour"
+                  aria-expanded={mixOpen}
+                  aria-pressed={lastMix !== null && color === lastMix}
+                  onClick={() => setMixOpen((open) => !open)}
+                  className={cn(
+                    swatch,
+                    'relative flex items-center justify-center p-0',
+                    lastMix !== null &&
+                      color === lastMix &&
+                      'outline-3 outline-offset-3 outline-hm-accent',
+                  )}
+                  style={{ background: lastMix ?? RAINBOW }}
+                >
+                  {lastMix === null ? (
+                    <span
+                      aria-hidden
+                      className="flex size-hm-28 items-center justify-center rounded-full bg-white text-hm-ink shadow-hm-raised"
+                    >
+                      <Plus aria-hidden className="size-hm-20" strokeWidth={2.5} />
+                    </span>
+                  ) : (
+                    <span
+                      aria-hidden
+                      className="absolute -right-hm-4 -bottom-hm-4 flex size-hm-36 items-center justify-center rounded-full border-2 border-white text-white shadow-hm-raised"
+                      style={{ background: RAINBOW }}
+                    >
+                      <Plus aria-hidden className="size-hm-20" strokeWidth={3} />
+                    </span>
+                  )}
+                </button>
+              </div>
+            </>
+          )}
         </div>
-      </aside>
+        <span aria-hidden className="mx-hm-8 h-hm-76 w-[2px] flex-none rounded-full bg-hm-line" />
+        <SizeSlider
+          value={size}
+          color={tool === 'eraser' || tool === 'sticker' ? 'var(--hm-ink-3)' : color}
+          stickerUrl={tool === 'sticker' ? activeSticker?.url : undefined}
+          onChange={setSize}
+        />
+      </div>
+
+      <div className="flex min-w-0 gap-hm-12">
+        <button
+          type="button"
+          disabled={!canUndo}
+          onClick={undo}
+          className={cn(finishTile, 'w-[calc(7rem*var(--hm-density))]')}
+        >
+          <Undo2 aria-hidden className="size-hm-30" />
+          Undo
+        </button>
+        <button
+          type="button"
+          disabled={!dirty}
+          onClick={clear}
+          className={cn(finishTile, 'w-[calc(7rem*var(--hm-density))]')}
+        >
+          <Trash2 aria-hidden className="size-hm-30" />
+          Clear
+        </button>
+        <button
+          type="button"
+          onClick={finish}
+          className="flex min-w-0 flex-1 cursor-pointer flex-col items-center justify-center gap-hm-6 rounded-hm-22 border-0 bg-hm-accent text-[calc(1.5rem*var(--hm-density))] leading-none font-semibold text-hm-on-accent shadow-hm-raised [-webkit-tap-highlight-color:transparent] active:scale-(--hm-press-scale)"
+        >
+          <Check aria-hidden className="size-hm-36" />
+          Done
+        </button>
+      </div>
 
       {review && (
         <div className="fixed inset-0 z-20 grid place-items-center overflow-hidden bg-[radial-gradient(ellipse_at_50%_40%,rgba(34,38,48,.95),rgba(8,9,12,.99))]">
@@ -442,16 +440,16 @@ export function PaintPage({ onClose }: { onClose: () => void }) {
               </p>
             </div>
 
-            <div className="relative w-[calc(40rem*var(--hm-density))] rotate-2 aspect-[880/600]">
+            <div className="relative w-[calc(44rem*var(--hm-density))] rotate-2 aspect-[968/600]">
               <img
                 src={review.url}
                 alt="Your painting"
-                className="absolute top-[16%] left-[15.9%] h-[68%] w-[68.2%] bg-white object-cover shadow-[inset_0_0_0_1px_rgba(0,0,0,.2)]"
+                className="absolute top-[16%] left-[16%] h-[68%] w-[68.7%] bg-white object-cover shadow-[inset_0_0_0_1px_rgba(0,0,0,.2)]"
               />
               <img
                 src={goldFrameUrl}
                 alt=""
-                className="pointer-events-none absolute -top-[10%] -left-[6.82%] h-[120%] w-[113.64%] max-w-none"
+                className="pointer-events-none absolute -top-[10%] -left-[6.87%] h-[120%] w-[114.5%] max-w-none"
               />
               <span className="absolute top-[86.6%] left-1/2 z-1 -translate-x-1/2 -translate-y-1/2 rounded-[0.25rem] bg-[linear-gradient(180deg,#FBE9A8,#D9AE4E_55%,#B8862C)] px-hm-18 py-[0.3125rem] text-[calc(1.0625rem*var(--hm-density))] font-semibold tracking-[.04em] whitespace-nowrap text-[#4A3208] shadow-[inset_0_1px_0_rgba(255,255,255,.6),0_0_0_1px_rgba(90,58,10,.6),0_3px_6px_rgba(0,0,0,.35)]">
                 {chosen ? `Painted by ${chosen.name}` : 'Painted on Homie'}

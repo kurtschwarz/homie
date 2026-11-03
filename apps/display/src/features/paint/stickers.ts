@@ -31,11 +31,25 @@ export const STICKER_ART: StickerArt[] = [
   { id: 'crown', name: 'Crown', url: crown },
 ]
 
+/** Id of the sticker selected when the paint page opens. */
 export const DEFAULT_STICKER_ID = 'star'
 
-/** Sticker edge length in CSS px for each size tile. */
-export const STICKER_PX = { small: 90, medium: 160, large: 260 }
+/**
+ * Maps a brush width to a sticker edge length, so the size slider scales stickers too.
+ *
+ * @param width - Brush width in CSS px, as set by the size slider.
+ * @returns Sticker edge length in CSS px: 90 at width 6, growing 7px per unit of width.
+ */
+export function stickerSize(width: number) {
+  return Math.round(90 + (width - 6) * 7)
+}
 
+/**
+ * Loads and decodes a sticker's image.
+ *
+ * @param art - The sticker's id, name and image URL.
+ * @returns The sticker with its decoded image, or `null` if the image fails to decode.
+ */
 async function decode({ url, ...art }: StickerArt): Promise<Sticker | null> {
   const image = new Image()
   image.src = url
@@ -47,7 +61,13 @@ async function decode({ url, ...art }: StickerArt): Promise<Sticker | null> {
   }
 }
 
-/** Only stickers that decoded are returned, because history replays records synchronously. */
+/**
+ * Decodes every sticker in {@link STICKER_ART} once on mount.
+ *
+ * Only stickers that decoded are returned, because history replays records synchronously.
+ *
+ * @returns The decoded stickers; empty until decoding finishes.
+ */
 export function useStickers() {
   const [stickers, setStickers] = React.useState<Sticker[]>([])
 
